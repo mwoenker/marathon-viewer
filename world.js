@@ -112,8 +112,8 @@ export class World {
                 edges: [
                     0, 1, 2, 3, 4, 5
                 ],
-                top: 4,
-                bottom: 0
+                top: 2,
+                bottom: -0.2
             },
             {
                 edges: [
@@ -126,10 +126,15 @@ export class World {
                 edges: [
                     11, 12, 13, 14
                 ],
-                top: 1,
-                bottom: -2,
+                top: 1.5,
+                bottom: -0.5,
             }
         ];
+
+        for (let i = 0; i < this.points.length; ++i) {
+            this.points[i][0] *= 2;
+            this.points[i][1] *= 2;
+        }
     }
 
     getEdgeVertices(edge) {

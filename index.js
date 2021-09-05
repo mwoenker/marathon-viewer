@@ -1,6 +1,6 @@
 "use strict";
 
-import { bitmaps, colorTable } from'./shapes-sewage.js';
+import { bitmaps, colorTable } from'./shapes-lava-inf.js';
 import {
     v2length,
     v2scale,
@@ -72,12 +72,30 @@ class Screen {
         for (let i = 0; i < width; ++i) {
             this.topParamList[i] = {
                 y: 0,
-                z: 0,
+                oneOverZ: 0,
                 textureX: 0,
                 textureY: 0,
             };
             this.bottomParamList[i] = {
                 y: 0,
+                oneOverZ: 0,
+                textureXOverZ: 0,
+                textureYOverZ: 0,
+            };
+        }
+        
+        this.leftParamList = new Array(height);
+        this.rightParamList = new Array(height);
+        
+        for (let i = 0; i < height; ++i) {
+            this.leftParamList[i] = {
+                x: 0,
+                oneOverZ: 0,
+                textureX: 0,
+                textureY: 0,
+            };
+            this.rightParamList[i] = {
+                x: 0,
                 oneOverZ: 0,
                 textureXOverZ: 0,
                 textureYOverZ: 0,
@@ -183,7 +201,6 @@ class Screen {
     }
 
     drawWallSlice({x, top, bottom, colorTable, texXOffset, texture, textureTop, textureBottom}) {
-        //if (Number.isNaN(x)) {
         const intTop = Math.max(0, parseInt(Math.ceil(top)));
         const intBottom = Math.min(this.height, parseInt(Math.ceil(bottom)));
         const texels = texture.data;
@@ -204,6 +221,127 @@ class Screen {
             this.pixels[offset] = color;
             offset += increment;
             texelY += texelYSlope;
+        }
+    }
+    
+    calcLineTextureParamsHorizontal(leftVertex, rightVertex, leftTexCoord, rightTexCoord, params) {
+        const xStart = leftVertex[0];
+        const xEnd = rightVertex[0];
+        
+        const oneOverZStart = 1 / leftVertex[2];
+        const oneOverZEnd = 1 / rightVertex[2];
+        const texXOverZStart = leftTexCoord[0] * oneOverZStart;
+        const texXOverZEnd = rightTexCoord[0] * oneOverZEnd;
+        const texYOverZStart = leftTexCoord[1] * oneOverZStart;
+        const texYOverZEnd = rightTexCoord[1] * oneOverZEnd;
+
+        const yDiff = rightVertex[1] - leftVertex[1];
+        const yMin = Math.max(0, Math.ceil(leftVertex[1]));
+        const yMax = Math.min(this.height, Math.ceil(rightVertex[1]));
+
+        for (let y = yMin; y < yMax; ++y) {
+            const t = (y - leftVertex[1]) / yDiff;
+            params[y].x = lerp(t, xStart, xEnd);
+            params[y].oneOverZ = lerp(t, oneOverZStart, oneOverZEnd);
+            params[y].textureXOverZ = lerp(t, texXOverZStart, texXOverZEnd);
+            params[y].textureYOverZ = lerp(t, texYOverZStart, texYOverZEnd);
+        }
+    }
+    
+    drawHorizontalPolygon({polygon, textureIndex}) {
+        const screenPosition = polygon.map(({position}) => [
+            this.viewXToColumn(position[0], position[2]),
+            this.viewYToRow(position[1], position[2]),
+            position[2],
+        ]);
+        let top = this.height;
+        let bottom = 0;
+        for (let i = 0; i < polygon.length; ++i) {
+            const nextI = (i + 1) % polygon.length;
+            const position = screenPosition[i];
+            const nextPosition = screenPosition[nextI];
+            if (nextPosition[1] > position[1]) {
+                // right of polygon
+                this.calcLineTextureParamsHorizontal(
+                    position,
+                    nextPosition,
+                    polygon[i].texCoord,
+                    polygon[nextI].texCoord,
+                    this.rightParamList);
+            } else if (nextPosition[1] < position[1]) {
+                // bottom of polygon
+                this.calcLineTextureParamsHorizontal(
+                    nextPosition,
+                    position,
+                    polygon[nextI].texCoord,
+                    polygon[i].texCoord,
+                    this.leftParamList);
+            }
+
+            const y = position[1];
+            if (y < top) {
+                top = y;
+            }
+            if (y > bottom) {
+                bottom = y;
+            }
+        }
+
+        const yMin = Math.max(0, Math.ceil(top));
+        const yMax = Math.min(this.height, Math.ceil(bottom));
+        this.drawHorizontalRange(yMin, yMax, textureIndex);
+    }
+
+    drawHorizontalRange(yMin, yMax, textureIndex) {
+        for (let y = yMin; y < yMax; ++y) {
+            const leftParams = this.leftParamList[y];
+            const rightParams = this.rightParamList[y];
+            const z = 1 / leftParams.oneOverZ;
+            const shadingTable = shadingTableForDistance(z);
+
+            this.drawHorizontalSpan({
+                y,
+                left: leftParams.x,
+                right: rightParams.x,
+                colorTable: shadingTable,
+                texture: bitmaps[textureIndex],
+                textureLeftX: leftParams.textureXOverZ * z,
+                textureLeftY: leftParams.textureYOverZ * z,
+                textureRightX: rightParams.textureXOverZ * z,
+                textureRightY: rightParams.textureYOverZ * z,
+            });
+        }
+    }
+
+    drawHorizontalSpan({y, left, right, colorTable, texture, textureLeftX, textureLeftY, textureRightX, textureRightY}) {
+        const texels = texture.data;
+
+        let u = textureLeftX * texture.width;
+        let v = textureLeftY * texture.height;
+        
+        const endU = textureRightX * texture.width;
+        const endV = textureRightY * texture.height;
+        
+        const du = (endU - u) / (right - left);
+        const dv = (endV - v) / (right - left);
+
+        const uMask = texture.width - 1;
+        const vMask = texture.height - 1;
+
+        const xStart = Math.ceil(left);
+        const xEnd = Math.ceil(right);
+
+        const nudge = xStart - left;
+        u += nudge * du;
+        v += nudge * dv;
+
+        let offset = this.width * y + xStart;
+        for (let x = xStart; x < xEnd; ++x) {
+            const texel = texels[(u & uMask) * texture.width + (v & vMask)];
+            const color = colorTable[texel];
+            this.pixels[offset++] = color;
+            u += du;
+            v += dv;
         }
     }
 }
@@ -410,6 +548,64 @@ function draw3d(canvas, player, world) {
                     const maxX = Math.max(...projectedXs);
                     const newClipArea = ClipArea3d.fromPolygon(clippedPolygon);
                     drawPolygon(edge.portalTo, newClipArea);
+                    
+                    const neighbor = polygons[edge.portalTo];
+                    
+                    if (neighbor.top < polygon.top) {
+                        const abovePoly = clipArea.clipPolygon([
+                            {
+                                position: [p1View[0], polygon.top - player.height, p1View[1]],
+                                texCoord: [0, polygon.top],
+                            },
+                            {
+                                position: [p2View[0], polygon.top - player.height, p2View[1]],
+                                texCoord: [length, polygon.top],
+                            },
+                            {
+                                position: [p2View[0], neighbor.top - player.height, p2View[1]],
+                                texCoord: [length, neighbor.top],
+                            },
+                            {
+                                position: [p1View[0], neighbor.top - player.height, p1View[1]],
+                                texCoord: [0, neighbor.top],
+                            }
+                        ]);
+
+                        if (abovePoly.length > 0) {
+                            wallsToDraw.push({
+                                polygon: abovePoly,
+                                textureIndex: edge.texture,
+                            });
+                        }
+                    }
+                    
+                    if (neighbor.bottom > polygon.bottom) {
+                        const belowPoly = clipArea.clipPolygon([
+                            {
+                                position: [p1View[0], neighbor.bottom - player.height, p1View[1]],
+                                texCoord: [0, neighbor.bottom],
+                            },
+                            {
+                                position: [p2View[0], neighbor.bottom - player.height, p2View[1]],
+                                texCoord: [length, neighbor.bottom],
+                            },
+                            {
+                                position: [p2View[0], polygon.bottom - player.height, p2View[1]],
+                                texCoord: [length, polygon.bottom],
+                            },
+                            {
+                                position: [p1View[0], polygon.bottom - player.height, p1View[1]],
+                                texCoord: [0, polygon.bottom],
+                            }
+                        ]);
+
+                        if (belowPoly.length > 0) {
+                            wallsToDraw.push({
+                                polygon: belowPoly,
+                                textureIndex: edge.texture,
+                            });
+                        }
+                    }
                 } else {
                     wallsToDraw.push({
                         polygon: clippedPolygon,
@@ -421,6 +617,29 @@ function draw3d(canvas, player, world) {
 
         for (const wall of wallsToDraw) {
             screen.drawWall(wall);
+        }
+
+        const vertices = polygon.edges.map(edgeIndex => {
+            const edge = edges[edgeIndex];
+            const [p1, p2] = world.getEdgeVertices(edge);
+            return p1;
+        });
+
+        const viewPoints = vertices.map((p) => toView.transform(p));
+        if (polygon.top > player.height) {
+            const ceiling = clipArea.clipPolygon(viewPoints.map(([x, y], i) => ({
+                position: [x, polygon.top - player.height, y],
+                texCoord: [vertices[i][0], vertices[i][1]],
+            }))).reverse();
+            screen.drawHorizontalPolygon({polygon: ceiling, textureIndex: 15 + polygonIndex});
+        }
+
+        if (polygon.bottom < player.height) {
+            const floor = clipArea.clipPolygon(viewPoints.map(([x, y], i) => ({
+                position: [x, polygon.bottom - player.height, y],
+                texCoord: [vertices[i][0], vertices[i][1]],
+            })));
+            screen.drawHorizontalPolygon({polygon: floor, textureIndex: 5 + polygonIndex});
         }
     };
 
@@ -446,11 +665,11 @@ function update(player, world, actions, timeSlice, secondsElapsed) {
     const oldPosition = position;
     
     if (actions.has('forward')) {
-        position = v2add(position, v2scale(timeSlice * 4, forward));
+        position = v2add(position, v2scale(timeSlice * 2, forward));
     }
 
     if (actions.has('backward')) {
-        position = v2add(position, v2scale(-timeSlice * 4, forward));
+        position = v2add(position, v2scale(-timeSlice * 2, forward));
     }
 
     if (actions.has('turn-left')) {
@@ -462,11 +681,11 @@ function update(player, world, actions, timeSlice, secondsElapsed) {
     }
     
     if (actions.has('strafe-left')) {
-        position = v2add(position, v2scale(timeSlice * 4, left));
+        position = v2add(position, v2scale(timeSlice * 2, left));
     }
     
     if (actions.has('strafe-right')) {
-        position = v2add(position, v2scale(-timeSlice * 4, left));
+        position = v2add(position, v2scale(-timeSlice * 2, left));
     }
 
     [position, polygon] = world.movePlayer(oldPosition, position, polygon);
