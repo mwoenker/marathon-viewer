@@ -2,17 +2,19 @@
 
 import { bitmaps, colorTable } from'./shapes-sewage.js';
 import {
-    vlength,
-    vscale,
-    vnormalize,
-    vadd,
-    vsub,
-    vdot,
-    vlerp,
-    vdirection,
+    v2length,
+    v2scale,
+    v2normalize,
+    v2add,
+    v2sub,
+    v2dot,
+    v2lerp,
+    v2direction,
     isClockwise
 } from './vector.js';
 import { World } from './world.js';
+import { ClipArea, ClipArea3d } from './clip.js';
+import {lerp} from './utils.js';
 
 const color32 = new Uint32Array(1);
 const color8 = new Uint8Array(color32.buffer);
@@ -52,10 +54,6 @@ function shadingTableForDistance(dist, brightness = 1) {
     return shadingLevels[parseInt(Math.max(0, Math.min(nShadingLevels - 1, combined)))];
 }
 
-function lerp(t, a, b) {
-    return (1 - t) * a + t * b;
-}
-
 class Screen {
     constructor(width, height, pixels, player) {
         this.width = width;
@@ -67,6 +65,24 @@ class Screen {
         this.bottom = -Math.tan(player.vFov / 2);
         this.xScale = this.width / (this.right - this.left);
         this.yScale = this.height / (this.bottom - this.top);
+
+        this.topParamList = new Array(width);
+        this.bottomParamList = new Array(width);
+        
+        for (let i = 0; i < width; ++i) {
+            this.topParamList[i] = {
+                y: 0,
+                z: 0,
+                textureX: 0,
+                textureY: 0,
+            };
+            this.bottomParamList[i] = {
+                y: 0,
+                oneOverZ: 0,
+                textureXOverZ: 0,
+                textureYOverZ: 0,
+            };
+        }
     }
 
     viewXToColumn(x, z) {
@@ -77,53 +93,97 @@ class Screen {
         const projected = y / z;
         return this.yScale * (projected - this.top);
     }
-    
-    drawWall({p1, p2, ceiling, floor, textureIndex, textureTop, textureBottom}) {
-        let x1 = this.viewXToColumn(p1.position[0], p1.position[1]);
-        let x2 = this.viewXToColumn(p2.position[0], p2.position[1]);
-        if (x1 > x2) {
-            [x1, x2] = [x2, x1];
-            [p1, p2] = [p2, p1];
+
+    calcLineTextureParams(leftVertex, rightVertex, leftTexCoord, rightTexCoord, params) {
+        const yStart = leftVertex[1];
+        const yEnd = rightVertex[1];
+        
+        const oneOverZStart = 1 / leftVertex[2];
+        const oneOverZEnd = 1 / rightVertex[2];
+        const texXOverZStart = leftTexCoord[0] * oneOverZStart;
+        const texXOverZEnd = rightTexCoord[0] * oneOverZEnd;
+        const texYOverZStart = leftTexCoord[1] * oneOverZStart;
+        const texYOverZEnd = rightTexCoord[1] * oneOverZEnd;
+
+        const xDiff = rightVertex[0] - leftVertex[0];
+        const xMin = Math.max(0, Math.ceil(leftVertex[0]));
+        const xMax = Math.min(this.width, Math.ceil(rightVertex[0]));
+
+        for (let x = xMin; x < xMax; ++x) {
+            const t = (x - leftVertex[0]) / xDiff;
+            params[x].y = lerp(t, yStart, yEnd);
+            params[x].oneOverZ = lerp(t, oneOverZStart, oneOverZEnd);
+            params[x].textureXOverZ = lerp(t, texXOverZStart, texXOverZEnd);
+            params[x].textureYOverZ = lerp(t, texYOverZStart, texYOverZEnd);
         }
-        const z1 = p1.position[1];
-        const z2 = p2.position[1];
+    }
 
-        const startTop = this.viewYToRow(ceiling, z1);
-        const startBottom = this.viewYToRow(floor, z1);
-        const endTop = this.viewYToRow(ceiling, z2);
-        const endBottom = this.viewYToRow(floor, z2);
-        const texXOverZStart = p1.texX / z1;
-        
-        const topSlope = (endTop - startTop) / (x2 - x1);
-        const bottomSlope = (endBottom - startBottom) / (x2 - x1);
-        const zReciprocalStart = 1 / z1;
-        const zReciprocalSlope = (1 / z2 - 1 / z1) / (x2 - x1);
-        const texXOverZSlope = (p2.texX / z2 - p1.texX / z1) / (x2 - x1);
+    drawWall({polygon, textureIndex}) {
+        const screenPosition = polygon.map(({position}) => [
+            this.viewXToColumn(position[0], position[2]),
+            this.viewYToRow(position[1], position[2]),
+            position[2],
+        ]);
+        let left = this.width;
+        let right = 0;
+        for (let i = 0; i < polygon.length; ++i) {
+            const nextI = (i + 1) % polygon.length;
+            const position = screenPosition[i];
+            const nextPosition = screenPosition[nextI];
+            if (nextPosition[0] > position[0]) {
+                // top of polygon
+                this.calcLineTextureParams(
+                    position,
+                    nextPosition,
+                    polygon[i].texCoord,
+                    polygon[nextI].texCoord,
+                    this.topParamList);
+            } else if (nextPosition[0] < position[0]) {
+                // bottom of polygon
+                this.calcLineTextureParams(
+                    nextPosition,
+                    position,
+                    polygon[nextI].texCoord,
+                    polygon[i].texCoord,
+                    this.bottomParamList);
+            }
 
-        const xStart = Math.max(0, Math.ceil(x1));
-        const xEnd = Math.min(this.width, Math.ceil(x2));
-        
-        for (let x = xStart; x < xEnd; ++x) {
-            const top = startTop + topSlope * (x - x1);
-            const bottom = startBottom + bottomSlope * (x - x1);
-            const zReciprocal = zReciprocalStart + zReciprocalSlope * (x - x1);
-            const texXOverZ = texXOverZStart + texXOverZSlope * (x - x1);
-            const z = 1 / zReciprocal;
+            const x = position[0];
+            if (x < left) {
+                left = x;
+            }
+            if (x > right) {
+                right = x;
+            }
+        }
+
+        const xMin = Math.max(0, Math.ceil(left));
+        const xMax = Math.min(this.width, Math.ceil(right));
+        this.drawWallRange(xMin, xMax, textureIndex);
+    }
+
+    drawWallRange(xMin, xMax, textureIndex) {
+        for (let x = xMin; x < xMax; ++x) {
+            const topParams = this.topParamList[x];
+            const bottomParams = this.bottomParamList[x];
+            const z = 1 / topParams.oneOverZ;
             const shadingTable = shadingTableForDistance(z);
+
             this.drawWallSlice({
                 x,
-                top,
-                bottom,
+                top: topParams.y,
+                bottom: bottomParams.y,
                 colorTable: shadingTable,
-                texXOffset: texXOverZ * z,
+                texXOffset: topParams.textureXOverZ * z,
                 texture: bitmaps[textureIndex],
-                textureTop,
-                textureBottom,
+                textureTop: topParams.textureYOverZ * z,
+                textureBottom: bottomParams.textureYOverZ * z,
             });
         }
     }
-    
+
     drawWallSlice({x, top, bottom, colorTable, texXOffset, texture, textureTop, textureBottom}) {
+        //if (Number.isNaN(x)) {
         const intTop = Math.max(0, parseInt(Math.ceil(top)));
         const intBottom = Math.min(this.height, parseInt(Math.ceil(bottom)));
         const texels = texture.data;
@@ -165,72 +225,13 @@ class Transformation {
     }
 
     transform(v) {
-        const translated = vsub(v, this.newOrigin);
-        return [vdot(translated, this.xAxis), vdot(translated, this.yAxis)];
+        const translated = v2sub(v, this.newOrigin);
+        return [v2dot(translated, this.xAxis), v2dot(translated, this.yAxis)];
     }
 
     unTransform(v)  {
-        const translated = [vdot(v, this.oldXAxis), vdot(v, this.oldYAxis)];
-        return vadd(translated, this.newOrigin);
-    }
-}
-
-class ClipArea {
-    // p1 and p2 are points that lie on opposite bounding lines of view area
-    // this.leftPlane and this.rightPlane define the bounding half spaces
-    // vdot(this.leftPlane, p) > 0 and vdot(this.rightPlane, p) > 0
-    constructor(p1, p2) {
-        const p1Plane = [-p1[1], p1[0]];
-        if (vdot(p1Plane, p2) > 0) {
-            // line from origin to p2 defines the left edge of the area
-            this.leftPlane = [p2[1], -p2[0]];
-            this.rightPlane = p1Plane;
-        } else {
-            // line from origin to p1 defines left edge
-            this.leftPlane = vscale(-1, p1Plane);
-            this.rightPlane = [-p2[1], p2[0]];
-        }
-    }
-
-    lerp(t, p1, p2) {
-        return {
-            position: vlerp(t, p1.position, p2.position),
-            texX: lerp(t, p1.texX, p2.texX),
-        };
-    }
-
-    clipLine(p1, p2) {
-        const p1DotLeft = vdot(p1.position, this.leftPlane);
-        const p2DotLeft = vdot(p2.position, this.leftPlane);
-
-        if (p1DotLeft < 0 && p2DotLeft < 0) {
-            return null;
-        } else {
-            if (p1DotLeft < 0) {
-                const t = p1DotLeft / (p1DotLeft - p2DotLeft);
-                p1 = this.lerp(t, p1, p2);
-            } else if (p2DotLeft < 0) {
-                const t = p2DotLeft / (p2DotLeft - p1DotLeft);
-                p2 = this.lerp(t, p2, p1);
-            }
-        }
-        
-        const p1DotRight = vdot(p1.position, this.rightPlane);
-        const p2DotRight = vdot(p2.position, this.rightPlane);
-
-        if (p1DotRight < 0 && p2DotRight < 0) {
-            return null;
-        } else {
-            if (p1DotRight < 0) {
-                const t = p1DotRight / (p1DotRight - p2DotRight);
-                p1 = this.lerp(t, p1, p2);
-            } else if (p2DotRight < 0) {
-                const t = p2DotRight / (p2DotRight - p1DotRight);
-                p2 = this.lerp(t, p2, p1);
-            }
-
-            return [p1, p2];
-        }
+        const translated = [v2dot(v, this.oldXAxis), v2dot(v, this.oldYAxis)];
+        return v2add(translated, this.newOrigin);
     }
 }
 
@@ -270,14 +271,14 @@ function drawOverhead(canvas, player, world) {
         context.restore();
     };
 
-    const frustumLeftDirection = vscale(5, vdirection(player.facingAngle - player.hFov / 2));
-    const frustumRightDirection = vscale(5, vdirection(player.facingAngle + player.hFov / 2));
+    const frustumLeftDirection = v2scale(5, v2direction(player.facingAngle - player.hFov / 2));
+    const frustumRightDirection = v2scale(5, v2direction(player.facingAngle + player.hFov / 2));
 
     drawLines('yellow', [-0.5, 0], [0.5, 0]);
     drawLines('yellow', [0, -0.5], [0, 0.5]);
 
-    drawLines('green', player.position, vadd(player.position, frustumLeftDirection));
-    drawLines('green', player.position, vadd(player.position, frustumRightDirection));
+    drawLines('green', player.position, v2add(player.position, frustumLeftDirection));
+    drawLines('green', player.position, v2add(player.position, frustumRightDirection));
 
     const toView = new Transformation(player.position, player.facingAngle);
 
@@ -356,14 +357,16 @@ function draw3d(canvas, player, world) {
     context.fillStyle = 'white';
     context.fillRect(0, 0, canvas.width, canvas.height);
 
-    const frustumLeftDirection = vscale(5, vdirection(player.facingAngle - player.hFov / 2));
-    const frustumRightDirection = vscale(5, vdirection(player.facingAngle + player.hFov / 2));
+    const frustumLeftDirection = v2scale(5, v2direction(player.facingAngle - player.hFov / 2));
+    const frustumRightDirection = v2scale(5, v2direction(player.facingAngle + player.hFov / 2));
 
     const toView = new Transformation(player.position, player.facingAngle);
     const screen = new Screen(canvas.width, canvas.height, pixels, player);
 
     const drawPolygon = (polygonIndex, clipArea) => {
         const polygon = polygons[polygonIndex];
+
+        const wallsToDraw = [];
         
         for (const edgeIndex of polygon.edges) {
             const edge = edges[edgeIndex];
@@ -373,59 +376,81 @@ function draw3d(canvas, player, world) {
                 continue;
             }
 
-            const length = vlength(vsub(p1, p2));
-            const p1View = {
-                position: toView.transform(p1),
-                texX: 0,
-            };
-            const p2View = {
-                position: toView.transform(p2),
-                texX: length,
-            };
+            const length = v2length(v2sub(p1, p2));
+            const p1View = toView.transform(p1);
+            const p2View = toView.transform(p2);
+                  //     texX: length,
+                  // };
+
+            const viewPolygon = [
+                {
+                    position: [p1View[0], polygon.top - player.height, p1View[1]],
+                    texCoord: [0, polygon.top],
+                },
+                {
+                    position: [p2View[0], polygon.top - player.height, p2View[1]],
+                    texCoord: [length, polygon.top],
+                },
+                {
+                    position: [p2View[0], polygon.bottom - player.height, p2View[1]],
+                    texCoord: [length, polygon.bottom],
+                },
+                {
+                    position: [p1View[0], polygon.bottom - player.height, p1View[1]],
+                    texCoord: [0, polygon.bottom],
+                },
+            ];
+
+            const clippedPolygon = clipArea.clipPolygon(viewPolygon);
             
-            const clippedLine = clipArea.clipLine(p1View, p2View);
-            
-            if (clippedLine) {
+            if (clippedPolygon.length > 0) {
                 if (edge.portalTo !== undefined && edge.portalTo !== null) {
-                    const newClipArea = new ClipArea(clippedLine[0].position, clippedLine[1].position);
+                    const projectedXs = clippedPolygon.map(({position}) => position[0] / position[2]);
+                    const minX = Math.min(...projectedXs);
+                    const maxX = Math.max(...projectedXs);
+                    const newClipArea = ClipArea3d.fromPolygon(clippedPolygon);
                     drawPolygon(edge.portalTo, newClipArea);
                 } else {
-                    screen.drawWall({
-                        p1: clippedLine[0],
-                        p2: clippedLine[1],
-                        ceiling: polygon.top - player.height,
-                        floor: polygon.bottom - player.height,
+                    wallsToDraw.push({
+                        polygon: clippedPolygon,
                         textureIndex: edge.texture,
-                        textureTop: 0,
-                        textureBottom: polygon.top - polygon.bottom
                     });
                 }
             }
         }
+
+        for (const wall of wallsToDraw) {
+            screen.drawWall(wall);
+        }
     };
 
-    const clipArea = new ClipArea(
-        [-Math.tan(player.hFov / 2), 1],
-        [Math.tan(player.hFov / 2), 1],
-    );
+    const left = -Math.tan(player.hFov / 2);
+    const right = Math.tan(player.hFov / 2);
+    const top = -Math.tan(player.vFov / 2);
+    const bottom = Math.tan(player.vFov / 2);
+    const clipArea = ClipArea3d.fromPolygon([
+        {position: [left, top, 1]},
+        {position: [right, top, 1]},
+        {position: [right, bottom, 1]},
+        {position: [left, bottom, 1]},
+    ]);
     drawPolygon(player.polygon, clipArea);
-
     
     context.putImageData(imageData, 0, 0);
 }
 
 function update(player, world, actions, timeSlice, secondsElapsed) {
     let { position, polygon, facingAngle, hFov, vFov } = player;
-    const forward = vdirection(facingAngle);
-    const left = vdirection(facingAngle - Math.PI / 2);
+    const forward = v2direction(facingAngle);
+    const left = v2direction(facingAngle - Math.PI / 2);
     const oldPosition = position;
     
     if (actions.has('forward')) {
-        position = vadd(position, vscale(timeSlice * 4, forward));
+        position = v2add(position, v2scale(timeSlice * 4, forward));
     }
 
     if (actions.has('backward')) {
-        position = vadd(position, vscale(-timeSlice * 4, forward));
+        position = v2add(position, v2scale(-timeSlice * 4, forward));
     }
 
     if (actions.has('turn-left')) {
@@ -437,11 +462,11 @@ function update(player, world, actions, timeSlice, secondsElapsed) {
     }
     
     if (actions.has('strafe-left')) {
-        position = vadd(position, vscale(timeSlice * 4, left));
+        position = v2add(position, v2scale(timeSlice * 4, left));
     }
     
     if (actions.has('strafe-right')) {
-        position = vadd(position, vscale(-timeSlice * 4, left));
+        position = v2add(position, v2scale(-timeSlice * 4, left));
     }
 
     [position, polygon] = world.movePlayer(oldPosition, position, polygon);
@@ -471,8 +496,6 @@ function initWorld(canvas, overheadCanvas, fpsCounter) {
         vFov,
         wallBitmapIndex: 31,
         height: 0.5,
-        ceilingBitmapIndex: 5,
-        floorBitmapIndex: 28,
         secondsElapsed: 0,
     };
 
@@ -495,18 +518,6 @@ function initWorld(canvas, overheadCanvas, fpsCounter) {
         } else if (e.key === 'Escape') {
             e.preventDefault();
             running = false;
-        } else if (e.key === 'c') {
-            e.preventDefault();
-            player.wallBitmapIndex = (player.wallBitmapIndex + 1) % bitmaps.length;
-            console.log('wall bitmap', player.wallBitmapIndex);
-        } else if (e.key === 'v') {
-            e.preventDefault();
-            player.floorBitmapIndex = (player.floorBitmapIndex + 1) % bitmaps.length;
-            console.log('floor bitmap', player.floorBitmapIndex);
-        } else if (e.key === 'b') {
-            e.preventDefault();
-            player.ceilingBitmapIndex = (player.ceilingBitmapIndex + 1) % bitmaps.length;
-            console.log('ceiling bitmap', player.ceilingBitmapIndex);
         }
     });
 
@@ -562,4 +573,5 @@ window.addEventListener('load', () => {
     const fpsCounter = document.getElementById('fpsCounter');
     initWorld(canvas, overheadCanvas, fpsCounter);
 });
+
 

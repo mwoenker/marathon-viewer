@@ -127,7 +127,7 @@ export class World {
                     11, 12, 13, 14
                 ],
                 top: 1,
-                bottom: 0,
+                bottom: -2,
             }
         ];
     }
