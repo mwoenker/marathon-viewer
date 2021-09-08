@@ -1,6 +1,9 @@
 "use strict";
 
-import { bitmaps, colorTable } from'./shapes-lava-inf.js';
+import { HtmlInputFile, HttpFile } from './files/binary-read.js';
+import { Shapes } from './shapes-loader.js';
+import { packColor, unpackColor, makeShadingTables, magenta, shadingTableForDistance } from './color.js';
+
 import {
     v2length,
     v2scale,
@@ -15,43 +18,21 @@ import {
 import { World } from './world.js';
 import { ClipArea, ClipArea3d } from './clip.js';
 import {lerp} from './utils.js';
+import {
+    readMapSummaries,
+    readMapFromSummary,
+    readMapChunkTypes,
+    sideTypeFull,
+    sideTypeHigh,
+    sideTypeLow,
+    sideTypeComposite,
+    sideTypeSplit
+} from './files/wad.js';
 
-const color32 = new Uint32Array(1);
-const color8 = new Uint8Array(color32.buffer);
 
-function packColor(r, g, b, a = 255) {
-    color8[0] = parseInt(Math.max(0, Math.min(r, 255)));
-    color8[1] = parseInt(Math.max(0, Math.min(g, 255)));
-    color8[2] = parseInt(Math.max(0, Math.min(b, 255)));
-    color8[3] = 255;
-    return color32[0];
-}
-
-function unpackColor(val) {
-    color32[0] = val;
-    return [color8[0], color8[1], color8[2], color8[3]];
-}
-
-const nShadingLevels = 32;
-const shadingLevels = new Array(nShadingLevels);
-for (let i = 0; i < nShadingLevels; ++i) {
-    shadingLevels[i] = colorTable.map(({r, g, b}) => {
-        const brightness = i / (nShadingLevels - 1); 
-        return packColor(
-            r * brightness / 256,
-            g * brightness / 256,
-            b * brightness / 256,
-        );
-    });
-}
-
-const black = packColor(0, 0, 0);
-const magenta = packColor(255, 0, 255);
-const yellow = packColor(255, 255, 0);
-
-function shadingTableForDistance(dist, brightness = 1) {
-    const combined = brightness * (nShadingLevels - (dist * 2) - 1);
-    return shadingLevels[parseInt(Math.max(0, Math.min(nShadingLevels - 1, combined)))];
+function floorMod(num, div) {
+    const mod = num % div;
+    return mod < 0 ? mod + div : mod;
 }
 
 class Screen {
@@ -136,7 +117,11 @@ class Screen {
         }
     }
 
-    drawWall({polygon, textureIndex}) {
+    drawWall({polygon, texture, brightness}) {
+        if (! texture) {
+            return;
+        }
+        
         const screenPosition = polygon.map(({position}) => [
             this.viewXToColumn(position[0], position[2]),
             this.viewYToRow(position[1], position[2]),
@@ -177,15 +162,15 @@ class Screen {
 
         const xMin = Math.max(0, Math.ceil(left));
         const xMax = Math.min(this.width, Math.ceil(right));
-        this.drawWallRange(xMin, xMax, textureIndex);
+        this.drawWallRange(xMin, xMax, texture, brightness);
     }
 
-    drawWallRange(xMin, xMax, textureIndex) {
+    drawWallRange(xMin, xMax, texture, brightness) {
         for (let x = xMin; x < xMax; ++x) {
             const topParams = this.topParamList[x];
             const bottomParams = this.bottomParamList[x];
             const z = 1 / topParams.oneOverZ;
-            const shadingTable = shadingTableForDistance(z);
+            const shadingTable = shadingTableForDistance(texture.shadingTables, z, brightness);
 
             this.drawWallSlice({
                 x,
@@ -193,7 +178,7 @@ class Screen {
                 bottom: bottomParams.y,
                 colorTable: shadingTable,
                 texXOffset: topParams.textureXOverZ * z,
-                texture: bitmaps[textureIndex],
+                texture,
                 textureTop: topParams.textureYOverZ * z,
                 textureBottom: bottomParams.textureYOverZ * z,
             });
@@ -207,7 +192,7 @@ class Screen {
         
         let offset = x + this.width * intTop;
         const increment = this.width;
-        const texelX = parseInt(texXOffset * texture.width) % texture.width;
+        const texelX = floorMod(parseInt(texXOffset * texture.width), texture.width);
         const texYMask = texture.height - 1;
 
         const rowBase = texelX * texture.width;
@@ -248,7 +233,11 @@ class Screen {
         }
     }
     
-    drawHorizontalPolygon({polygon, textureIndex}) {
+    drawHorizontalPolygon({polygon, texture, brightness}) {
+        if (! texture) {
+            return;
+        }
+        
         const screenPosition = polygon.map(({position}) => [
             this.viewXToColumn(position[0], position[2]),
             this.viewYToRow(position[1], position[2]),
@@ -289,22 +278,22 @@ class Screen {
 
         const yMin = Math.max(0, Math.ceil(top));
         const yMax = Math.min(this.height, Math.ceil(bottom));
-        this.drawHorizontalRange(yMin, yMax, textureIndex);
+        this.drawHorizontalRange(yMin, yMax, texture, brightness);
     }
 
-    drawHorizontalRange(yMin, yMax, textureIndex) {
+    drawHorizontalRange(yMin, yMax, texture, brightness) {
         for (let y = yMin; y < yMax; ++y) {
             const leftParams = this.leftParamList[y];
             const rightParams = this.rightParamList[y];
             const z = 1 / leftParams.oneOverZ;
-            const shadingTable = shadingTableForDistance(z);
+            const shadingTable = shadingTableForDistance(texture.shadingTables, z, brightness);
 
             this.drawHorizontalSpan({
                 y,
                 left: leftParams.x,
                 right: rightParams.x,
                 colorTable: shadingTable,
-                texture: bitmaps[textureIndex],
+                texture,
                 textureLeftX: leftParams.textureXOverZ * z,
                 textureLeftY: leftParams.textureYOverZ * z,
                 textureRightX: rightParams.textureXOverZ * z,
@@ -357,7 +346,6 @@ class Transformation {
         this.xAxis = [-Math.sin(rotation), Math.cos(rotation)];
         this.yAxis = [Math.cos(rotation), Math.sin(rotation)];
 
-        const m = -1;
         this.oldXAxis = [-Math.sin(rotation), Math.cos(rotation)];
         this.oldYAxis = [Math.cos(rotation), Math.sin(rotation)];
     }
@@ -382,7 +370,7 @@ function drawOverhead(canvas, player, world) {
     const { points, lines, edges, polygons } = world;
 
     const context = canvas.getContext('2d');
-    context.fillStyle = 'white';
+    context.fillStyle = 'green';
     context.fillRect(0, 0, canvas.width, canvas.height);
 
     const angle = player.secondsElapsed * 10;
@@ -431,7 +419,7 @@ function drawOverhead(canvas, player, world) {
                 continue;
             }
 
-            drawLines(polygon.color || 'purple', p1, p2);
+            drawLines('purple', p1, p2);
             
             const p1View = {
                 position: toView.transform(p1),
@@ -447,7 +435,7 @@ function drawOverhead(canvas, player, world) {
             if (clippedLine) {
                 if (edge.portalTo !== undefined && edge.portalTo !== null) {
                     const newClipArea = new ClipArea(clippedLine[0].position, clippedLine[1].position);
-                    drawPolygon(edge.portalTo, newClipArea);
+                    drawPolygon(edge.portalTo, clipArea);
                     
                     context.save();
                     context.lineWidth = 3;
@@ -477,7 +465,36 @@ function drawOverhead(canvas, player, world) {
     drawPolygon(player.polygon, clipArea);
 }
 
-function draw3d(canvas, player, world) {
+function makeViewPolygon({p1View, p2View, top, bottom, playerHeight, textureOffset}) {
+    const length = v2length(v2sub(p1View, p2View));
+    
+    return [
+        {
+            position: [p1View[0], top - playerHeight, p1View[1]],
+            texCoord: [textureOffset[0], textureOffset[1]],
+        },
+        {
+            position: [p2View[0], top - playerHeight, p2View[1]],
+            texCoord: [textureOffset[0] + length, textureOffset[1]],
+        },
+        {
+            position: [p2View[0], bottom - playerHeight, p2View[1]],
+            texCoord: [textureOffset[0] + length, textureOffset[1] - bottom + top],
+        },
+        {
+            position: [p1View[0], bottom - playerHeight, p1View[1]],
+            texCoord: [textureOffset[0], textureOffset[1] - bottom + top],
+        },
+    ];
+}
+
+window.transform = (x, y) => ([
+    (x & 1023) / 1024,
+    (y & 1023) / 1024,
+]);
+
+let i = 0;
+function draw3d(canvas, player, world, shapes) {
     const context = canvas.getContext('2d');
 
     if (! imageData || imageData.width !== canvas.width || imageData.height !== canvas.height) {
@@ -487,7 +504,7 @@ function draw3d(canvas, player, world) {
     }
 
     for (let i = 0; i < pixels.length; ++i) {
-        pixels[i] = black;
+        pixels[i] = magenta;
     }
     
     const { points, lines, edges, polygons } = world;
@@ -501,14 +518,19 @@ function draw3d(canvas, player, world) {
     const toView = new Transformation(player.position, player.facingAngle);
     const screen = new Screen(canvas.width, canvas.height, pixels, player);
 
+    ++i;
+    let drawPolygons = 0;
+    
     const drawPolygon = (polygonIndex, clipArea) => {
+        ++drawPolygons;
         const polygon = polygons[polygonIndex];
 
         const wallsToDraw = [];
         
-        for (const edgeIndex of polygon.edges) {
-            const edge = edges[edgeIndex];
-            const [p1, p2] = world.getEdgeVertices(edge);
+        for (let linePosition = 0; linePosition < polygon.vertexCount; ++linePosition) {
+            const side = world.sides[polygon.sides[linePosition]];
+            const [p1, p2] = world.getLineVertices(polygonIndex, linePosition);
+            const portalTo = world.getPortal(polygonIndex, linePosition);
 
             if (! isClockwise(player.position, p1, p2)) {
                 continue;
@@ -517,100 +539,79 @@ function draw3d(canvas, player, world) {
             const length = v2length(v2sub(p1, p2));
             const p1View = toView.transform(p1);
             const p2View = toView.transform(p2);
-                  //     texX: length,
-                  // };
 
-            const viewPolygon = [
-                {
-                    position: [p1View[0], polygon.top - player.height, p1View[1]],
-                    texCoord: [0, polygon.top],
-                },
-                {
-                    position: [p2View[0], polygon.top - player.height, p2View[1]],
-                    texCoord: [length, polygon.top],
-                },
-                {
-                    position: [p2View[0], polygon.bottom - player.height, p2View[1]],
-                    texCoord: [length, polygon.bottom],
-                },
-                {
-                    position: [p1View[0], polygon.bottom - player.height, p1View[1]],
-                    texCoord: [0, polygon.bottom],
-                },
-            ];
+            const viewPolygon = makeViewPolygon({
+                p1View,
+                p2View,
+                top: polygon.ceilingHeight,
+                bottom: polygon.floorHeight,
+                playerHeight: player.height,
+                textureOffset: world.getTexOffset(side?.primaryTexture),
+            });
 
             const clippedPolygon = clipArea.clipPolygon(viewPolygon);
             
             if (clippedPolygon.length > 0) {
-                if (edge.portalTo !== undefined && edge.portalTo !== null) {
+                if (portalTo !== -1 && portalTo !== undefined && portalTo !== null) {
                     const projectedXs = clippedPolygon.map(({position}) => position[0] / position[2]);
                     const minX = Math.min(...projectedXs);
                     const maxX = Math.max(...projectedXs);
                     const newClipArea = ClipArea3d.fromPolygon(clippedPolygon);
-                    drawPolygon(edge.portalTo, newClipArea);
+                    drawPolygon(portalTo, newClipArea);
                     
-                    const neighbor = polygons[edge.portalTo];
+                    const neighbor = polygons[portalTo];
                     
-                    if (neighbor.top < polygon.top) {
-                        const abovePoly = clipArea.clipPolygon([
-                            {
-                                position: [p1View[0], polygon.top - player.height, p1View[1]],
-                                texCoord: [0, polygon.top],
-                            },
-                            {
-                                position: [p2View[0], polygon.top - player.height, p2View[1]],
-                                texCoord: [length, polygon.top],
-                            },
-                            {
-                                position: [p2View[0], neighbor.top - player.height, p2View[1]],
-                                texCoord: [length, neighbor.top],
-                            },
-                            {
-                                position: [p1View[0], neighbor.top - player.height, p1View[1]],
-                                texCoord: [0, neighbor.top],
-                            }
-                        ]);
-
+                    if (neighbor.ceilingHeight < polygon.ceilingHeight && side) {
+                        const abovePoly = clipArea.clipPolygon(makeViewPolygon({
+                            p1View,
+                            p2View,
+                            top: polygon.ceilingHeight,
+                            bottom: neighbor.ceilingHeight,
+                            playerHeight: player.height,
+                            textureOffset: world.getTexOffset(side?.primaryTexture),
+                        }));
+                        
                         if (abovePoly.length > 0) {
                             wallsToDraw.push({
                                 polygon: abovePoly,
-                                textureIndex: edge.texture,
+                                texture: shapes.getBitmap(side.primaryTexture.texture),
+                                brightness: world.getLightIntensity(side.primaryLightsourceIndex),
                             });
                         }
                     }
                     
-                    if (neighbor.bottom > polygon.bottom) {
-                        const belowPoly = clipArea.clipPolygon([
-                            {
-                                position: [p1View[0], neighbor.bottom - player.height, p1View[1]],
-                                texCoord: [0, neighbor.bottom],
-                            },
-                            {
-                                position: [p2View[0], neighbor.bottom - player.height, p2View[1]],
-                                texCoord: [length, neighbor.bottom],
-                            },
-                            {
-                                position: [p2View[0], polygon.bottom - player.height, p2View[1]],
-                                texCoord: [length, polygon.bottom],
-                            },
-                            {
-                                position: [p1View[0], polygon.bottom - player.height, p1View[1]],
-                                texCoord: [0, polygon.bottom],
-                            }
-                        ]);
+                    if (neighbor.floorHeight > polygon.floorHeight && side) {
+                        const sideTex = (side.type === sideTypeSplit
+                                         ? side.secondaryTexture
+                                         : side.primaryTexture);
+                        const belowPoly = clipArea.clipPolygon(makeViewPolygon({
+                            p1View,
+                            p2View,
+                            top: neighbor.floorHeight,
+                            bottom: polygon.floorHeight,
+                            playerHeight: player.height,
+                            textureOffset: world.getTexOffset(sideTex),
+                        }));
 
                         if (belowPoly.length > 0) {
                             wallsToDraw.push({
                                 polygon: belowPoly,
-                                textureIndex: edge.texture,
+                                texture: shapes.getBitmap(sideTex.texture),
+                                brightness: world.getLightIntensity(
+                                    (side.type === sideTypeSplit
+                                     ? side.secondaryLightsourceIndex
+                                     : side.primaryLightsourceIndex)),
                             });
                         }
                     }
                 } else {
-                    wallsToDraw.push({
-                        polygon: clippedPolygon,
-                        textureIndex: edge.texture,
-                    });
+                    if (side) {
+                        wallsToDraw.push({
+                            polygon: clippedPolygon,
+                            texture: shapes.getBitmap(side.primaryTexture.texture),
+                            brightness: world.getLightIntensity(side.primaryLightsourceIndex),
+                        });
+                    }
                 }
             }
         }
@@ -618,35 +619,40 @@ function draw3d(canvas, player, world) {
         for (const wall of wallsToDraw) {
             screen.drawWall(wall);
         }
-
-        const vertices = polygon.edges.map(edgeIndex => {
-            const edge = edges[edgeIndex];
-            const [p1, p2] = world.getEdgeVertices(edge);
-            return p1;
-        });
+        const vertices = polygon.endpoints.map(idx => world.points[idx]);
 
         const viewPoints = vertices.map((p) => toView.transform(p));
-        if (polygon.top > player.height) {
+        if (polygon.ceilingHeight > player.height) {
             const ceiling = clipArea.clipPolygon(viewPoints.map(([x, y], i) => ({
-                position: [x, polygon.top - player.height, y],
+                position: [x, polygon.ceilingHeight - player.height, y],
                 texCoord: [vertices[i][0], vertices[i][1]],
             }))).reverse();
-            screen.drawHorizontalPolygon({polygon: ceiling, textureIndex: 15 + polygonIndex});
+            screen.drawHorizontalPolygon({
+                polygon: ceiling,
+                texture: shapes.getBitmap(polygon.ceilingTex),
+                brightness: world.getLightIntensity(polygon.floorLightsource),
+            });
         }
 
-        if (polygon.bottom < player.height) {
+        if (polygon.floorHeight < player.height) {
             const floor = clipArea.clipPolygon(viewPoints.map(([x, y], i) => ({
-                position: [x, polygon.bottom - player.height, y],
+                position: [x, polygon.floorHeight - player.height, y],
                 texCoord: [vertices[i][0], vertices[i][1]],
             })));
-            screen.drawHorizontalPolygon({polygon: floor, textureIndex: 5 + polygonIndex});
+            screen.drawHorizontalPolygon({
+                polygon: floor,
+                texture: shapes.getBitmap(polygon.floorTex),
+                brightness: world.getLightIntensity(polygon.ceilingLightsource),
+            });
         }
     };
 
-    const left = -Math.tan(player.hFov / 2);
-    const right = Math.tan(player.hFov / 2);
-    const top = -Math.tan(player.vFov / 2);
-    const bottom = Math.tan(player.vFov / 2);
+    const epsilon = 0.0001;
+    const left = -Math.tan(player.hFov / 2) - epsilon;
+    const right = Math.tan(player.hFov / 2) + epsilon;
+    const top = -Math.tan(player.vFov / 2) - epsilon;
+    const bottom = Math.tan(player.vFov / 2) + epsilon;
+    
     const clipArea = ClipArea3d.fromPolygon([
         {position: [left, top, 1]},
         {position: [right, top, 1]},
@@ -654,30 +660,34 @@ function draw3d(canvas, player, world) {
         {position: [left, bottom, 1]},
     ]);
     drawPolygon(player.polygon, clipArea);
+
+    if (i % 100 === 0) {
+        console.log(drawPolygons, 'polygons');
+    }
     
     context.putImageData(imageData, 0, 0);
 }
 
 function update(player, world, actions, timeSlice, secondsElapsed) {
-    let { position, polygon, facingAngle, hFov, vFov } = player;
+    let { position, height, polygon, facingAngle, hFov, vFov } = player;
     const forward = v2direction(facingAngle);
     const left = v2direction(facingAngle - Math.PI / 2);
     const oldPosition = position;
     
     if (actions.has('forward')) {
-        position = v2add(position, v2scale(timeSlice * 2, forward));
+        position = v2add(position, v2scale(timeSlice * 4, forward));
     }
 
     if (actions.has('backward')) {
-        position = v2add(position, v2scale(-timeSlice * 2, forward));
+        position = v2add(position, v2scale(-timeSlice * 4, forward));
     }
 
     if (actions.has('turn-left')) {
-        facingAngle = facingAngle - timeSlice * 2;
+        facingAngle = facingAngle - timeSlice * 4;
     }
     
     if (actions.has('turn-right')) {
-        facingAngle = facingAngle + timeSlice * 2;
+        facingAngle = facingAngle + timeSlice * 4;
     }
     
     if (actions.has('strafe-left')) {
@@ -688,9 +698,17 @@ function update(player, world, actions, timeSlice, secondsElapsed) {
         position = v2add(position, v2scale(-timeSlice * 2, left));
     }
 
+    if (actions.has('up')) {
+        height += timeSlice * 4;
+    }
+    
+    if (actions.has('down')) {
+        height -= timeSlice * 4;
+    }
+
     [position, polygon] = world.movePlayer(oldPosition, position, polygon);
 
-    return { ...player, position, polygon, facingAngle, hFov, vFov, secondsElapsed };
+    return { ...player, position, height, polygon, facingAngle, hFov, vFov, secondsElapsed };
 }
 
 const keyMap = {
@@ -700,21 +718,31 @@ const keyMap = {
     'ArrowRight': 'turn-right',
     'z': 'strafe-left',
     'x': 'strafe-right',
+    'd': 'up',
+    'c': 'down',
 };
 
-function initWorld(canvas, overheadCanvas, fpsCounter) {
+function initWorld(map, shapes, canvas, overheadCanvas, fpsCounter) {
     const hFov = Math.PI / 2;
     const vFov = 2 * Math.atan(Math.tan(hFov / 2) * canvas.height / canvas.width);
-    const world = new World();
+    const world = new World(map);
+    // const targetPolygon = 100;
+    const targetPolygon = 1;
+
+    const sum = map.polygons[targetPolygon].endpoints.reduce(
+        (sum, pointIndex) => v2add(sum, map.points[pointIndex]),
+        [0, 0],
+    );
+    const average = v2scale(1 / map.polygons[targetPolygon].endpoints.length / 1024, sum);
 
     let player = {
-        position: [1, 1],
-        polygon: 0,
+        position: average, // [2, 2],
+        polygon: targetPolygon,
         facingAngle: 0.05,
         hFov,
         vFov,
         wallBitmapIndex: 31,
-        height: 0.5,
+        height: map.polygons[targetPolygon].floorHeight / 1024 + 0.5,
         secondsElapsed: 0,
     };
 
@@ -745,6 +773,10 @@ function initWorld(canvas, overheadCanvas, fpsCounter) {
     let fpsCounted = 0;
     let lastFrameTime = null;
     const frame = () => {
+        if (! running) {
+            return;
+        }
+        
         try {
             const frameTime = new Date();
             if (lastFrameTime) {
@@ -754,7 +786,7 @@ function initWorld(canvas, overheadCanvas, fpsCounter) {
             }
 
             if (canvas) {
-                draw3d(canvas, player, world);
+                draw3d(canvas, player, world, shapes);
             }
             
             if (overheadCanvas) {
@@ -775,22 +807,86 @@ function initWorld(canvas, overheadCanvas, fpsCounter) {
             }
             
             lastFrameTime = frameTime;
-            if (running) {
-                requestAnimationFrame(frame);
-            }
+            requestAnimationFrame(frame);
         } catch (e) {
             console.error(e);
         }
     };
 
     frame();
+
+    const cancel = () => {
+        console.log('cancel');
+        running = false;
+    };
+
+    return { cancel };
 }
 
-window.addEventListener('load', () => {
+function populateLevelSelect(levelSelect, summaries) {
+    levelSelect.innerHtml = '';
+    summaries.forEach((summary, i) => {
+        const option = document.createElement('option');
+        option.value = `${i}`;
+        option.innerText = summary.info.name;
+        levelSelect.appendChild(option);
+    });
+}
+
+window.addEventListener('load', async () => {
+    // const mapInput = document.getElementById('mapInput');
+    const levelSelect = document.getElementById('levelSelect');
     const canvas = document.getElementById('world');
     const overheadCanvas = document.getElementById('overhead');
     const fpsCounter = document.getElementById('fpsCounter');
-    initWorld(canvas, overheadCanvas, fpsCounter);
+
+    const file = new HttpFile('minf.sceA');
+    const summaries = await readMapSummaries(file);
+
+    populateLevelSelect(levelSelect, summaries);
+    
+    const summary = summaries[24];
+    const map = await readMapFromSummary(summary);
+
+    const shapes = new Shapes(new HttpFile('minf.shpA'));
+    
+    let { cancel } = initWorld(map, shapes, canvas, overheadCanvas, fpsCounter);
+
+    levelSelect.addEventListener('change', async (e) => {
+        cancel();
+        const level = parseInt(levelSelect.value);
+        const summary = summaries[level];
+        const map = await readMapFromSummary(summary);
+        cancel = initWorld(map, shapes, canvas, overheadCanvas, fpsCounter).cancel;
+    });
+    
+    
+    // console.log({summaries});
+
+    // const shapesFile = new HttpFile('minf.shpA');
+    // const shapes = await readShapes(shapesFile);
+    // console.log({shapes});
+    
+
+    
+    // mapInput.addEventListener('change', async (e) => {
+    //     const inputFile = e.target.files[0];
+    //     if (inputFile) {
+    //         const file = new HtmlInputFile(inputFile);
+    //         console.log({file});
+    //         const summaries = await readMapSummaries(file);
+    //         summaries.forEach((summary, i) => {
+    //             console.log(i, summary?.info?.name);
+    //         });
+    //         // const summary = summaries.find(s => s.info.name === 'Electric Sheep One');
+    //         // const summary = summaries[24];
+    //         // const summary = summaries[18];
+    //         const summary = summaries[0];
+    //         if (summary) {
+    //             const map = await readMapFromSummary(summary);
+    //             console.log({map});
+    //             initWorld(map, canvas, overheadCanvas, fpsCounter);
+    //         }
+    //     }
+    // });
 });
-
-

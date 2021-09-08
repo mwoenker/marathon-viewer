@@ -1,21 +1,32 @@
 import { collideLineSegments } from './collision.js';
 
 export class World {
-    constructor() {
+    constructor(map) {
+        this.points = map.points.map(([x, y]) => [x / 1024, y / 1024]);
+        this.lines = map.lines;
+        this.sides = map.sides;
+        this.polygons = map.polygons.map(p => ({
+            ...p,
+            floorHeight: p.floorHeight / 1024,
+            ceilingHeight: p.ceilingHeight / 1024,
+        }));
+        this.lights = map.lights;
+
+        /*
         this.points = [
-            [1, 0], // 0
-            [2, 0], // 1
-            [3, 1], // 2
-            [2, 2], // 3
-            [1, 2], // 4
-            [0, 1], // 5
+            [1, 0], //0
+            [2, 0], //1
+            [3, 1], //2
+            [2, 2], //3
+            [1, 2], //4
+            [0, 1], //5
 
-            [2, -2], // 6
-            [3, -2], // 7
-            [3, -1], // 8
+            [2, -2], //6
+            [3, -2], //7
+            [3, -1], //8
 
-            [5, -2], // 9
-            [5, -1], // 10
+            [5, -2], //9
+            [5, -1], //10
         ];
 
         this.lines = [
@@ -126,7 +137,7 @@ export class World {
                 edges: [
                     11, 12, 13, 14
                 ],
-                top: 1.5,
+                top: 3,
                 bottom: -0.5,
             }
         ];
@@ -135,6 +146,7 @@ export class World {
             this.points[i][0] *= 2;
             this.points[i][1] *= 2;
         }
+        */
     }
 
     getEdgeVertices(edge) {
@@ -144,30 +156,63 @@ export class World {
         return [points[idx1], points[idx2]];
     }
 
+    getLineVertices(polygonIndex, linePosition) {
+        const polygon = this.polygons[polygonIndex];
+        return [
+            this.points[polygon.endpoints[linePosition]],
+            this.points[polygon.endpoints[(linePosition + 1) % polygon.endpoints.length]]
+        ];
+    }
+
+    getPortal(polygonIndex, linePosition) {
+        const polygon = this.polygons[polygonIndex];
+        const line = this.lines[polygon.lines[linePosition]];
+        if (line.frontPoly === polygonIndex) {
+            return line.backPoly;
+        } else if (line.backPoly === polygonIndex) {
+            return line.frontPoly;
+        } else {
+            throw new Error(`not front or back side poly=${polygonIndex} front=${line.frontPoly} back=${line.backPoly}`);
+        }
+    }
+
+    getTexOffset(sideTexDef) {
+        if (! sideTexDef) {
+            return [0, 0];
+        }
+        // return [
+        //     (sideTexDef.offset[0] & 1023) / 1024,
+        //     (sideTexDef.offset[1] & 1023) / 1024,
+        // ];
+        return window.transform(sideTexDef.offset[0], sideTexDef.offset[1]);
+    }
+
+    getLightIntensity(lightIndex) {
+        const light = this.lights[lightIndex];
+        const intensityFixed = light.primaryActive.intensity;
+        return intensityFixed / 0xffff;
+    }
+
     movePlayer(oldPosition, position, polygonIndex) {
         const polygon = this.polygons[polygonIndex];
         let intersection = null;
-        let intersectEdge = null;
-        for (const edgeIndex of polygon.edges) {
-            const edge = this.edges[edgeIndex];
-            const line = this.getEdgeVertices(this.edges[edgeIndex]);
+        let intersectLinePosition = null;
+        for (let linePosition = 0; linePosition < polygon.lines.length; ++linePosition) {
+            const line = this.getLineVertices(polygonIndex, linePosition);
             const thisIntersection = collideLineSegments([oldPosition, position], line);
             if ((! intersection && thisIntersection) ||
                 (thisIntersection && thisIntersection.t < intersection.t))
             {
                 intersection = thisIntersection;
-                intersectEdge = edge;
+                intersectLinePosition = linePosition;
             }
         }
         if (intersection) {
-            console.log({intersectEdge});
-            if (intersectEdge.portalTo !== undefined && intersectEdge.portalTo !== null) {
-                console.log('portal', intersectEdge.portalTo);
-                return this.movePlayer(intersection.collidePosition, position, intersectEdge.portalTo);
+            const portalTo = this.getPortal(polygonIndex, intersectLinePosition);
+            if (portalTo !== undefined && portalTo !== null && portalTo !== -1) {
+                return this.movePlayer(intersection.collidePosition, position, portalTo);
             } else {
-                console.log('bonk');
                 return [oldPosition, polygonIndex];
-                // return [intersection.collidePosition, polygonIndex];
             }
         } else {
             return [position, polygonIndex];
