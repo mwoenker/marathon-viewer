@@ -1,4 +1,4 @@
-class SliceFile {
+export class SliceFile {
     constructor(file, begin, end) {
         this.file = file;
         this.begin = begin;

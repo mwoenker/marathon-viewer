@@ -38,10 +38,10 @@ export class Shapes {
             this.collections[index] = { loading: true };
             readCollection(this.file, this.headers[index])
                 .then((collection) => {
-                    collection.clutShadingTables = collection.colorTables.map((table) => {
+                    const clutShadingTables = collection.colorTables.map((table) => {
                         return makeShadingTables(table);
                     });                    
-                    this.collections[index] = {...collection };
+                    this.collections[index] = {...collection, clutShadingTables };
                     console.log(`loaded collection ${index}`);
                 })
                 .catch((e) => {
@@ -71,7 +71,10 @@ export class Shapes {
             return null;
         } else {
             const collection = this.collections[collectionIndex];
-            const bitmap = collection.bitmaps[bitmapIndex];
+            const bitmap = collection?.bitmaps[bitmapIndex];
+            if (! bitmap) {
+                return null;
+            }
             const withShading = {
                 ...bitmap,
                 shadingTables: collection.clutShadingTables[clutIndex],

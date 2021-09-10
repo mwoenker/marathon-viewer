@@ -1,4 +1,4 @@
-import {Reader, readRange, getDataFork} from './binary-read.js';
+import {SliceFile, Reader, readRange, getDataFork} from './binary-read.js';
 import {MapGeometry} from './map.js';
 
 function readDirectoryEntry(bytes, entrySize, wadVersion, appDataBytes) {
@@ -380,6 +380,44 @@ async function readEntryChunks(file, wadHeader, index, whitelist) {
     return chunks;
 }
 
+async function readEntryInfo(file, wadHeader, index) {
+    let entry = wadHeader.directory.find(entry => entry.index === index);
+    if (! entry) {
+        throw new Error(`entry ${index} not found`);
+    }
+
+    const chunks = new Map();
+
+    const data = new SliceFile(file, entry.offset, entry.offset + entry.length);
+
+    let chunkStart = 0;
+    while (chunkStart < entry.length) {
+        const headerSize = 0 === wadHeader.version ? 12 : wadHeader.chunkSize;
+        const r = new Reader(
+            await data.readRange(chunkStart, chunkStart + headerSize));
+        const chunkHeader = {
+            name: r.fixString(4),
+            nextOffset: r.uint32(),
+            size: r.uint32(),
+        };
+
+        if (chunkHeader.name === 'Minf') {
+            const dataStart = chunkStart + headerSize;
+            const chunkData = await data.readRange(dataStart, dataStart + chunkHeader.size);
+            const chunk = chunkParser.parse(chunkHeader, chunkData);
+            return chunk;
+        }
+
+        if (chunkHeader.nextOffset <= chunkStart) {
+            break;
+        }
+        
+        chunkStart = chunkHeader.nextOffset;
+    }
+    
+    return null;
+}
+
 async function readMap(file, wadHeader, index) {
     const chunks = await readEntryChunks(file, wadHeader, index);
     let points;
@@ -451,6 +489,7 @@ async function readAllMaps(file) {
 async function readMapSummaries(file) {
     const wadData = await getDataFork(file);
     const wadHeader = await readWadHeader(wadData);
+    console.log(wadHeader);
     const chunkPromises = wadHeader.directory
           .map(entry => readEntryChunks(
               wadData, wadHeader, entry.index, ['Minf']));

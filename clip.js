@@ -61,6 +61,8 @@ export class ClipArea {
     }
 }
 
+const emptyPolygon = [];
+
 export class ClipArea3d {
     constructor(planes) {
         this.planes = planes;
@@ -120,7 +122,7 @@ export class ClipArea3d {
             }
             return dist;
         });
-        
+
         if (allOut) {
             return [];
         } else if (allIn) {
@@ -147,7 +149,6 @@ export class ClipArea3d {
     }
 
     clipPolygon(polygon) {
-        const result = [];
         const distances = new Array(polygon);
         for (const plane of this.planes) {
             polygon = this.clipPolygonByPlane(polygon, plane);
