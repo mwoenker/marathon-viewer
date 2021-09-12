@@ -12,6 +12,20 @@ export class World {
         }));
         this.lights = map.lights;
         this.objects = map.objects;
+        
+        const transferModes = new Set();
+        for (const side of this.sides) {
+            transferModes.add(side.primaryTransferMode);
+            transferModes.add(side.secondaryTransferMode);
+            transferModes.add(side.transparentTransferMode);
+        }
+
+        for (const polygon of this.polygons) {
+            transferModes.add(polygon.floorTransferMode);
+            transferModes.add(polygon.ceilingTransferMode);
+        }
+
+        console.log({transferModes});
     }
 
     getEdgeVertices(edge) {

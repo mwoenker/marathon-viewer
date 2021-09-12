@@ -20,11 +20,6 @@ import {
     readMapSummaries,
     readMapFromSummary,
     readMapChunkTypes,
-    sideTypeFull,
-    sideTypeHigh,
-    sideTypeLow,
-    sideTypeComposite,
-    sideTypeSplit
 } from './files/wad.js';
 import { ClipArea3d } from './clip.js';
 import { Rasterizer } from './rasterize.js';
@@ -235,6 +230,12 @@ function populateLevelSelect(levelSelect, summaries) {
 const shapesUrl = 'minf.shpA';
 const mapUrl = 'minf.sceA';
 
+// const shapesUrl = 'm2.shpA';
+// const mapUrl = 'm2.sceA';
+
+// const shapesUrl = 'Eternal-Shapes.shpA';
+// const mapUrl = 'Eternal-Maps.sceA';
+
 window.addEventListener('load', async () => {
     const levelSelect = document.getElementById('levelSelect');
     const screenSizeSelect = document.getElementById('screenSizeSelect');
@@ -247,7 +248,7 @@ window.addEventListener('load', async () => {
 
     populateLevelSelect(levelSelect, summaries);
     
-    const summary = summaries[24];
+    const summary = summaries[0];
     const map = await readMapFromSummary(summary);
 
     const shapes = new Shapes(new HttpFile(shapesUrl));

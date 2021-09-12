@@ -1,5 +1,6 @@
 import { lerp, floorMod } from './utils.js';
-import { makeShadingTables, magenta, shadingTableForDistance } from './color.js';
+import { makeShadingTables, magenta, shadingTableForDistance, black } from './color.js';
+import { transferMode } from './files/wad.js';
 
 export class Rasterizer {
     constructor(width, height, pixels, player) {
@@ -83,7 +84,15 @@ export class Rasterizer {
         }
     }
 
-    drawWall({polygon, texture, brightness}) {
+    drawWall({polygon, texture, brightness, transfer}) {
+        if (transfer === transferMode.landscape) {
+            this.textureHorizontalPolygon({polygon, texture, brightness, transfer});
+        } else {
+            this.textureWall({polygon, texture, brightness, transfer});
+        }
+    }
+
+    textureWall({polygon, texture, brightness, transfer}) {
         if (! texture) {
             return;
         }
@@ -128,17 +137,17 @@ export class Rasterizer {
 
         const xMin = Math.max(0, Math.ceil(left));
         const xMax = Math.min(this.width, Math.ceil(right));
-        this.drawWallRange(xMin, xMax, texture, brightness);
+        this.textureWallRange(xMin, xMax, texture, brightness);
     }
 
-    drawWallRange(xMin, xMax, texture, brightness) {
+    textureWallRange(xMin, xMax, texture, brightness) {
         for (let x = xMin; x < xMax; ++x) {
             const topParams = this.topParamList[x];
             const bottomParams = this.bottomParamList[x];
             const z = 1 / topParams.oneOverZ;
             const shadingTable = shadingTableForDistance(texture.shadingTables, z, brightness);
 
-            this.drawWallSlice({
+            this.textureWallSlice({
                 x,
                 top: topParams.y,
                 bottom: bottomParams.y,
@@ -151,14 +160,14 @@ export class Rasterizer {
         }
     }
 
-    drawWallSlice({x, top, bottom, colorTable, texXOffset, texture, textureTop, textureBottom}) {
+    textureWallSlice({x, top, bottom, colorTable, texXOffset, texture, textureTop, textureBottom}) {
         const intTop = Math.max(0, parseInt(Math.ceil(top)));
         const intBottom = Math.min(this.height, parseInt(Math.ceil(bottom)));
         const texels = texture.data;
         
         let offset = x + this.width * intTop;
         const increment = this.width;
-        const texelX = floorMod(parseInt(texXOffset * texture.width), texture.width);
+        const texelX = floorMod(parseInt(texXOffset * texture.width), 128);
         const texYMask = texture.height - 1;
 
         const rowBase = texelX * texture.width;
@@ -173,6 +182,10 @@ export class Rasterizer {
             offset += increment;
             texelY += texelYSlope;
         }
+    }
+
+    drawHorizontalPolygon({polygon, texture, brightness, transfer}) {
+        this.textureHorizontalPolygon({polygon, texture, brightness, transfer});
     }
     
     calcLineTextureParamsHorizontal(leftVertex, rightVertex, leftTexCoord, rightTexCoord, params) {
@@ -199,7 +212,7 @@ export class Rasterizer {
         }
     }
     
-    drawHorizontalPolygon({polygon, texture, brightness}) {
+    textureHorizontalPolygon({polygon, texture, brightness, transfer}) {
         if (! texture) {
             return;
         }
@@ -226,7 +239,6 @@ export class Rasterizer {
             } else if (nextPosition[1] < position[1]) {
                 // bottom of polygon
                 this.calcLineTextureParamsHorizontal(
-
                     nextPosition,
                     position,
                     polygon[nextI].texCoord,
@@ -245,31 +257,58 @@ export class Rasterizer {
 
         const yMin = Math.max(0, Math.ceil(top));
         const yMax = Math.min(this.height, Math.ceil(bottom));
-        this.drawHorizontalRange(yMin, yMax, texture, brightness);
+        this.textureHorizontalRange(yMin, yMax, texture, brightness, transfer);
     }
 
-    drawHorizontalRange(yMin, yMax, texture, brightness) {
+    textureHorizontalRange(yMin, yMax, texture, brightness, transfer) {
         for (let y = yMin; y < yMax; ++y) {
             const leftParams = this.leftParamList[y];
             const rightParams = this.rightParamList[y];
             const z = 1 / leftParams.oneOverZ;
             const shadingTable = shadingTableForDistance(texture.shadingTables, z, brightness);
 
-            this.drawHorizontalSpan({
-                y,
-                left: leftParams.x,
-                right: rightParams.x,
-                colorTable: shadingTable,
-                texture,
-                textureLeftX: leftParams.textureXOverZ * z,
-                textureLeftY: leftParams.textureYOverZ * z,
-                textureRightX: rightParams.textureXOverZ * z,
-                textureRightY: rightParams.textureYOverZ * z,
-            });
+            if (transfer === transferMode.landscape) {
+                this.landscapeHorizontalSpan({
+                    y,
+                    left: leftParams.x,
+                    right: rightParams.x,
+                    colorTable: shadingTable,
+                    texture,
+                    textureLeftX: leftParams.textureXOverZ * z,
+                    textureLeftY: leftParams.textureYOverZ * z,
+                    textureRightX: rightParams.textureXOverZ * z,
+                    textureRightY: rightParams.textureYOverZ * z,
+                    transfer,
+                });
+            } else {
+                this.textureHorizontalSpan({
+                    y,
+                    left: leftParams.x,
+                    right: rightParams.x,
+                    colorTable: shadingTable,
+                    texture,
+                    textureLeftX: leftParams.textureXOverZ * z,
+                    textureLeftY: leftParams.textureYOverZ * z,
+                    textureRightX: rightParams.textureXOverZ * z,
+                    textureRightY: rightParams.textureYOverZ * z,
+                    transfer,
+                });
+            }
         }
     }
 
-    drawHorizontalSpan({y, left, right, colorTable, texture, textureLeftX, textureLeftY, textureRightX, textureRightY}) {
+    textureHorizontalSpan({
+        y,
+        left,
+        right,
+        colorTable,
+        texture,
+        textureLeftX,
+        textureLeftY,
+        textureRightX,
+        textureRightY,
+        transfer
+    }) {
         const texels = texture.data;
 
         let u = textureLeftX * texture.width;
@@ -299,5 +338,51 @@ export class Rasterizer {
             u += du;
             v += dv;
         }
+    }
+
+    landscapeHorizontalSpan({
+        y,
+        left,
+        right,
+        colorTable,
+        texture,
+        textureLeftX,
+        textureLeftY,
+        textureRightX,
+        textureRightY,
+        transfer
+    }) {
+        const texels = texture.data;
+
+        // height left <-> right
+        // width top <-> bottom
+        
+        let u = textureLeftX * texture.height;
+        const endU = textureRightX * texture.height;
+        const du = (endU - u) / (right - left);
+
+        let v = Math.max(0, Math.min(texture.width - 1, 0 | (textureLeftY * texture.width)));
+
+        if (texture.height & (texture.height - 1) !== 0) {
+            throw new Error('landscape height not power of two');
+        }
+        
+        const uMask = texture.height - 1;
+        const rowStart = texture.height * v;
+
+        const xStart = Math.ceil(left);
+        const xEnd = Math.ceil(right);
+
+        const nudge = xStart - left;
+        u += nudge * du;
+
+        let offset = this.width * y + xStart;
+
+        for (let x = xStart; x < xEnd; ++x) {
+            const texel = texels[rowStart + (uMask & u)];
+            const color = colorTable[texel];
+            this.pixels[offset++] = color;
+            u += du;
+        }            
     }
 }

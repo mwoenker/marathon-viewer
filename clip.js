@@ -72,8 +72,8 @@ export class ClipArea3d {
         // project points of polygon onto z=1 plane and construct four planes containing
         // the polygon. These planes clip the polygons in view space, but end up effectively
         // clipping an orthogonal rectangle in screen space
-        const projectedX = polygon.map(({position}) => position[0] / position[2]);
-        const projectedY = polygon.map(({position}) => position[1] / position[2]);
+        const projectedX = polygon.map((position) => position[0] / position[2]);
+        const projectedY = polygon.map((position) => position[1] / position[2]);
         const left = Math.min(...projectedX);
         const right = Math.max(...projectedX);
         const top = Math.min(...projectedY);
@@ -103,17 +103,10 @@ export class ClipArea3d {
         return new ClipArea3d([leftPlane, rightPlane]);
     }
     
-    lerp(t, p1, p2) {
-        return {
-            position: v3lerp(t, p1.position, p2.position),
-            texCoord: v2lerp(t, p1.texCoord, p2.texCoord),
-        };
-    }
-
     clipPolygonByPlane(polygon, plane) {
         let allIn = true;
         let allOut = true;
-        const distances = polygon.map(({position}) => {
+        const distances = polygon.map(position => {
             const dist =  v3dot(position, plane);
             if (dist < 0) {
                 allIn = false;
@@ -135,12 +128,12 @@ export class ClipArea3d {
                     result.push(polygon[i]);
                     if (distances[nextI] < 0) {
                         const t = distances[i] / (distances[i] - distances[nextI]);
-                        result.push(this.lerp(t, polygon[i], polygon[nextI]));
+                        result.push(v3lerp(t, polygon[i], polygon[nextI]));
                     }
                 } else {
                     if (distances[nextI] >= 0) {
                         const t = distances[i] / (distances[i] - distances[nextI]);
-                        result.push(this.lerp(t, polygon[i], polygon[nextI]));
+                        result.push(v3lerp(t, polygon[i], polygon[nextI]));
                     }
                 }
             }

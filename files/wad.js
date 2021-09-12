@@ -504,20 +504,44 @@ async function readMapSummaries(file) {
     return summaries;
 }
 
-const sideTypeFull = 0;
-const sideTypeHigh = 1;
-const sideTypeLow = 2;
-const sideTypeComposite = 3;
-const sideTypeSplit = 4;
+const sideType = {
+    full: 0,
+    high: 1,
+    low: 2,
+    composite: 3,
+    split: 4,
+}
+
+const transferMode = {
+    normal: 0,
+    fadeOutToBlack: 1, /* reduce ambient light until black, then tint-fade out */
+    invisibility: 2,
+    subtleInvisibility: 3,
+    pulsate: 4, /* only valid for polygons */
+    wobble: 5, /* only valid for polygons */
+    fastWobble: 6, /* only valid for polygons */
+    static: 7,
+    static50Percent: 8,
+    landscape: 9,
+    smear: 10, /* repeat pixel(0,0) of texture everywhere */
+    fadeOutStatic: 11,
+    pulsatingStatic: 12,
+    foldIn: 13, /* appear */
+    foldOut: 14, /* disappear */
+    horizontalSlide: 15,
+    fastHorizontalSlide: 16,
+    verticalSlide: 17,
+    fastVerticalSlide: 18,
+    wander: 19,
+    fastWander: 20,
+    bigLandscape: 21, // unused I think? I think originally this distinguished between m2, m1 style landscapes
+};
 
 export {
     readAllMaps,
     readMapSummaries,
     readMapFromSummary,
     readMapChunkTypes,
-    sideTypeFull,
-    sideTypeHigh,
-    sideTypeLow,
-    sideTypeComposite,
-    sideTypeSplit
+    sideType,
+    transferMode,
 };
