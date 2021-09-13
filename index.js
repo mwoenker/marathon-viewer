@@ -133,8 +133,21 @@ function initWorld(map, shapes, canvas, overheadCanvas, fpsCounter) {
         hFov,
         vFov,
         wallBitmapIndex: 31,
-        height: map.polygons[targetPolygon].floorHeight / 1024 + 0.5,
+        height: map.polygons[targetPolygon].floorHeight / 1024 + 0.66,
         secondsElapsed: 0,
+    };
+
+    window.teleport = (polyIndex) => {
+        const sum = map.polygons[polyIndex].endpoints.reduce(
+            (sum, pointIndex) => v2add(sum, map.points[pointIndex]),
+            [0, 0],
+        );
+        const average = v2scale(1 / map.polygons[polyIndex].endpoints.length / 1024, sum);
+        player.polygon = polyIndex;
+        player.position = average,
+        player.height = map.polygons[polyIndex].floorHeight / 1024 + 0.66;
+
+        console.log(player.polygon, player.position, player.height);
     };
 
     let running = true;
@@ -163,6 +176,7 @@ function initWorld(map, shapes, canvas, overheadCanvas, fpsCounter) {
     let fpsCounterBegin = new Date();
     let fpsCounted = 0;
     let lastFrameTime = null;
+    let lastPoly = player.polygon;
     const frame = () => {
         if (! running) {
             return;
@@ -174,6 +188,10 @@ function initWorld(map, shapes, canvas, overheadCanvas, fpsCounter) {
                 const timeSlice = (frameTime - lastFrameTime) / 1000;
                 const secondsElapsed = (frameTime - startTime) / 1000;
                 player = update(player, world, actions, timeSlice, secondsElapsed);
+                if (lastPoly !== player.polygon) {
+                    console.log('poly', player.polygon);
+                    lastPoly = player.polygon;
+                }
             }
 
             if (canvas) {

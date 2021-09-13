@@ -84,15 +84,15 @@ export class Rasterizer {
         }
     }
 
-    drawWall({polygon, texture, brightness, transfer}) {
+    drawWall({polygon, texture, brightness, transfer, isTransparent}) {
         if (transfer === transferMode.landscape) {
             this.textureHorizontalPolygon({polygon, texture, brightness, transfer});
         } else {
-            this.textureWall({polygon, texture, brightness, transfer});
+            this.textureWall({polygon, texture, brightness, transfer, isTransparent});
         }
     }
 
-    textureWall({polygon, texture, brightness, transfer}) {
+    textureWall({polygon, texture, brightness, transfer, isTransparent = false}) {
         if (! texture) {
             return;
         }
@@ -137,26 +137,39 @@ export class Rasterizer {
 
         const xMin = Math.max(0, Math.ceil(left));
         const xMax = Math.min(this.width, Math.ceil(right));
-        this.textureWallRange(xMin, xMax, texture, brightness);
+        this.textureWallRange(xMin, xMax, texture, brightness, isTransparent);
     }
 
-    textureWallRange(xMin, xMax, texture, brightness) {
+    textureWallRange(xMin, xMax, texture, brightness, isTransparent) {
         for (let x = xMin; x < xMax; ++x) {
             const topParams = this.topParamList[x];
             const bottomParams = this.bottomParamList[x];
             const z = 1 / topParams.oneOverZ;
             const shadingTable = shadingTableForDistance(texture.shadingTables, z, brightness);
 
-            this.textureWallSlice({
-                x,
-                top: topParams.y,
-                bottom: bottomParams.y,
-                colorTable: shadingTable,
-                texXOffset: topParams.textureXOverZ * z,
-                texture,
-                textureTop: topParams.textureYOverZ * z,
-                textureBottom: bottomParams.textureYOverZ * z,
-            });
+            if (isTransparent) {
+                this.textureWallSliceTransparent({
+                    x,
+                    top: topParams.y,
+                    bottom: bottomParams.y,
+                    colorTable: shadingTable,
+                    texXOffset: topParams.textureXOverZ * z,
+                    texture,
+                    textureTop: topParams.textureYOverZ * z,
+                    textureBottom: bottomParams.textureYOverZ * z,
+                });
+            } else {
+                this.textureWallSlice({
+                    x,
+                    top: topParams.y,
+                    bottom: bottomParams.y,
+                    colorTable: shadingTable,
+                    texXOffset: topParams.textureXOverZ * z,
+                    texture,
+                    textureTop: topParams.textureYOverZ * z,
+                    textureBottom: bottomParams.textureYOverZ * z,
+                });
+            }
         }
     }
 
@@ -179,6 +192,32 @@ export class Rasterizer {
             const texel = texels[rowBase + wrappedY];
             const color = colorTable[texel];
             this.pixels[offset] = color;
+            offset += increment;
+            texelY += texelYSlope;
+        }
+    }
+
+    textureWallSliceTransparent({x, top, bottom, colorTable, texXOffset, texture, textureTop, textureBottom}) {
+        const intTop = Math.max(0, parseInt(Math.ceil(top)));
+        const intBottom = Math.min(this.height, parseInt(Math.ceil(bottom)));
+        const texels = texture.data;
+        
+        let offset = x + this.width * intTop;
+        const increment = this.width;
+        const texelX = floorMod(parseInt(texXOffset * texture.width), 128);
+        const texYMask = texture.height - 1;
+
+        const rowBase = texelX * texture.width;
+        const texelYSlope = (textureBottom - textureTop) * texture.height / (bottom - top);
+        let texelY = textureTop * texture.height + (intTop - top) * texelYSlope;
+
+        for (let y = intTop; y < intBottom; ++y) {
+            const wrappedY = texelY & texYMask;
+            const texel = texels[rowBase + wrappedY];
+            if (texel !== 0) {
+                const color = colorTable[texel];
+                this.pixels[offset] = color;
+            }
             offset += increment;
             texelY += texelYSlope;
         }
@@ -265,9 +304,9 @@ export class Rasterizer {
             const leftParams = this.leftParamList[y];
             const rightParams = this.rightParamList[y];
             const z = 1 / leftParams.oneOverZ;
-            const shadingTable = shadingTableForDistance(texture.shadingTables, z, brightness);
 
             if (transfer === transferMode.landscape) {
+                const shadingTable = shadingTableForDistance(texture.shadingTables, 0, 1);
                 this.landscapeHorizontalSpan({
                     y,
                     left: leftParams.x,
@@ -281,6 +320,7 @@ export class Rasterizer {
                     transfer,
                 });
             } else {
+                const shadingTable = shadingTableForDistance(texture.shadingTables, z, brightness);
                 this.textureHorizontalSpan({
                     y,
                     left: leftParams.x,

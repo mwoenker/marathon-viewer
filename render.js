@@ -43,7 +43,7 @@ class Renderer {
         this.landscapeYOffset = (1 - this.landscapeHeight) / 2;
     }
 
-    makeWallPolygon({p1View, p2View, top, bottom, textureOffset, transferMode: polyTransfer}) {
+    makeWallPolygon({p1View, p2View, top, bottom}) {
         const length = v2length(v2sub(p1View, p2View));
 
         return [
@@ -143,8 +143,6 @@ class Renderer {
                 p2View,
                 top: Math.min(polygon.ceilingHeight, neighbor.ceilingHeight),
                 bottom: Math.max(polygon.floorHeight, neighbor.floorHeight),
-                textureOffset: this.world.getTexOffset(side?.primaryTexture),
-                transferMode: side?.primaryTransferMode || transferMode.normal,
             });
 
             const clippedPolygon = clipArea.clipPolygon(viewPolygon);
@@ -159,8 +157,6 @@ class Renderer {
                     p2View,
                     top: polygon.ceilingHeight,
                     bottom: neighbor.ceilingHeight,
-                    textureOffset: this.world.getTexOffset(side?.primaryTexture),
-                    transferMode: side?.primaryTransferMode || transferMode.normal,
                 }));
 
                 if (abovePoly.length > 0) {
@@ -192,8 +188,6 @@ class Renderer {
                     p2View,
                     top: neighbor.floorHeight,
                     bottom: polygon.floorHeight,
-                    textureOffset: this.world.getTexOffset(sideTex),
-                    transferMode,
                 }));
 
                 if (belowPoly.length > 0) {
@@ -213,7 +207,36 @@ class Renderer {
                              ? side.secondaryLightsourceIndex
                              : side.primaryLightsourceIndex)),
                         transfer: transferMode || transferMode.normal,
+                    });
+                }
+            }
 
+            if (side?.transparentTexture && side.transparentTexture.texture !== 0xffff) {
+                const bottom = Math.max(neighbor.floorHeight, polygon.floorHeight);
+                const top = Math.min(neighbor.ceilingHeight, polygon.ceilingHeight);
+                const sideTex = side.transparentTexture;
+                const transparentPoly = clipArea.clipPolygon(this.makeWallPolygon({
+                    p1View,
+                    p2View,
+                    top,
+                    bottom,
+                }));
+
+                if (transparentPoly.length > 0) {
+                    const texturedPolygon = this.textureWallPolygon(
+                        p1View,
+                        p2View,
+                        top,
+                        transparentPoly,
+                        transferMode || transferMode.normal,
+                        this.world.getTexOffset(sideTex));
+                    
+                    this.rasterizer.drawWall({
+                        polygon: texturedPolygon,
+                        texture: this.shapes.getBitmap(sideTex.texture),
+                        brightness: this.world.getLightIntensity(side.transparentLightsourceIndex),
+                        transfer: transferMode || transferMode.normal,
+                        isTransparent: true,
                     });
                 }
             }
@@ -224,8 +247,6 @@ class Renderer {
                 top: polygon.ceilingHeight,
                 bottom: polygon.floorHeight,
                 playerHeight: this.player.height,
-                textureOffset: this.world.getTexOffset(side?.primaryTexture),
-                transferMode: side?.primaryTransferMode || transferMode.normal,
             });
 
             const clippedPolygon = clipArea.clipPolygon(viewPolygon);
