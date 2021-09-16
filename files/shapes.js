@@ -4,7 +4,7 @@ const nCollections = 32;
 const collectionHeaderSize = 32;
 
 // See shape_descriptors.h in aleph one
-export const collectionIndex = {
+export const collections = {
     wall: {
         water: 17,
         lava: 18,
@@ -26,6 +26,12 @@ export const collectionIndex = {
         space: 30,
     },
 };
+
+export function makeShapeDescriptor(clut, collection, shape) {
+    return ((clut & 0x03) << 13) |
+        ((collection & 0x01f) << 8) |
+        (shape & 0x0ff);
+}
 
 export const COLUMN_ORDER_BIT = 0x8000;
 export const SELF_LUMINESCENT_BIT = 0x80;

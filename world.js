@@ -1,17 +1,22 @@
-import { collideLineSegments } from './collision.js';
+import {collideLineSegments} from './collision.js';
+import {lerp, floorMod} from './utils.js';
+import {mediaDefinitions} from './files/wad.js';
+import {makeShapeDescriptor} from './files/shapes.js';
+export const worldUnitSize = 1024;
 
 export class World {
     constructor(map) {
-        this.points = map.points.map(([x, y]) => [x / 1024, y / 1024]);
+        this.points = map.points.map(([x, y]) => [x / worldUnitSize, y / worldUnitSize]);
         this.lines = map.lines;
         this.sides = map.sides;
         this.polygons = map.polygons.map(p => ({
             ...p,
-            floorHeight: p.floorHeight / 1024,
-            ceilingHeight: p.ceilingHeight / 1024,
+            floorHeight: p.floorHeight / worldUnitSize,
+            ceilingHeight: p.ceilingHeight / worldUnitSize,
         }));
         this.lights = map.lights;
         this.objects = map.objects;
+        this.media = map.media;
         
         const transferModes = new Set();
         for (const side of this.sides) {
@@ -60,8 +65,8 @@ export class World {
             return [0, 0];
         }
         return [
-            (sideTexDef.offset[0] & 1023) / 1024,
-            (sideTexDef.offset[1] & 1023) / 1024,
+            floorMod(sideTexDef.offset[0], worldUnitSize) / worldUnitSize,
+            floorMod(sideTexDef.offset[1], worldUnitSize) / worldUnitSize,
         ];
     }
 
@@ -74,17 +79,69 @@ export class World {
     getFloorOffset(polygonIndex) {
         const polygon = this.polygons[polygonIndex];
         return [
-            polygon.floorOrigin[0] / 1024,
-            polygon.floorOrigin[1] / 1024,
+            polygon.floorOrigin[0] / worldUnitSize,
+            polygon.floorOrigin[1] / worldUnitSize,
         ];
     }
 
     getCeilingOffset(polygonIndex) {
         const polygon = this.polygons[polygonIndex];
         return [
-            polygon.ceilingOrigin[0] / 1024,
-            polygon.ceilingOrigin[1] / 1024,
+            polygon.ceilingOrigin[0] / worldUnitSize,
+            polygon.ceilingOrigin[1] / worldUnitSize,
         ];
+    }
+
+    getMediaInfo(polygonIndex, seconds = 0) {
+        const polygon = this.polygons[polygonIndex];
+        const mediaIndex = polygon.media;
+        
+        if (mediaIndex === -1 || ! (mediaIndex in this.media)) {
+            return null;
+        }
+        const media = this.media[mediaIndex];
+        //const lightLevel = this.getLightIntensity(media.lightIndex);
+        const lightLevel = 0.5 + Math.sin(seconds / 4) / 2;
+        const height = lerp(lightLevel, media.low, media.high) / worldUnitSize;
+
+        const def = mediaDefinitions[media.type];
+
+        return {
+            height,
+            textureOffset: media.origin,
+            texture: makeShapeDescriptor(0, def.collection, def.shape),
+            transferMode: media.transferMode,
+            lightIntensity: this.getLightIntensity(polygon.mediaLightsource),
+        };
+    }
+
+    getPolygonFloorCeiling(polygonIndex, playerHeight, isSubmerged, seconds = 0) {
+        const polygon = this.polygons[polygonIndex];
+        const media = this.getMediaInfo(polygonIndex, seconds);
+        
+        let low = {
+            height: polygon.floorHeight,
+            textureOffset: polygon.floorOrigin,
+            texture: polygon.floorTexture,
+            transferMode: polygon.floorTransferMode,
+            lightIntensity: this.getLightIntensity(polygon.floorLightsource),
+        };
+
+        let high = {
+            height: polygon.ceilingHeight,
+            textureOffset: polygon.ceilingOrigin,
+            texture: polygon.ceilingTexture,
+            transferMode: polygon.ceilingTransferMode,
+            lightIntensity: this.getLightIntensity(polygon.ceilingLightsource),
+        };
+
+        if (media && playerHeight > media.height && media.height > low.height) {
+            low = media;
+        } else if (isSubmerged && media && playerHeight < media.height && media.height < high.height) {
+            high = media;
+        }
+
+        return {floor: low, ceiling: high};
     }
 
     movePlayer(oldPosition, position, polygonIndex) {
@@ -111,8 +168,5 @@ export class World {
         } else {
             return [position, polygonIndex];
         }
-
     }
 }
-
-export const worldUnitSize = 1024;

@@ -351,17 +351,19 @@ export class Rasterizer {
     }) {
         const texels = texture.data;
 
-        let u = textureLeftX * texture.width;
+        // multiple by texture.height to pre shift the u part
+        let u = textureLeftX * texture.width * texture.height;
         let v = textureLeftY * texture.height;
         
-        const endU = textureRightX * texture.width;
+        // multiple by texture.height to pre shift the u part
+        const endU = textureRightX * texture.width * texture.height;
         const endV = textureRightY * texture.height;
         
         const du = (endU - u) / (right - left);
         const dv = (endV - v) / (right - left);
 
-        const uMask = texture.width - 1;
-        const vMask = texture.height - 1;
+        const uMask = 0 | (texture.width - 1) * texture.height;
+        const vMask = 0 | (texture.height - 1);
 
         const xStart = Math.ceil(left);
         const xEnd = Math.ceil(right);
@@ -372,7 +374,9 @@ export class Rasterizer {
 
         let offset = this.width * y + xStart;
         for (let x = xStart; x < xEnd; ++x) {
-            const texel = texels[(u & uMask) * texture.width + (v & vMask)];
+            // const texel = texels[(u & uMask) * texture.width + (v & vMask)];
+            // const texel = texels[((u & uMask) << 7) + (v & vMask)];
+            const texel = texels[(u & uMask) | (v & vMask)];
             const color = colorTable[texel];
             this.pixels[offset++] = color;
             u += du;

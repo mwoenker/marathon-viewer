@@ -28,7 +28,7 @@ import { render } from './render.js';
 let imageData = null;
 let pixels = null;
 
-function draw3d(canvas, player, world, shapes) {
+function draw3d(canvas, player, world, shapes, seconds) {
     const context = canvas.getContext('2d');
 
     if (! imageData || imageData.width !== canvas.width || imageData.height !== canvas.height) {
@@ -49,7 +49,7 @@ function draw3d(canvas, player, world, shapes) {
 
     const rasterizer = new Rasterizer(canvas.width, canvas.height, pixels, player);
 
-    render({rasterizer, player, world, shapes});
+    render({rasterizer, player, world, shapes, seconds});
     
     context.putImageData(imageData, 0, 0);
 }
@@ -114,7 +114,8 @@ const keyMap = {
 };
 
 function initWorld(map, shapes, canvas, overheadCanvas, fpsCounter) {
-    const hFov = Math.PI / 2;
+    const hFov = 90 / 180 * Math.PI;
+    
     const vFov = 2 * Math.atan(Math.tan(hFov / 2) * canvas.height / canvas.width);
     const world = new World(map);
     // const targetPolygon = 100;
@@ -184,9 +185,9 @@ function initWorld(map, shapes, canvas, overheadCanvas, fpsCounter) {
         
         try {
             const frameTime = new Date();
+            const timeSlice = (frameTime - lastFrameTime) / 1000;
+            const secondsElapsed = (frameTime - startTime) / 1000;
             if (lastFrameTime) {
-                const timeSlice = (frameTime - lastFrameTime) / 1000;
-                const secondsElapsed = (frameTime - startTime) / 1000;
                 player = update(player, world, actions, timeSlice, secondsElapsed);
                 if (lastPoly !== player.polygon) {
                     console.log('poly', player.polygon);
@@ -195,7 +196,7 @@ function initWorld(map, shapes, canvas, overheadCanvas, fpsCounter) {
             }
 
             if (canvas) {
-                draw3d(canvas, player, world, shapes);
+                draw3d(canvas, player, world, shapes, secondsElapsed);
             }
             
             if (overheadCanvas) {
@@ -253,6 +254,9 @@ const mapUrl = 'minf.sceA';
 
 // const shapesUrl = 'Eternal-Shapes.shpA';
 // const mapUrl = 'Eternal-Maps.sceA';
+
+// const shapesUrl = 'Phoenix Shapes.shpA';
+// const mapUrl = 'Phoenix Map.sceA';
 
 window.addEventListener('load', async () => {
     const levelSelect = document.getElementById('levelSelect');

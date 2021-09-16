@@ -1,5 +1,6 @@
 import {SliceFile, Reader, readRange, getDataFork} from './binary-read.js';
 import {MapGeometry} from './map.js';
+import {collections} from './shapes.js';
 
 function readDirectoryEntry(bytes, entrySize, wadVersion, appDataBytes) {
     const r = new Reader(bytes);
@@ -161,8 +162,8 @@ chunkParser.defineArray('POLY', (r) => {
     polygon.vertexCount = r.uint16();
     polygon.endpoints = readPolyIndices(polygon.vertexCount);
     polygon.lines = readPolyIndices(polygon.vertexCount);
-    polygon.floorTex = r.uint16();
-    polygon.ceilingTex = r.uint16();
+    polygon.floorTexture = r.uint16();
+    polygon.ceilingTexture = r.uint16();
     polygon.floorHeight = r.int16();
     polygon.ceilingHeight = r.int16();
     polygon.floorLightsource = r.int16();
@@ -181,7 +182,7 @@ chunkParser.defineArray('POLY', (r) => {
     polygon.sides = readPolyIndices(polygon.vertexCount);
     polygon.floorOrigin = readList(2, () => r.uint16());
     polygon.ceilingOrigin = readList(2, () => r.uint16());
-    polygon.media = r.uint16();
+    polygon.media = r.int16();
     polygon.mediaLightsource = r.uint16();
     polygon.firstSoundSource = r.uint16();
     polygon.ambientSound = r.uint16();
@@ -446,6 +447,7 @@ async function readMap(file, wadHeader, index) {
         lines: chunks.get('LINS'),
         sides: chunks.get('SIDS'),
         polygons: chunks.get('POLY'),
+        media: chunks.get('medi') || [],
         objects: chunks.get('OBJS') || [],
         frequencies: chunks.get('plac') || [],
         ambientSounds: chunks.get('ambi') || [],
@@ -535,6 +537,37 @@ const transferMode = {
     wander: 19,
     fastWander: 20,
     bigLandscape: 21, // unused I think? I think originally this distinguished between m2, m1 style landscapes
+};
+
+export const mediaTypes = {
+    water: 0,
+    lava: 1,
+    goo: 2,
+    sewage: 3,
+    jjaro: 4,
+};
+
+export const mediaDefinitions = {
+    [mediaTypes.water]: {
+        collection: collections.wall.water,
+        shape: 19,
+    },
+    [mediaTypes.lava]: {
+        collection: collections.wall.lava,
+        shape: 12,
+    },
+    [mediaTypes.goo]: {
+        collection: collections.wall.pfhor,
+        shape: 5,
+    },
+    [mediaTypes.sewage]: {
+        collection: collections.wall.sewage,
+        shape: 13,
+    },
+    [mediaTypes.jjaro]: {
+        collection: collections.wall.jjaro,
+        shape: 13,
+    },
 };
 
 export {
