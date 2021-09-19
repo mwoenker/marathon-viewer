@@ -1,18 +1,14 @@
-import { lerp, floorMod } from './utils.js';
-import { makeShadingTables, magenta, shadingTableForDistance, black } from './color.js';
-import { transferMode } from './files/wad.js';
+import {lerp, floorMod} from './utils.js';
+import {makeShadingTables, magenta, shadingTableForDistance, black} from './color.js';
+import {transferMode} from './files/wad.js';
+import {ScreenTransform} from './screen-transform.js';
 
 export class Rasterizer {
     constructor(width, height, pixels, player) {
+        this.pixels = pixels;
+        this.screenTransform = new ScreenTransform(width, height, player.hFov, player.vFov);
         this.width = width;
         this.height = height;
-        this.pixels = pixels;
-        this.left = -Math.tan(player.hFov / 2);
-        this.right = Math.tan(player.hFov / 2);
-        this.top = Math.tan(player.vFov / 2);
-        this.bottom = -Math.tan(player.vFov / 2);
-        this.xScale = this.width / (this.right - this.left);
-        this.yScale = this.height / (this.bottom - this.top);
 
         this.topParamList = new Array(width);
         this.bottomParamList = new Array(width);
@@ -49,15 +45,6 @@ export class Rasterizer {
                 textureYOverZ: 0,
             };
         }
-    }
-
-    viewXToColumn(x, z) {
-        return this.xScale * (x / z - this.left);
-    }
-    
-    viewYToRow(y, z) {
-        const projected = y / z;
-        return this.yScale * (projected - this.top);
     }
 
     calcLineTextureParams(leftVertex, rightVertex, leftTexCoord, rightTexCoord, params) {
@@ -97,11 +84,8 @@ export class Rasterizer {
             return;
         }
 
-        const screenPosition = polygon.map(({position}) => [
-            this.viewXToColumn(position[0], position[2]),
-            this.viewYToRow(position[1], position[2]),
-            position[2],
-        ]);
+        const screenPosition = polygon.map(({position}) =>
+            this.screenTransform.viewToScreen(position));
         let left = this.width;
         let right = 0;
         for (let i = 0; i < polygon.length; ++i) {
@@ -256,11 +240,8 @@ export class Rasterizer {
             return;
         }
         
-        const screenPosition = polygon.map(({position}) => [
-            this.viewXToColumn(position[0], position[2]),
-            this.viewYToRow(position[1], position[2]),
-            position[2],
-        ]);
+        const screenPosition = polygon.map(({position}) =>
+            this.screenTransform.viewToScreen(position));
         let top = this.height;
         let bottom = 0;
         for (let i = 0; i < polygon.length; ++i) {

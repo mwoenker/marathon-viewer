@@ -1,4 +1,4 @@
-import {collideLineSegments} from './collision.js';
+import {collideLineSegments, lineSegmentIntersectsHorizontalPolygon, closerCollision} from './collision.js';
 import {lerp, floorMod} from './utils.js';
 import {mediaDefinitions} from './files/wad.js';
 import {makeShapeDescriptor} from './files/shapes.js';
@@ -29,8 +29,6 @@ export class World {
             transferModes.add(polygon.floorTransferMode);
             transferModes.add(polygon.ceilingTransferMode);
         }
-
-        console.log({transferModes});
     }
 
     getEdgeVertices(edge) {
@@ -74,6 +72,11 @@ export class World {
         const light = this.lights[lightIndex];
         const intensityFixed = light.primaryActive.intensity;
         return intensityFixed / 0xffff;
+    }
+
+    getPolygonPoints(polygonIndex) {
+        const polygon = this.polygons[polygonIndex];
+        return polygon.endpoints.map(index => this.points[index]);
     }
 
     getFloorOffset(polygonIndex) {
@@ -168,5 +171,69 @@ export class World {
         } else {
             return [position, polygonIndex];
         }
+    }
+
+    // cast a "ray" (really, find first intersection of world along line segment
+    // between two points)
+    intersectLineSegment(polygonIndex, startPosition, endPosition) {
+        const polygon = this.polygons[polygonIndex];
+        const points = this.getPolygonPoints(polygonIndex);
+
+        const floorIntercept = lineSegmentIntersectsHorizontalPolygon(
+            startPosition, endPosition, points, polygon.floorHeight);
+        if (floorIntercept) {
+            return {
+                polygonIndex,
+                type: 'floor',
+            };
+        }
+        
+        const ceilingIntercept = lineSegmentIntersectsHorizontalPolygon(
+            startPosition, endPosition, points, polygon.ceilingHeight);
+        if (ceilingIntercept) {
+            return {
+                polygonIndex,
+                type: 'ceiling',
+            };
+        }
+
+        for (let wallIndex = 0; wallIndex < polygon.lines.length; ++wallIndex) {
+            const line = this.getLineVertices(polygonIndex, wallIndex);
+            const intersection = collideLineSegments([startPosition, endPosition], line);
+            if (intersection) {
+                const portalTo = this.getPortal(polygonIndex, wallIndex);
+                if ((portalTo || portalTo === 0) && portalTo !== -1) {
+                    const neighbor = this.polygons[portalTo];
+                    const portalTop = Math.min(polygon.ceilingHeight, neighbor.ceilingHeight);
+                    const portalBottom = Math.max(polygon.floorHeight, neighbor.floorHeight);
+                    const intersectHeight = lerp(intersection.t, startPosition[2], endPosition[2]);
+                    if (intersectHeight > portalTop) {
+                        return {
+                            polygonIndex,
+                            type: 'wallPrimary',
+                            wallIndex,
+                        };
+                    } else if (intersectHeight < portalBottom) {
+                        return {
+                            polygonIndex,
+                            type: polygon.ceilingHeight > neighbor.ceilingHeight
+                                ? 'wallSecondary'
+                                : 'wallPrimary',
+                            wallIndex,
+                        };
+                    } else {
+                        return this.intersectLineSegment(portalTo, startPosition, endPosition);
+                    }
+                } else {
+                    return {
+                        polygonIndex,
+                        type: 'wallPrimary',
+                        wallIndex,
+                    };
+                }
+            }
+        }
+
+        return null;
     }
 }

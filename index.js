@@ -4,6 +4,7 @@ import { HtmlInputFile, HttpFile } from './files/binary-read.js';
 import { Shapes } from './shapes-loader.js';
 import { packColor, unpackColor, makeShadingTables, magenta, shadingTableForDistance } from './color.js';
 import { drawOverhead } from './drawOverhead.js';
+import {makeShapeDescriptor} from './files/shapes.js';
 import {
     v2length,
     v2scale,
@@ -15,6 +16,7 @@ import {
     v2direction,
     isClockwise
 } from './vector.js';
+import { v3scale, v3add } from './vector3.js';
 import { World } from './world.js';
 import {
     readMapSummaries,
@@ -24,6 +26,8 @@ import {
 import { ClipArea3d } from './clip.js';
 import { Rasterizer } from './rasterize.js';
 import { render } from './render.js';
+import { Transformation } from './transform2d.js';
+import { ScreenTransform } from './screen-transform.js';
 
 let imageData = null;
 let pixels = null;
@@ -170,6 +174,42 @@ function initWorld(map, shapes, canvas, overheadCanvas, fpsCounter) {
         } else if (e.key === 'Escape') {
             e.preventDefault();
             running = false;
+        }
+    });
+
+    canvas.addEventListener('mousedown', (e) => {
+        const screenTransform = new ScreenTransform(
+            canvas.width, canvas.height, player.hFov, player.vFov);
+        const viewRay = v3scale(100, screenTransform.screenToRay(e.offsetX, e.offsetY));
+        const viewTransform = new Transformation(player.position, player.facingAngle);
+        const worldEnd2d = viewTransform.unTransform([viewRay[0], viewRay[2]]);
+        const ray = [worldEnd2d[0], worldEnd2d[1], player.height + viewRay[1]];
+        const intercept = world.intersectLineSegment(
+            player.polygon,
+            [...player.position, player.height],
+            ray,
+        );
+
+        if (intercept) {
+            const polygon = world.polygons[intercept.polygonIndex];
+            const shape = makeShapeDescriptor(0, 18, 5);
+            if (intercept.type === 'floor') {
+                polygon.floorTexture = shape;
+            } else if (intercept.type === 'ceiling') {
+                polygon.ceilingTexture = shape;
+            } else if (intercept.type === 'wallPrimary') {
+                const sideIndex = polygon.sides[intercept.wallIndex];
+                if (Number.isInteger(sideIndex) && sideIndex >= 0) {
+                    const side = world.sides[sideIndex];
+                    side.primaryTexture.texture = shape;
+                }
+            } else if (intercept.type === 'wallSecondary') {
+                const sideIndex = polygon.sides[intercept.wallIndex];
+                if (Number.isInteger(sideIndex) && sideIndex >= 0) {
+                    const side = world.sides[sideIndex];
+                    side.secondaryTexture.texture = shape;
+                }
+            }
         }
     });
 
