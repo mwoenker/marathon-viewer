@@ -1,4 +1,6 @@
 import {v2add, v2sub} from '../vector.js';
+import {Side, SideTex} from './map/side.js';
+import {Polygon} from './map/polygon.js';
 
 function outOfRange(pt) {
     return pt[0] < -0x8000 || pt[0] > 0x7fff ||
@@ -181,6 +183,66 @@ export class MapGeometry {
         return new MapGeometry({...this, points: newPoints});
     }
 
+    setWallTexture({polygonIndex, wallIndex, sideType, textureSlot, shape, offset}) {
+        const sideTex = new SideTex({texture: shape, offset});
+        const polygon = this.polygons[polygonIndex];
+        const sideIndex = polygon.sides[wallIndex];
+        if (sideIndex == -1) {
+            const side = new Side({
+                type: sideType,
+                polygonIndex,
+                lineIndex: polygon.lines[wallIndex],
+                primaryTexture: textureSlot === 'primary' ? sideTex : new SideTex(),
+                secondaryTexture: textureSlot === 'secondary' ? sideTex : new SideTex(),
+                transparentTexture: textureSlot === 'transparent' ? sideTex : new SideTex(),
+                
+            });
+            const sides = [...this.sides, side];
+            const polygonSides = [...polygon.sides];
+            polygonSides[wallIndex] = sides.length - 1;
+            
+            const newPolygon = new Polygon({
+                ...polygon,
+                sides: polygonSides
+            });
+            const polygons = [...this.polygons];
+            polygons[polygonIndex] = newPolygon;
+            
+            return new MapGeometry({...this, sides, polygons});
+        } else {
+            const oldSide = this.sides[sideIndex];
+            const side = new Side({
+                ...oldSide,
+                primaryTexture: textureSlot === 'primary' ? sideTex : oldSide.primaryTexture,
+                secondaryTexture: textureSlot === 'secondary' ? sideTex : oldSide.secondaryTexture,
+                transparentTexture: textureSlot === 'transparent' ? sideTex : oldSide.transparentTexture,
+            });
+            const sides = [...this.sides];
+            sides[sideIndex] = side;
+            return new MapGeometry({...this, sides});
+        }
+    }
+
+    setFloorTexture({polygonIndex, shape, offset}) {
+        const polygons = [...this.polygons];
+        polygons[polygonIndex] = new Polygon({
+            ...polygons[polygonIndex],
+            floorTexture: shape,
+            floorOrigin: offset,
+        });
+        return new MapGeometry({...this, polygons});
+    }
+
+    setCeilingTexture({polygonIndex, shape, offset}) {
+        const polygons = [...this.polygons];
+        polygons[polygonIndex] = new Polygon({
+            ...polygons[polygonIndex],
+            ceilingTexture: shape,
+            ceilingOrigin: offset,
+        });
+        return new MapGeometry({...this, polygons});
+    }
+    
     removeObjectsAndRenumber(deadObjects) {
         const newIndices = {};
         const newObjects = {};

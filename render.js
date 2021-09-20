@@ -16,11 +16,10 @@ import {Transformation} from './transform2d.js';
 import {floorMod} from './utils.js';
 
 class Renderer {
-    constructor({world, player, shapes, viewTransform, rasterizer, seconds}) {
+    constructor({world, player, shapes, rasterizer, seconds}) {
         this.world = world;
         this.player = player;
         this.shapes = shapes;
-        this.viewTransform = viewTransform;
         this.rasterizer = rasterizer;
         this.seconds = seconds;
 
@@ -126,8 +125,9 @@ class Renderer {
     }
 
     renderWall(polygonIndex, polyLineIndex, clipArea) {
-        const polygon = this.world.polygons[polygonIndex];
-        const side = this.world.sides[polygon.sides[polyLineIndex]];
+        const polygon = this.world.getPolygon(polygonIndex);
+        const sideIndex = polygon.sides[polyLineIndex];
+        const side = -1 === sideIndex ? null : this.world.getSide(polygon.sides[polyLineIndex]);
         const [p1, p2] = this.world.getLineVertices(polygonIndex, polyLineIndex);
         const portalTo = this.world.getPortal(polygonIndex, polyLineIndex);
 
@@ -140,7 +140,7 @@ class Renderer {
         const p2View = this.viewTransform.transform(p2);
 
         if (portalTo !== -1 && portalTo !== undefined && portalTo !== null) {
-            const neighbor = this.world.polygons[portalTo];
+            const neighbor = this.world.getPolygon(portalTo);
             const viewPolygon = this.makeWallPolygon({
                 p1View,
                 p2View,
@@ -275,13 +275,13 @@ class Renderer {
     }
 
     renderPolygon(polygonIndex, clipArea) {
-        const polygon = this.world.polygons[polygonIndex];
+        const polygon = this.world.getPolygon(polygonIndex);
 
         for (let polyLineIndex = 0; polyLineIndex < polygon.vertexCount; ++polyLineIndex) {
             this.renderWall(polygonIndex, polyLineIndex, clipArea);
         }
 
-        const vertices = polygon.endpoints.map(idx => this.world.points[idx]);
+        const vertices = polygon.endpoints.map(idx => this.world.getPoint(idx));
 
         const {floor, ceiling} = this.world.getPolygonFloorCeiling(
             polygonIndex,

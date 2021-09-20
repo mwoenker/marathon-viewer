@@ -121,7 +121,7 @@ function initWorld(map, shapes, canvas, overheadCanvas, fpsCounter) {
     const hFov = 90 / 180 * Math.PI;
     
     const vFov = 2 * Math.atan(Math.tan(hFov / 2) * canvas.height / canvas.width);
-    const world = new World(map);
+    let world = new World(map);
     // const targetPolygon = 100;
     const targetPolygon = 1;
 
@@ -191,25 +191,36 @@ function initWorld(map, shapes, canvas, overheadCanvas, fpsCounter) {
         );
 
         if (intercept) {
-            const polygon = world.polygons[intercept.polygonIndex];
+            const polygon = world.getPolygon(intercept.polygonIndex);
+            const {polygonIndex} = intercept;
             const shape = makeShapeDescriptor(0, 18, 5);
             if (intercept.type === 'floor') {
-                polygon.floorTexture = shape;
+                map = map.setFloorTexture({polygonIndex, shape, offset: [0, 0]});
             } else if (intercept.type === 'ceiling') {
-                polygon.ceilingTexture = shape;
+                map = map.setCeilingTexture({polygonIndex, shape, offset: [0, 0]});
             } else if (intercept.type === 'wallPrimary') {
-                const sideIndex = polygon.sides[intercept.wallIndex];
-                if (Number.isInteger(sideIndex) && sideIndex >= 0) {
-                    const side = world.sides[sideIndex];
-                    side.primaryTexture.texture = shape;
-                }
+                const {polygonIndex, wallIndex, sideType} = intercept;
+                map = map.setWallTexture({
+                    polygonIndex,
+                    wallIndex,
+                    sideType,
+                    textureSlot: 'primary',
+                    shape,
+                    offset: [0, 0],
+                });
             } else if (intercept.type === 'wallSecondary') {
-                const sideIndex = polygon.sides[intercept.wallIndex];
-                if (Number.isInteger(sideIndex) && sideIndex >= 0) {
-                    const side = world.sides[sideIndex];
-                    side.secondaryTexture.texture = shape;
-                }
+                const {polygonIndex, wallIndex, sideType} = intercept;
+                map = map.setWallTexture({
+                    polygonIndex,
+                    wallIndex,
+                    sideType,
+                    textureSlot: 'secondary',
+                    shape,
+                    offset: [0, 0],
+                });
             }
+            
+            world = new World(map);
         }
     });
 
@@ -286,8 +297,8 @@ function populateLevelSelect(levelSelect, summaries) {
     });
 }
 
-const shapesUrl = 'minf.shpA';
-const mapUrl = 'minf.sceA';
+// const shapesUrl = 'minf.shpA';
+// const mapUrl = 'minf.sceA';
 
 // const shapesUrl = 'm2.shpA';
 // const mapUrl = 'm2.sceA';
@@ -295,8 +306,8 @@ const mapUrl = 'minf.sceA';
 // const shapesUrl = 'Eternal-Shapes.shpA';
 // const mapUrl = 'Eternal-Maps.sceA';
 
-// const shapesUrl = 'Phoenix Shapes.shpA';
-// const mapUrl = 'Phoenix Map.sceA';
+const shapesUrl = 'Phoenix Shapes.shpA';
+const mapUrl = 'Phoenix Map.sceA';
 
 window.addEventListener('load', async () => {
     const levelSelect = document.getElementById('levelSelect');

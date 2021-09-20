@@ -1,6 +1,7 @@
 import {SliceFile, Reader, readRange, getDataFork} from './binary-read.js';
 import {MapGeometry} from './map.js';
 import {collections} from './shapes.js';
+import {SideTex, Side} from './map/side.js';
 
 function readDirectoryEntry(bytes, entrySize, wadVersion, appDataBytes) {
     const r = new Reader(bytes);
@@ -119,36 +120,7 @@ chunkParser.defineArray('LINS', (r) => {
     return line;
 });
 
-chunkParser.defineArray('SIDS', (r) => {
-    const sideTex = () => ({
-        offset: readPoint(r),
-        texture: r.uint16(), // shape descriptor
-    });
-    const line = {
-        type: r.uint16(),
-        flags: r.uint16(),
-        primaryTexture: sideTex(),
-        secondaryTexture: sideTex(),
-        transparentTexture: sideTex(),
-        collisionTopLeft: readPoint(r),
-        collisionTopRight: readPoint(r),
-        collisionBottomLeft: readPoint(r),
-        collisionBottomRight: readPoint(r),
-        controlPanelType: r.int16(),
-        controlPanelPermutation: r.int16(),
-        primaryTransferMode: r.int16(),
-        secondaryTransferMode: r.int16(),
-        transparentTransferMode: r.int16(),
-        polygonIndex: r.int16(),
-        lineIndex: r.int16(),
-        primaryLightsourceIndex: r.int16(),
-        secondaryLightsourceIndex: r.int16(),
-        transparentLightsourceIndex: r.int16(),
-        ambientDelta: r.int32(),
-    };
-    r.skip(2);
-    return line;
-});
+chunkParser.defineArray('SIDS', (r) => Side.read(r))
 
 chunkParser.defineArray('POLY', (r) => {
     // Read 8 shorts, but only return the first $nVertices
