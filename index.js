@@ -288,17 +288,19 @@ function initWorld(map, shapes, canvas, overheadCanvas, fpsCounter) {
 function populateLevelSelect(levelSelect, summaries) {
     levelSelect.innerHtml = '';
     summaries.forEach((summary, i) => {
-        if (summary && summary.info) {
+        console.log({summary});
+        console.log(summary.directoryEntry);
+        if (summary && summary?.directoryEntry?.levelName) {
             const option = document.createElement('option');
             option.value = `${i}`;
-            option.innerText = summary.info.name;
+            option.innerText = summary.directoryEntry.levelName;
             levelSelect.appendChild(option);
         }
     });
 }
 
-// const shapesUrl = 'minf.shpA';
-// const mapUrl = 'minf.sceA';
+const shapesUrl = 'minf.shpA';
+const mapUrl = 'minf.sceA';
 
 // const shapesUrl = 'm2.shpA';
 // const mapUrl = 'm2.sceA';
@@ -306,8 +308,8 @@ function populateLevelSelect(levelSelect, summaries) {
 // const shapesUrl = 'Eternal-Shapes.shpA';
 // const mapUrl = 'Eternal-Maps.sceA';
 
-const shapesUrl = 'Phoenix Shapes.shpA';
-const mapUrl = 'Phoenix Map.sceA';
+// const shapesUrl = 'Phoenix Shapes.shpA';
+// const mapUrl = 'Phoenix Map.sceA';
 
 window.addEventListener('load', async () => {
     const levelSelect = document.getElementById('levelSelect');

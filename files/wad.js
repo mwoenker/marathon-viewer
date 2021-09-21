@@ -8,12 +8,17 @@ function readDirectoryEntry(bytes, entrySize, wadVersion, appDataBytes) {
     const offset = r.uint32();
     const length = r.uint32();
     let index = 0;
-    let appData = null;
+    let extraFields = {};
     if (wadVersion >= 2) {
         index = r.uint16();
-        appData = r.raw(appDataBytes);
+        extraFields = {
+            missionFlags: r.int16(),
+            environmentFlags: r.int16(),
+            entryPointFlags: r.int32(),
+            levelName: r.cString(66),
+        };
     }
-    return {offset, length, index, appData};
+    return {offset, length, index, ...extraFields};
 }
 
 async function readWadHeader(file) {
@@ -120,7 +125,7 @@ chunkParser.defineArray('LINS', (r) => {
     return line;
 });
 
-chunkParser.defineArray('SIDS', (r) => Side.read(r))
+chunkParser.defineArray('SIDS', (r) => Side.read(r));
 
 chunkParser.defineArray('POLY', (r) => {
     // Read 8 shorts, but only return the first $nVertices
@@ -463,17 +468,12 @@ async function readAllMaps(file) {
 async function readMapSummaries(file) {
     const wadData = await getDataFork(file);
     const wadHeader = await readWadHeader(wadData);
-    console.log(wadHeader);
-    const chunkPromises = wadHeader.directory
-          .map(entry => readEntryChunks(
-              wadData, wadHeader, entry.index, ['Minf']));
-    const mapChunks = await Promise.all(chunkPromises);
-    const summaries = mapChunks.map(
-        (chunks, i) => ({
+    const summaries = wadHeader.directory.map(
+        (entry, i) => ({
             index: wadHeader.directory[i].index,
             data: wadData,
+            directoryEntry: wadHeader.directory[i],
             header: wadHeader,
-            info: chunks.get('Minf')
         }));
     return summaries;
 }
