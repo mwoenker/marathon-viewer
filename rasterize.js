@@ -332,11 +332,11 @@ export class Rasterizer {
     }) {
         const texels = texture.data;
 
-        // multiple by texture.height to pre shift the u part
+        // multiply to pre shift the u part
         let u = textureLeftX * texture.width * texture.height;
         let v = textureLeftY * texture.height;
         
-        // multiple by texture.height to pre shift the u part
+        // multiply to pre shift the u part
         const endU = textureRightX * texture.width * texture.height;
         const endV = textureRightY * texture.height;
         
