@@ -4,10 +4,9 @@ export class ScreenTransform {
     constructor(width, height, hFov, vFov, verticalAngle) {
         this.width = width;
         this.height = height;
-        this.left = Math.tan(hFov / 2);
+        this.left = -Math.tan(hFov / 2);
         this.right = Math.tan(hFov / 2);
-        // const middle = Math.tan(verticalAngle);
-        const middle = 0;
+        const middle = Math.tan(verticalAngle);
         this.top = middle + Math.tan(vFov / 2);
         this.bottom = middle - Math.tan(vFov / 2);
         this.xScale = this.width / (this.right - this.left);

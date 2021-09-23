@@ -14,6 +14,7 @@ import {ClipArea3d} from './clip.js';
 import {sideType, transferMode} from './files/wad.js';
 import {Transformation} from './transform2d.js';
 import {floorMod} from './utils.js';
+import {ScreenTransform} from './screen-transform.js';
 
 class Renderer {
     constructor({world, player, shapes, rasterizer, seconds}) {
@@ -23,12 +24,15 @@ class Renderer {
         this.rasterizer = rasterizer;
         this.seconds = seconds;
 
+        const screenTransform = new ScreenTransform(
+            rasterizer.width, rasterizer.height, player.hFov, player.vFov, player.verticalAngle);
+        
         this.viewTransform = new Transformation(player.position, player.facingAngle);
         const epsilon = 0.0001;
-        this.left = -Math.tan(player.hFov / 2) - epsilon;
-        this.right = Math.tan(player.hFov / 2) + epsilon;
-        this.top = Math.tan(player.vFov / 2) + epsilon;
-        this.bottom = -Math.tan(player.vFov / 2) - epsilon;
+        this.left = screenTransform.left - epsilon;
+        this.right = screenTransform.right + epsilon;
+        this.top = screenTransform.top + epsilon;
+        this.bottom = screenTransform.bottom - epsilon;
 
         this.clipArea = ClipArea3d.fromPolygon([
             [this.left, this.top, 1],
@@ -40,6 +44,7 @@ class Renderer {
         this.landscapeWidth = player.hFov / Math.PI / 2;
         this.landscapeHeight = this.landscapeWidth / rasterizer.width * rasterizer.height * 1024 / 540;
         this.landscapeYOffset = (1 - this.landscapeHeight) / 2;
+        this.landscapeTiltCorrection = Math.tan(this.player.verticalAngle);
 
         const playerPolyMedia = world.getMediaInfo(player.polygon, seconds);
         this.isSubmerged = playerPolyMedia && playerPolyMedia.height > player.height;
@@ -61,7 +66,7 @@ class Renderer {
             const projX = position[0] / position[2];
             const projY = position[1] / position[2];
             const fracX = (projX - this.left) / (this.right - this.left);
-            const fracY = (projY - this.bottom) / (this.top - this.bottom);
+            const fracY = (projY - this.bottom + this.landscapeTiltCorrection) / (this.top - this.bottom);
             const rotationFrac = floorMod(this.player.facingAngle / Math.PI / 2, 1);
             return {
                 position: [projX, projY, 1],

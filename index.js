@@ -59,7 +59,7 @@ function draw3d(canvas, player, world, shapes, seconds) {
 }
 
 function update(player, world, actions, timeSlice, secondsElapsed) {
-    let { position, height, polygon, facingAngle, hFov, vFov } = player;
+    let { position, height, polygon, facingAngle, hFov, vFov, verticalAngle } = player;
     const forward = v2direction(facingAngle);
     const left = v2direction(facingAngle - Math.PI / 2);
     const oldPosition = position;
@@ -96,13 +96,21 @@ function update(player, world, actions, timeSlice, secondsElapsed) {
         height -= timeSlice * 4;
     }
 
+    if (actions.has('tilt-up')) {
+        verticalAngle = Math.min(Math.PI / 6, verticalAngle + timeSlice * 2);
+    }
+
+    if (actions.has('tilt-down')) {
+        verticalAngle = Math.max(-Math.PI / 6, verticalAngle - timeSlice * 2);
+    }
+
     if (actions.has('stupid-mode')) {
         player.stupid_mode = ! player.stupid_mode;
     }
 
     [position, polygon] = world.movePlayer(oldPosition, position, polygon);
 
-    return { ...player, position, height, polygon, facingAngle, hFov, vFov, secondsElapsed };
+    return { ...player, position, height, polygon, facingAngle, hFov, vFov, secondsElapsed, verticalAngle };
 }
 
 const keyMap = {
@@ -114,6 +122,8 @@ const keyMap = {
     'x': 'strafe-right',
     'd': 'up',
     'c': 'down',
+    'f': 'tilt-up',
+    'v': 'tilt-down',
     's': 'stupid-mode',
 };
 
@@ -135,6 +145,7 @@ function initWorld(map, shapes, canvas, overheadCanvas, fpsCounter) {
         position: average, // [2, 2],
         polygon: targetPolygon,
         facingAngle: 0.05,
+        verticalAngle: 0.0,
         hFov,
         vFov,
         wallBitmapIndex: 31,
@@ -179,7 +190,7 @@ function initWorld(map, shapes, canvas, overheadCanvas, fpsCounter) {
 
     canvas.addEventListener('mousedown', (e) => {
         const screenTransform = new ScreenTransform(
-            canvas.width, canvas.height, player.hFov, player.vFov);
+            canvas.width, canvas.height, player.hFov, player.vFov, player.verticalAngle);
         const viewRay = v3scale(100, screenTransform.screenToRay(e.offsetX, e.offsetY));
         const viewTransform = new Transformation(player.position, player.facingAngle);
         const worldEnd2d = viewTransform.unTransform([viewRay[0], viewRay[2]]);

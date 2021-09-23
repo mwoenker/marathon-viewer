@@ -6,7 +6,7 @@ import {ScreenTransform} from './screen-transform.js';
 export class Rasterizer {
     constructor(width, height, pixels, player) {
         this.pixels = pixels;
-        this.screenTransform = new ScreenTransform(width, height, player.hFov, player.vFov);
+        this.screenTransform = new ScreenTransform(width, height, player.hFov, player.vFov, player.verticalAngle);
         this.width = width;
         this.height = height;
 
