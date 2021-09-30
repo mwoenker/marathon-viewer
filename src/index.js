@@ -4,7 +4,7 @@ import { HtmlInputFile, HttpFile } from './files/binary-read.js';
 import { Shapes } from './shapes-loader.js';
 import { packColor, unpackColor, makeShadingTables, magenta, shadingTableForDistance } from './color.js';
 import { drawOverhead } from './drawOverhead.js';
-import {makeShapeDescriptor} from './files/shapes.js';
+import { makeShapeDescriptor } from './files/shapes.js';
 import {
     v2length,
     v2scale,
@@ -15,8 +15,8 @@ import {
     v2lerp,
     v2direction,
     isClockwise
-} from './vector.js';
-import { v3scale, v3add } from './vector3.js';
+} from './vector2';
+import { v3scale, v3add } from './vector3';
 import { World } from './world.js';
 import {
     readMapSummaries,
@@ -35,14 +35,14 @@ let pixels = null;
 function draw3d(canvas, player, world, shapes, seconds) {
     const context = canvas.getContext('2d');
 
-    if (! imageData || imageData.width !== canvas.width || imageData.height !== canvas.height) {
+    if (!imageData || imageData.width !== canvas.width || imageData.height !== canvas.height) {
         console.log('create imagedata');
         imageData = context.createImageData(canvas.width, canvas.height);
         pixels = new Uint32Array(imageData.data.buffer);
     }
 
     pixels.fill(magenta);
-    
+
     const { points, lines, edges, polygons } = world;
 
     context.fillStyle = 'white';
@@ -53,8 +53,8 @@ function draw3d(canvas, player, world, shapes, seconds) {
 
     const rasterizer = new Rasterizer(canvas.width, canvas.height, pixels, player);
 
-    render({rasterizer, player, world, shapes, seconds});
-    
+    render({ rasterizer, player, world, shapes, seconds });
+
     context.putImageData(imageData, 0, 0);
 }
 
@@ -63,7 +63,7 @@ function update(player, world, actions, timeSlice, secondsElapsed) {
     const forward = v2direction(facingAngle);
     const left = v2direction(facingAngle - Math.PI / 2);
     const oldPosition = position;
-    
+
     if (actions.has('forward')) {
         position = v2add(position, v2scale(timeSlice * 4, forward));
     }
@@ -75,15 +75,15 @@ function update(player, world, actions, timeSlice, secondsElapsed) {
     if (actions.has('turn-left')) {
         facingAngle = facingAngle - timeSlice * 4;
     }
-    
+
     if (actions.has('turn-right')) {
         facingAngle = facingAngle + timeSlice * 4;
     }
-    
+
     if (actions.has('strafe-left')) {
         position = v2add(position, v2scale(timeSlice * 2, left));
     }
-    
+
     if (actions.has('strafe-right')) {
         position = v2add(position, v2scale(-timeSlice * 2, left));
     }
@@ -91,7 +91,7 @@ function update(player, world, actions, timeSlice, secondsElapsed) {
     if (actions.has('up')) {
         height += timeSlice * 4;
     }
-    
+
     if (actions.has('down')) {
         height -= timeSlice * 4;
     }
@@ -105,7 +105,7 @@ function update(player, world, actions, timeSlice, secondsElapsed) {
     }
 
     if (actions.has('stupid-mode')) {
-        player.stupid_mode = ! player.stupid_mode;
+        player.stupid_mode = !player.stupid_mode;
     }
 
     [position, polygon] = world.movePlayer(oldPosition, position, polygon);
@@ -129,7 +129,7 @@ const keyMap = {
 
 function initWorld(map, shapes, canvas, overheadCanvas, fpsCounter) {
     const hFov = 90 / 180 * Math.PI;
-    
+
     const vFov = 2 * Math.atan(Math.tan(hFov / 2) * canvas.height / canvas.width);
     let world = new World(map);
     // const targetPolygon = 100;
@@ -161,7 +161,7 @@ function initWorld(map, shapes, canvas, overheadCanvas, fpsCounter) {
         const average = v2scale(1 / map.polygons[polyIndex].endpoints.length / 1024, sum);
         player.polygon = polyIndex;
         player.position = average,
-        player.height = map.polygons[polyIndex].floorHeight / 1024 + 0.66;
+            player.height = map.polygons[polyIndex].floorHeight / 1024 + 0.66;
 
         console.log(player.polygon, player.position, player.height);
     };
@@ -203,14 +203,14 @@ function initWorld(map, shapes, canvas, overheadCanvas, fpsCounter) {
 
         if (intercept) {
             const polygon = world.getPolygon(intercept.polygonIndex);
-            const {polygonIndex} = intercept;
+            const { polygonIndex } = intercept;
             const shape = makeShapeDescriptor(0, 18, 5);
             if (intercept.type === 'floor') {
-                map = map.setFloorTexture({polygonIndex, shape, offset: [0, 0]});
+                map = map.setFloorTexture({ polygonIndex, shape, offset: [0, 0] });
             } else if (intercept.type === 'ceiling') {
-                map = map.setCeilingTexture({polygonIndex, shape, offset: [0, 0]});
+                map = map.setCeilingTexture({ polygonIndex, shape, offset: [0, 0] });
             } else if (intercept.type === 'wallPrimary') {
-                const {polygonIndex, wallIndex, sideType} = intercept;
+                const { polygonIndex, wallIndex, sideType } = intercept;
                 map = map.setWallTexture({
                     polygonIndex,
                     wallIndex,
@@ -220,7 +220,7 @@ function initWorld(map, shapes, canvas, overheadCanvas, fpsCounter) {
                     offset: [0, 0],
                 });
             } else if (intercept.type === 'wallSecondary') {
-                const {polygonIndex, wallIndex, sideType} = intercept;
+                const { polygonIndex, wallIndex, sideType } = intercept;
                 map = map.setWallTexture({
                     polygonIndex,
                     wallIndex,
@@ -230,7 +230,7 @@ function initWorld(map, shapes, canvas, overheadCanvas, fpsCounter) {
                     offset: [0, 0],
                 });
             }
-            
+
             world = new World(map);
         }
     });
@@ -241,10 +241,10 @@ function initWorld(map, shapes, canvas, overheadCanvas, fpsCounter) {
     let lastFrameTime = null;
     let lastPoly = player.polygon;
     const frame = () => {
-        if (! running) {
+        if (!running) {
             return;
         }
-        
+
         try {
             const frameTime = new Date();
             const timeSlice = (frameTime - lastFrameTime) / 1000;
@@ -260,11 +260,11 @@ function initWorld(map, shapes, canvas, overheadCanvas, fpsCounter) {
             if (canvas) {
                 draw3d(canvas, player, world, shapes, secondsElapsed);
             }
-            
+
             if (overheadCanvas) {
                 drawOverhead(overheadCanvas, player, world);
             }
-            
+
             ++fpsCounted;
 
             if (frameTime - fpsCounterBegin > 1000) {
@@ -272,12 +272,12 @@ function initWorld(map, shapes, canvas, overheadCanvas, fpsCounter) {
                 const fps = fpsCounted / secondsElapsed;
                 fpsCounted = 0;
                 fpsCounterBegin = new Date();
-                
+
                 if (fpsCounter) {
                     fpsCounter.innerText = `${fps} fps`;
                 }
             }
-            
+
             lastFrameTime = frameTime;
             requestAnimationFrame(frame);
             // setTimeout(frame, 0);
@@ -299,7 +299,7 @@ function initWorld(map, shapes, canvas, overheadCanvas, fpsCounter) {
 function populateLevelSelect(levelSelect, summaries) {
     levelSelect.innerHtml = '';
     summaries.forEach((summary, i) => {
-        console.log({summary});
+        console.log({ summary });
         console.log(summary.directoryEntry);
         if (summary && summary?.directoryEntry?.levelName) {
             const option = document.createElement('option');
@@ -310,8 +310,8 @@ function populateLevelSelect(levelSelect, summaries) {
     });
 }
 
-const shapesUrl = 'minf.shpA';
-const mapUrl = 'minf.sceA';
+// const shapesUrl = 'minf.shpA';
+// const mapUrl = 'minf.sceA';
 
 // const shapesUrl = 'm2.shpA';
 // const mapUrl = 'm2.sceA';
@@ -319,8 +319,8 @@ const mapUrl = 'minf.sceA';
 // const shapesUrl = 'Eternal-Shapes.shpA';
 // const mapUrl = 'Eternal-Maps.sceA';
 
-// const shapesUrl = 'Phoenix Shapes.shpA';
-// const mapUrl = 'Phoenix Map.sceA';
+const shapesUrl = 'Phoenix Shapes.shpA';
+const mapUrl = 'Phoenix Map.sceA';
 
 window.addEventListener('load', async () => {
     const levelSelect = document.getElementById('levelSelect');
@@ -333,12 +333,12 @@ window.addEventListener('load', async () => {
     const summaries = await readMapSummaries(file);
 
     populateLevelSelect(levelSelect, summaries);
-    
+
     const summary = summaries[0];
     const map = await readMapFromSummary(summary);
 
     const shapes = new Shapes(new HttpFile(shapesUrl));
-    
+
     let { cancel } = initWorld(map, shapes, canvas, overheadCanvas, fpsCounter);
 
     levelSelect.addEventListener('change', async (e) => {
@@ -356,7 +356,7 @@ window.addEventListener('load', async () => {
             canvas.height = components[1];
         }
     };
-    
+
     screenSizeSelect.addEventListener('change', screenSizeChange);
     screenSizeChange();
 });

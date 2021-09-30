@@ -1,6 +1,6 @@
-import {v2add, v2sub, v2scale, v2dot, v2lerp} from './vector.js';
-import {v3add, v3sub, v3scale, v3dot, v3lerp} from './vector3.js';
-import {lerp} from './utils.js';
+import { v2add, v2sub, v2scale, v2dot, v2lerp } from './vector2';
+import { v3add, v3sub, v3scale, v3dot, v3lerp } from './vector3';
+import { lerp } from './utils';
 
 export class ClipArea {
     // p1 and p2 are points that lie on opposite bounding lines of view area
@@ -41,7 +41,7 @@ export class ClipArea {
                 p2 = this.lerp(t, p2, p1);
             }
         }
-        
+
         const p1DotRight = v2dot(p1.position, this.rightPlane);
         const p2DotRight = v2dot(p2.position, this.rightPlane);
 
@@ -102,12 +102,13 @@ export class ClipArea3d {
         }
         return new ClipArea3d([leftPlane, rightPlane]);
     }
-    
+
     clipPolygonByPlane(polygon, plane) {
         let allIn = true;
         let allOut = true;
+
         const distances = polygon.map(position => {
-            const dist =  v3dot(position, plane);
+            const dist = v3dot(position, plane);
             if (dist < 0) {
                 allIn = false;
             } else if (dist >= 0) {
@@ -142,11 +143,43 @@ export class ClipArea3d {
     }
 
     clipPolygon(polygon) {
+        // let skip = false;
+        // let allIn = true;
+        // const planeDistances = this.planes.map(plane => {
+        //     let allOut = true;
+        //     const distances = polygon.map(position => {
+        //         const distance = v3dot(position, plane);
+        //         if (distance >= 0) {
+        //             allOut = false;
+        //         } else {
+        //             allIn = false;
+        //         }
+        //         return distance;
+        //     });
+        //     if (allOut) {
+        //         skip = true;
+        //     }
+        //     return distances;
+        // });
+
+        // if (skip) {
+        //     return [];
+        // } else if (allIn) {
+        //     return polygon;
+        // }
+
         const distances = new Array(polygon);
         for (const plane of this.planes) {
             polygon = this.clipPolygonByPlane(polygon, plane);
         }
         return polygon;
+    }
+
+    clipPolygon2(polygon) {
+        const planeDistances = this.planes.map(plane =>
+            polygon.map(position =>
+                v3dot(position, plane)));
+
     }
 }
 

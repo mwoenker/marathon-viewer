@@ -1,7 +1,7 @@
-import {lerp, floorMod} from './utils.js';
-import {makeShadingTables, magenta, shadingTableForDistance, black} from './color.js';
-import {transferMode} from './files/wad.js';
-import {ScreenTransform} from './screen-transform.js';
+import { lerp, floorMod } from './utils';
+import { makeShadingTables, magenta, shadingTableForDistance, black } from './color.js';
+import { transferMode } from './files/wad.js';
+import { ScreenTransform } from './screen-transform.js';
 
 export class Rasterizer {
     constructor(width, height, pixels, player) {
@@ -12,7 +12,7 @@ export class Rasterizer {
 
         this.topParamList = new Array(width);
         this.bottomParamList = new Array(width);
-        
+
         for (let i = 0; i < width; ++i) {
             this.topParamList[i] = {
                 y: 0,
@@ -27,10 +27,10 @@ export class Rasterizer {
                 textureYOverZ: 0,
             };
         }
-        
+
         this.leftParamList = new Array(height);
         this.rightParamList = new Array(height);
-        
+
         for (let i = 0; i < height; ++i) {
             this.leftParamList[i] = {
                 x: 0,
@@ -50,7 +50,7 @@ export class Rasterizer {
     calcLineTextureParams(leftVertex, rightVertex, leftTexCoord, rightTexCoord, params) {
         const yStart = leftVertex[1];
         const yEnd = rightVertex[1];
-        
+
         const oneOverZStart = 1 / leftVertex[2];
         const oneOverZEnd = 1 / rightVertex[2];
         const texXOverZStart = leftTexCoord[0] * oneOverZStart;
@@ -71,20 +71,20 @@ export class Rasterizer {
         }
     }
 
-    drawWall({polygon, texture, brightness, transfer, isTransparent}) {
+    drawWall({ polygon, texture, brightness, transfer, isTransparent }) {
         if (transfer === transferMode.landscape) {
-            this.textureHorizontalPolygon({polygon, texture, brightness, transfer});
+            this.textureHorizontalPolygon({ polygon, texture, brightness, transfer });
         } else {
-            this.textureWall({polygon, texture, brightness, transfer, isTransparent});
+            this.textureWall({ polygon, texture, brightness, transfer, isTransparent });
         }
     }
 
-    textureWall({polygon, texture, brightness, transfer, isTransparent = false}) {
-        if (! texture) {
+    textureWall({ polygon, texture, brightness, transfer, isTransparent = false }) {
+        if (!texture) {
             return;
         }
 
-        const screenPosition = polygon.map(({position}) =>
+        const screenPosition = polygon.map(({ position }) =>
             this.screenTransform.viewToScreen(position));
         let left = this.width;
         let right = 0;
@@ -157,11 +157,11 @@ export class Rasterizer {
         }
     }
 
-    textureWallSlice({x, top, bottom, colorTable, texXOffset, texture, textureTop, textureBottom}) {
+    textureWallSlice({ x, top, bottom, colorTable, texXOffset, texture, textureTop, textureBottom }) {
         const intTop = Math.max(0, parseInt(Math.ceil(top)));
         const intBottom = Math.min(this.height, parseInt(Math.ceil(bottom)));
         const texels = texture.data;
-        
+
         let offset = x + this.width * intTop;
         const increment = this.width;
         const texelX = floorMod(parseInt(texXOffset * texture.width), 128);
@@ -181,11 +181,11 @@ export class Rasterizer {
         }
     }
 
-    textureWallSliceTransparent({x, top, bottom, colorTable, texXOffset, texture, textureTop, textureBottom}) {
+    textureWallSliceTransparent({ x, top, bottom, colorTable, texXOffset, texture, textureTop, textureBottom }) {
         const intTop = Math.max(0, parseInt(Math.ceil(top)));
         const intBottom = Math.min(this.height, parseInt(Math.ceil(bottom)));
         const texels = texture.data;
-        
+
         let offset = x + this.width * intTop;
         const increment = this.width;
         const texelX = floorMod(parseInt(texXOffset * texture.width), 128);
@@ -207,14 +207,14 @@ export class Rasterizer {
         }
     }
 
-    drawHorizontalPolygon({polygon, texture, brightness, transfer}) {
-        this.textureHorizontalPolygon({polygon, texture, brightness, transfer});
+    drawHorizontalPolygon({ polygon, texture, brightness, transfer }) {
+        this.textureHorizontalPolygon({ polygon, texture, brightness, transfer });
     }
-    
+
     calcLineTextureParamsHorizontal(leftVertex, rightVertex, leftTexCoord, rightTexCoord, params) {
         const xStart = leftVertex[0];
         const xEnd = rightVertex[0];
-        
+
         const oneOverZStart = 1 / leftVertex[2];
         const oneOverZEnd = 1 / rightVertex[2];
         const texXOverZStart = leftTexCoord[0] * oneOverZStart;
@@ -234,13 +234,13 @@ export class Rasterizer {
             params[y].textureYOverZ = lerp(t, texYOverZStart, texYOverZEnd);
         }
     }
-    
-    textureHorizontalPolygon({polygon, texture, brightness, transfer}) {
-        if (! texture) {
+
+    textureHorizontalPolygon({ polygon, texture, brightness, transfer }) {
+        if (!texture) {
             return;
         }
-        
-        const screenPosition = polygon.map(({position}) =>
+
+        const screenPosition = polygon.map(({ position }) =>
             this.screenTransform.viewToScreen(position));
         let top = this.height;
         let bottom = 0;
@@ -335,11 +335,11 @@ export class Rasterizer {
         // multiply to pre shift the u part
         let u = textureLeftX * texture.width * texture.height;
         let v = textureLeftY * texture.height;
-        
+
         // multiply to pre shift the u part
         const endU = textureRightX * texture.width * texture.height;
         const endV = textureRightY * texture.height;
-        
+
         const du = (endU - u) / (right - left);
         const dv = (endV - v) / (right - left);
 
@@ -381,7 +381,7 @@ export class Rasterizer {
 
         // height left <-> right
         // width top <-> bottom
-        
+
         let u = textureLeftX * texture.height;
         const endU = textureRightX * texture.height;
         const du = (endU - u) / (right - left);
@@ -391,7 +391,7 @@ export class Rasterizer {
         if (texture.height & (texture.height - 1) !== 0) {
             throw new Error('landscape height not power of two');
         }
-        
+
         const uMask = texture.height - 1;
         const rowStart = texture.height * v;
 
@@ -408,6 +408,6 @@ export class Rasterizer {
             const color = colorTable[texel];
             this.pixels[offset++] = color;
             u += du;
-        }            
+        }
     }
 }

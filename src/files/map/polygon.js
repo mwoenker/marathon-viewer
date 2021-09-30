@@ -1,4 +1,4 @@
-import {readList, writeList} from './utils.js';
+import { readList, writeList } from './utils';
 
 export const maxVertices = 8;
 
@@ -35,8 +35,7 @@ export class Polygon {
         firstSoundSource,
         ambientSound,
         randomSound,
-    })
-    {
+    }) {
         this.type = type;
         this.flags = flags;
         this.permutation = permutation;
@@ -73,7 +72,7 @@ export class Polygon {
     read(r) {
         // Read 8 shorts, but only return the first $nVertices
         const readPolyIndices = (nVertices) =>
-              readList(maxVertices, () => r.int16()).slice(0, nVertices);
+            readList(maxVertices, () => r.int16()).slice(0, nVertices);
 
         const polygon = new Polygon({
             type: r.uint16(),
@@ -108,7 +107,7 @@ export class Polygon {
             ambientSound: r.uint16(),
             randomSound: r.uint16(),
         });
-        
+
         r.skip(2);
 
         return polygon;
@@ -156,7 +155,7 @@ export class Polygon {
         writer.uint16(this.firstSoundSource);
         writer.uint16(this.ambientSound);
         writer.uint16(this.randomSound);
-        
+
         writer.zeros(2);
     }
 }

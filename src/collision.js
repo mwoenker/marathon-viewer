@@ -1,5 +1,5 @@
-import {v2add, v2sub, v2dot, v2scale, v2length} from './vector.js';
-import {v3add, v3sub, v3dot, v3scale, v3lerp} from './vector3.js';
+import { v2add, v2sub, v2dot, v2scale, v2length } from './vector2';
+import { v3add, v3sub, v3dot, v3scale, v3lerp } from './vector3';
 
 export function collideLineSegments(collidingLine, targetLine) {
     const targetDiff = v2sub(targetLine[1], targetLine[0]);
@@ -45,7 +45,7 @@ export function pointInPolygon2d(position, polyVertices) {
         const p2 = polyVertices[(i + 1) % polyVertices.length];
         if (position[1] >= p1[1] && position[1] < p2[1] ||
             position[1] >= p2[1] && position[1] < p1[1]
-           ) {
+        ) {
             const t = (position[1] - p1[1]) / (p2[1] - p1[1]);
             const lineX = p1[0] + t * (p2[0] - p1[0]);
             if (lineX < position[0]) {
@@ -107,11 +107,11 @@ export function rayIntersectsLineSegment2d(position, direction, [lineStart, line
     const lineT = v2dot(
         lineDirection,
         v2sub(lineIntersection, lineStart)) / v2length(lineDirection);
-    
+
     if (lineT < 0 || lineT > 1) {
         return null;
     }
-    
+
     return {
         t: multiplier,
         collidePosition: lineIntersection,

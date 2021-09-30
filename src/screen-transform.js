@@ -1,4 +1,4 @@
-import {lerp} from './utils.js';
+import { lerp } from './utils';
 
 export class ScreenTransform {
     constructor(width, height, hFov, vFov, verticalAngle) {
@@ -16,7 +16,7 @@ export class ScreenTransform {
     viewXToColumn(x, z) {
         return this.xScale * (x / z - this.left);
     }
-    
+
     viewYToRow(y, z) {
         const projected = y / z;
         return this.yScale * (projected - this.top);

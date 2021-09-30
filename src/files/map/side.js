@@ -1,8 +1,8 @@
-import {transferMode} from '../wad.js';
-import {readPoint, writePoint} from './utils.js';
+import { transferMode } from '../wad.js';
+import { readPoint, writePoint } from './utils';
 
 export class SideTex {
-    constructor({offset, texture} = {}) {
+    constructor({ offset, texture } = {}) {
         this.offset = offset ?? [0, 0];
         this.texture = texture ?? 0xffff;
     }
@@ -43,13 +43,13 @@ export class Side {
         transparentLightsourceIndex,
         ambientDelta,
     }) {
-        if (! Number.isInteger(type) ||
-            ! Number.isInteger(polygonIndex) ||
-            ! Number.isInteger(lineIndex)
-           ) {
+        if (!Number.isInteger(type) ||
+            !Number.isInteger(polygonIndex) ||
+            !Number.isInteger(lineIndex)
+        ) {
             throw new Error('Invalid arguments to side constructor');
         }
-        
+
         this.type = type;
         this.flags = flags ?? 0;
         this.primaryTexture = primaryTexture ?? new SideTex();

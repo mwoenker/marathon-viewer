@@ -8,16 +8,16 @@ import {
     v2lerp,
     v2direction,
     isClockwise
-} from './vector.js';
-import {v3sub, v3normalize, v3dot} from './vector3.js';
-import {ClipArea3d} from './clip.js';
-import {sideType, transferMode} from './files/wad.js';
-import {Transformation} from './transform2d.js';
-import {floorMod} from './utils.js';
-import {ScreenTransform} from './screen-transform.js';
+} from './vector2';
+import { v3sub, v3normalize, v3dot } from './vector3';
+import { ClipArea3d } from './clip.js';
+import { sideType, transferMode } from './files/wad.js';
+import { Transformation } from './transform2d.js';
+import { floorMod } from './utils';
+import { ScreenTransform } from './screen-transform.js';
 
 class Renderer {
-    constructor({world, player, shapes, rasterizer, seconds}) {
+    constructor({ world, player, shapes, rasterizer, seconds }) {
         this.world = world;
         this.player = player;
         this.shapes = shapes;
@@ -26,7 +26,7 @@ class Renderer {
 
         const screenTransform = new ScreenTransform(
             rasterizer.width, rasterizer.height, player.hFov, player.vFov, player.verticalAngle);
-        
+
         this.viewTransform = new Transformation(player.position, player.facingAngle);
         const epsilon = 0.0001;
         this.left = screenTransform.left - epsilon;
@@ -50,7 +50,7 @@ class Renderer {
         this.isSubmerged = playerPolyMedia && playerPolyMedia.height > player.height;
     }
 
-    makeWallPolygon({p1View, p2View, top, bottom}) {
+    makeWallPolygon({ p1View, p2View, top, bottom }) {
         const length = v2length(v2sub(p1View, p2View));
 
         return [
@@ -101,11 +101,11 @@ class Renderer {
         viewPoints, textureOffset, height, clipArea, isCeiling, texture, brightness, polyTransferMode
     }) {
         const polygon = clipArea.clipPolygon(viewPoints.map((v) => [v[0], height, v[1]]));
-        
+
         if (isCeiling) {
             polygon.reverse();
         }
-        
+
         if (polygon.length > 0) {
             let textured;
             if (polyTransferMode === transferMode.landscape) {
@@ -119,7 +119,7 @@ class Renderer {
                     };
                 });
             }
-            
+
             this.rasterizer.drawHorizontalPolygon({
                 polygon: textured,
                 texture,
@@ -136,7 +136,7 @@ class Renderer {
         const [p1, p2] = this.world.getLineVertices(polygonIndex, polyLineIndex);
         const portalTo = this.world.getPortal(polygonIndex, polyLineIndex);
 
-        if (! isClockwise(this.player.position, p1, p2)) {
+        if (!isClockwise(this.player.position, p1, p2)) {
             return;
         }
 
@@ -158,7 +158,7 @@ class Renderer {
                 const newClipArea = ClipArea3d.fromPolygon(clippedPolygon);
                 this.renderPolygon(portalTo, newClipArea);
             }
-            
+
             if (neighbor.ceilingHeight < polygon.ceilingHeight && side) {
                 const abovePoly = clipArea.clipPolygon(this.makeWallPolygon({
                     p1View,
@@ -183,14 +183,14 @@ class Renderer {
                     });
                 }
             }
-            
+
             if (neighbor.floorHeight > polygon.floorHeight && side) {
                 const sideTex = side.type === sideType.split
-                      ? side.secondaryTexture
-                      : side.primaryTexture;
+                    ? side.secondaryTexture
+                    : side.primaryTexture;
                 const transferMode = side.type === sideType.split
-                      ? side.secondaryTransferMode
-                      : side.primaryTransferMode;
+                    ? side.secondaryTransferMode
+                    : side.primaryTransferMode;
                 const belowPoly = clipArea.clipPolygon(this.makeWallPolygon({
                     p1View,
                     p2View,
@@ -206,14 +206,14 @@ class Renderer {
                         belowPoly,
                         transferMode || transferMode.normal,
                         this.world.getTexOffset(sideTex));
-                    
+
                     this.rasterizer.drawWall({
                         polygon: texturedPolygon,
                         texture: this.shapes.getBitmap(sideTex.texture),
                         brightness: this.world.getLightIntensity(
                             (side.type === sideType.split
-                             ? side.secondaryLightsourceIndex
-                             : side.primaryLightsourceIndex)),
+                                ? side.secondaryLightsourceIndex
+                                : side.primaryLightsourceIndex)),
                         transfer: transferMode || transferMode.normal,
                     });
                 }
@@ -238,7 +238,7 @@ class Renderer {
                         transparentPoly,
                         side?.transparentTransferMode,
                         this.world.getTexOffset(sideTex));
-                    
+
                     this.rasterizer.drawWall({
                         polygon: texturedPolygon,
                         texture: this.shapes.getBitmap(sideTex.texture),
@@ -288,7 +288,7 @@ class Renderer {
 
         const vertices = polygon.endpoints.map(idx => this.world.getPoint(idx));
 
-        const {floor, ceiling} = this.world.getPolygonFloorCeiling(
+        const { floor, ceiling } = this.world.getPolygonFloorCeiling(
             polygonIndex,
             this.player.height,
             this.isSubmerged,
@@ -326,8 +326,8 @@ class Renderer {
         this.renderPolygon(this.player.polygon, this.clipArea);
     }
 }
-        
-export function render({rasterizer, player, world, shapes, seconds}) {
-    const renderer = new Renderer({world, player, shapes, rasterizer, seconds});
+
+export function render({ rasterizer, player, world, shapes, seconds }) {
+    const renderer = new Renderer({ world, player, shapes, rasterizer, seconds });
     renderer.render();
 }

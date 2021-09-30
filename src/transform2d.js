@@ -2,7 +2,7 @@ import {
     v2add,
     v2sub,
     v2dot,
-} from './vector.js';
+} from './vector2';
 
 export class Transformation {
     constructor(newOrigin, rotation) {
@@ -19,7 +19,7 @@ export class Transformation {
         return [v2dot(translated, this.xAxis), v2dot(translated, this.yAxis)];
     }
 
-    unTransform(v)  {
+    unTransform(v) {
         const translated = [v2dot(v, this.oldXAxis), v2dot(v, this.oldYAxis)];
         return v2add(translated, this.newOrigin);
     }

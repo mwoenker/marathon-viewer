@@ -1,7 +1,7 @@
-import {collideLineSegments, lineSegmentIntersectsHorizontalPolygon, closerCollision} from './collision.js';
-import {lerp, floorMod} from './utils.js';
-import {mediaDefinitions, sideType} from './files/wad.js';
-import {makeShapeDescriptor} from './files/shapes.js';
+import { collideLineSegments, lineSegmentIntersectsHorizontalPolygon } from './collision.js';
+import { lerp, floorMod } from './utils';
+import { mediaDefinitions, sideType } from './files/wad.js';
+import { makeShapeDescriptor } from './files/shapes.js';
 export const worldUnitSize = 1024;
 
 export class World {
@@ -18,7 +18,7 @@ export class World {
         this.lights = map.lights;
         this.objects = map.objects;
         this.media = map.media;
-        
+
         const transferModes = new Set();
         for (const side of this.sides) {
             transferModes.add(side.primaryTransferMode);
@@ -54,7 +54,7 @@ export class World {
     }
 
     getEdgeVertices(edge) {
-        const {lines, points} = this;
+        const { lines, points } = this;
         const line = lines[edge.line];
         const [idx1, idx2] = edge.reverse ? [line[1], line[0]] : [line[0], line[1]];
         return [points[idx1], points[idx2]];
@@ -81,7 +81,7 @@ export class World {
     }
 
     getTexOffset(sideTexDef) {
-        if (! sideTexDef) {
+        if (!sideTexDef) {
             return [0, 0];
         }
         return [
@@ -120,8 +120,8 @@ export class World {
     getMediaInfo(polygonIndex, seconds = 0) {
         const polygon = this.polygons[polygonIndex];
         const mediaIndex = polygon.media;
-        
-        if (mediaIndex === -1 || ! (mediaIndex in this.media)) {
+
+        if (mediaIndex === -1 || !(mediaIndex in this.media)) {
             return null;
         }
         const media = this.media[mediaIndex];
@@ -143,7 +143,7 @@ export class World {
     getPolygonFloorCeiling(polygonIndex, playerHeight, isSubmerged, seconds = 0) {
         const polygon = this.polygons[polygonIndex];
         const media = this.getMediaInfo(polygonIndex, seconds);
-        
+
         let low = {
             height: polygon.floorHeight,
             textureOffset: polygon.floorOrigin,
@@ -166,7 +166,7 @@ export class World {
             high = media;
         }
 
-        return {floor: low, ceiling: high};
+        return { floor: low, ceiling: high };
     }
 
     movePlayer(oldPosition, position, polygonIndex) {
@@ -176,9 +176,8 @@ export class World {
         for (let linePosition = 0; linePosition < polygon.lines.length; ++linePosition) {
             const line = this.getLineVertices(polygonIndex, linePosition);
             const thisIntersection = collideLineSegments([oldPosition, position], line);
-            if ((! intersection && thisIntersection) ||
-                (thisIntersection && thisIntersection.t < intersection.t))
-            {
+            if ((!intersection && thisIntersection) ||
+                (thisIntersection && thisIntersection.t < intersection.t)) {
                 intersection = thisIntersection;
                 intersectLinePosition = linePosition;
             }
@@ -209,7 +208,7 @@ export class World {
                 type: 'floor',
             };
         }
-        
+
         const ceilingIntercept = lineSegmentIntersectsHorizontalPolygon(
             startPosition, endPosition, points, polygon.ceilingHeight);
         if (ceilingIntercept) {
@@ -223,7 +222,7 @@ export class World {
             const line = this.getLineVertices(polygonIndex, wallIndex);
             const intersection = collideLineSegments([startPosition, endPosition], line);
             const sideIndex = polygon.sides[wallIndex];
-            
+
             if (intersection) {
                 const portalTo = this.getPortal(polygonIndex, wallIndex);
                 if ((portalTo || portalTo === 0) && portalTo !== -1) {
@@ -233,7 +232,7 @@ export class World {
 
                     const hasTop = portalTop !== polygon.ceilingHeight;
                     const hasBottom = portalBottom !== polygon.floorHeight;
-                    
+
                     let sideTextureType = sideType.full;
                     if (hasTop && hasBottom) {
                         sideTextureType = sideType.split;
@@ -242,7 +241,7 @@ export class World {
                     } else if (hasBottom) {
                         sideTextureType = sideType.low;
                     }
-                    
+
                     const intersectHeight = lerp(intersection.t, startPosition[2], endPosition[2]);
                     if (intersectHeight > portalTop) {
                         return {

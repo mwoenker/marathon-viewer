@@ -3,7 +3,7 @@ import {
     v2add,
     v2direction,
     isClockwise
-} from './vector.js';
+} from './vector2';
 import { ClipArea } from './clip.js';
 
 import { Transformation } from './transform2d.js';
@@ -22,7 +22,7 @@ export function drawOverhead(canvas, player, world) {
 
     const angle = player.secondsElapsed * 10;
     const radians = angle * Math.PI / 180;
-    
+
     const fromWorld = (vo) => {
         const toView = new Transformation(player.position, player.facingAngle);
         const v = toView.unTransform(toView.transform(vo));
@@ -57,17 +57,17 @@ export function drawOverhead(canvas, player, world) {
 
     const drawPolygon = (polygonIndex, clipArea) => {
         const polygon = polygons[polygonIndex];
-        
+
         for (const edgeIndex of polygon.edges) {
             const edge = edges[edgeIndex];
             const [p1, p2] = world.getEdgeVertices(edge);
 
-            if (! isClockwise(player.position, p1, p2)) {
+            if (!isClockwise(player.position, p1, p2)) {
                 continue;
             }
 
             drawLines('purple', p1, p2);
-            
+
             const p1View = {
                 position: toView.transform(p1),
                 texX: 0,
@@ -76,14 +76,14 @@ export function drawOverhead(canvas, player, world) {
                 position: toView.transform(p2),
                 texX: 1,
             };
-            
+
             const clippedLine = clipArea.clipLine(p1View, p2View);
-            
+
             if (clippedLine) {
                 if (edge.portalTo !== undefined && edge.portalTo !== null) {
                     const newClipArea = new ClipArea(clippedLine[0].position, clippedLine[1].position);
                     drawPolygon(edge.portalTo, clipArea);
-                    
+
                     context.save();
                     context.lineWidth = 3;
                     drawLines(

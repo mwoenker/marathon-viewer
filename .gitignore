@@ -1,2 +1,4 @@
 *.shpA
 *.sceA
+dist
+node_modules

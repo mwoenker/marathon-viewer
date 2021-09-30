@@ -1,6 +1,6 @@
-import {v2add, v2sub} from '../vector.js';
-import {Side, SideTex} from './map/side.js';
-import {Polygon} from './map/polygon.js';
+import { v2add, v2sub } from '../vector2';
+import { Side, SideTex } from './map/side.js';
+import { Polygon } from './map/polygon.js';
 
 function outOfRange(pt) {
     return pt[0] < -0x8000 || pt[0] > 0x7fff ||
@@ -16,12 +16,12 @@ class Dependencies {
     // Add object, but not its dependencies. Returns true if object is already
     // in list.
     _add(type, index) {
-        if (! this.objects.has(type)) {
+        if (!this.objects.has(type)) {
             this.objects.set(type, [index]);
             return true;
         } else {
             const typeObjs = this.objects.get(type);
-            if (! typeObjs.includes(index)) {
+            if (!typeObjs.includes(index)) {
                 this.objects.get(type).push(index);
                 return true;
             } else {
@@ -42,7 +42,7 @@ class Dependencies {
     // object B is dependent on object A if B must be deleted when A is deleted
     // -- i.e. a line is dependent on its two endpoints because when one of its
     // endpoints is deleted, the line can no longer exist.
-    
+
     addPoint(map, pointIndex) {
         if (this._add('points', pointIndex)) {
             for (let i = 0; i < map.lines.length; ++i) {
@@ -127,8 +127,7 @@ function updateObject(original, updates) {
         if (a === b) {
             return true;
         } else if (Array.isArray(a) && Array.isArray(b)
-                   && a.length === b.length)
-        {
+            && a.length === b.length) {
             for (let i = 0; i < a.length; ++i) {
                 if (a[i] !== b[i]) {
                     return false;
@@ -139,17 +138,17 @@ function updateObject(original, updates) {
             return false;
         }
     }
-    
+
     for (const prop in updates) {
-        if (! compare(original[prop], updates[prop])) {
-            return {...original, ...updates};
+        if (!compare(original[prop], updates[prop])) {
+            return { ...original, ...updates };
         }
     }
     return original;
 }
 
 export class MapGeometry {
-    constructor({index, header, info, ...arrays}) {
+    constructor({ index, header, info, ...arrays }) {
         this.index = index;
         this.header = header;
         this.info = info;
@@ -164,7 +163,7 @@ export class MapGeometry {
         if (outOfRange(newPoints[i])) {
             return this;
         } else {
-            return new MapGeometry({...this, points: newPoints});
+            return new MapGeometry({ ...this, points: newPoints });
         }
     }
 
@@ -180,11 +179,11 @@ export class MapGeometry {
                 return this;
             }
         }
-        return new MapGeometry({...this, points: newPoints});
+        return new MapGeometry({ ...this, points: newPoints });
     }
 
-    setWallTexture({polygonIndex, wallIndex, sideType, textureSlot, shape, offset}) {
-        const sideTex = new SideTex({texture: shape, offset});
+    setWallTexture({ polygonIndex, wallIndex, sideType, textureSlot, shape, offset }) {
+        const sideTex = new SideTex({ texture: shape, offset });
         const polygon = this.polygons[polygonIndex];
         const sideIndex = polygon.sides[wallIndex];
         if (sideIndex == -1) {
@@ -195,20 +194,20 @@ export class MapGeometry {
                 primaryTexture: textureSlot === 'primary' ? sideTex : new SideTex(),
                 secondaryTexture: textureSlot === 'secondary' ? sideTex : new SideTex(),
                 transparentTexture: textureSlot === 'transparent' ? sideTex : new SideTex(),
-                
+
             });
             const sides = [...this.sides, side];
             const polygonSides = [...polygon.sides];
             polygonSides[wallIndex] = sides.length - 1;
-            
+
             const newPolygon = new Polygon({
                 ...polygon,
                 sides: polygonSides
             });
             const polygons = [...this.polygons];
             polygons[polygonIndex] = newPolygon;
-            
-            return new MapGeometry({...this, sides, polygons});
+
+            return new MapGeometry({ ...this, sides, polygons });
         } else {
             const oldSide = this.sides[sideIndex];
             const side = new Side({
@@ -219,30 +218,30 @@ export class MapGeometry {
             });
             const sides = [...this.sides];
             sides[sideIndex] = side;
-            return new MapGeometry({...this, sides});
+            return new MapGeometry({ ...this, sides });
         }
     }
 
-    setFloorTexture({polygonIndex, shape, offset}) {
+    setFloorTexture({ polygonIndex, shape, offset }) {
         const polygons = [...this.polygons];
         polygons[polygonIndex] = new Polygon({
             ...polygons[polygonIndex],
             floorTexture: shape,
             floorOrigin: offset,
         });
-        return new MapGeometry({...this, polygons});
+        return new MapGeometry({ ...this, polygons });
     }
 
-    setCeilingTexture({polygonIndex, shape, offset}) {
+    setCeilingTexture({ polygonIndex, shape, offset }) {
         const polygons = [...this.polygons];
         polygons[polygonIndex] = new Polygon({
             ...polygons[polygonIndex],
             ceilingTexture: shape,
             ceilingOrigin: offset,
         });
-        return new MapGeometry({...this, polygons});
+        return new MapGeometry({ ...this, polygons });
     }
-    
+
     removeObjectsAndRenumber(deadObjects) {
         const newIndices = {};
         const newObjects = {};
@@ -333,7 +332,7 @@ export class MapGeometry {
         deletions.addLine(this, pointIdx);
         return this.removeObjectsAndRenumber(deletions);
     }
-    
+
     deletePoint(pointIdx) {
         const deletions = new Dependencies();
         deletions.addPoint(this, pointIdx);
