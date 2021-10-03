@@ -1,44 +1,130 @@
-import {Reader, readRange, getDataFork} from './binary-read.js';
-
+import { RandomAccess, Reader, readRange } from './binary-read';
+import { Vec2 } from '../vector2'
 const nCollections = 32;
 const collectionHeaderSize = 32;
 
 // See shape_descriptors.h in aleph one
-export const collections = {
-    wall: {
-        water: 17,
-        lava: 18,
-        sewage: 19,
-        jjaro: 20,
-        pfhor: 21,
-    },
-    scenery: {
-        water: 22,
-        lava: 23,
-        sewage: 24,
-        jjaro: 25,
-        pfhor: 26,
-    },
-    landscape: {
-        day: 27,
-        night: 28,
-        moon: 29,
-        space: 30,
-    },
-};
+export enum Collections {
+    wallsWater = 17,
+    wallsLava,
+    wallsSewage,
+    wallsJjaro,
+    wallsPfhor,
+    sceneryWater,
+    sceneryLava,
+    scenerySewage,
+    sceneryJjaro,
+    sceneryPfhor,
+    landscapeDay,
+    landscapeNight,
+    landscapeMoon,
+    landscapeSpace,
+}
 
-export function makeShapeDescriptor(clut, collection, shape) {
+export function makeShapeDescriptor(clut: number, collection: number, shape: number): number {
     return ((clut & 0x03) << 13) |
         ((collection & 0x01f) << 8) |
         (shape & 0x0ff);
 }
 
+export interface ShapesColor {
+    flags: number;
+    value: number;
+    r: number;
+    g: number;
+    b: number;
+}
+
+export interface ShapesHeader {
+    status: number;
+    flags: number;
+    offset8: number;
+    length8: number;
+    offset16: number;
+    length16: number;
+}
+
+export interface CollectionHeader {
+    status: number;
+    flags: number;
+    offset8: number;
+    length8: number;
+    offset16: number;
+    length16: number;
+}
+
+export interface CollectionHeaders {
+    header: CollectionHeader,
+    version: number,
+    type: number,
+    flags: number,
+    colorsPerTable: number,
+    colorTableCount: number,
+    colorTablesOffset: number,
+    sequenceCount: number,
+    sequenceTableOffset: number,
+    frameCount: number,
+    frameTableOffset: number,
+    bitmapCount: number,
+    bitmapTableOffset: number,
+    scaleFactor: number,
+    collectionSize: number,
+}
+
+export interface Sequence {
+    type: number;
+    flags: number;
+    name: string;
+    numberOfViews: number;
+    framesPerView: number;
+    ticksPerFrame: number;
+    keyFrame: number;
+    transferMode: number;
+    transferModePeriod: number;
+    firstFrameSound: number;
+    keyFrameSound: number;
+    lastFrameSound: number;
+    scaleFactor: number;
+    loopFrame: number;
+}
+
+export interface Bitmap {
+    width: number;
+    height: number;
+    bytesPerRow: number;
+    flags: number;
+    bitDepth: number;
+    offset: number
+    columnOrder: boolean;
+    data: Uint8Array;
+}
+
+export interface Frame {
+    flags: number;
+    minimumLighIntensity: number;
+    bitmapIndex: number;
+    origin: Vec2;
+    key: Vec2;
+    worldLeft: number;
+    worldRight: number;
+    worldTop: number;
+    worldBottom: number;
+    world: Vec2;
+}
+
+export interface Collection extends CollectionHeaders {
+    sequences: Sequence[],
+    frames: Frame[],
+    bitmaps: Bitmap[]
+    colorTables: ShapesColor[][]
+}
+
 export const COLUMN_ORDER_BIT = 0x8000;
 export const SELF_LUMINESCENT_BIT = 0x80;
 
-function readColorTable(bytes, colorsPerTable) {
+function readColorTable(bytes: ArrayBuffer, colorsPerTable: number): ShapesColor[] {
     const r = new Reader(bytes);
-    
+
     const table = [];
     for (let i = 0; i < colorsPerTable; ++i) {
         table.push({
@@ -52,7 +138,7 @@ function readColorTable(bytes, colorsPerTable) {
     return table;
 }
 
-function readColorTables(bytes, collection) {
+function readColorTables(bytes: ArrayBuffer, collection: CollectionHeaders) {
     const tables = [];
     for (let i = 0; i < collection.colorTableCount; ++i) {
         const colorSize = 8;
@@ -65,53 +151,58 @@ function readColorTables(bytes, collection) {
     return tables;
 }
 
-function readBitmap(bytes, offset) {
+function readBitmap(bytes: ArrayBuffer, offset: number): Bitmap {
     const r = new Reader(bytes.slice(offset));
 
-    const bitmap = {
-        width: r.int16(),
-        height: r.int16(),
-        bytesPerRow: r.int16(),
-        flags: r.uint16(),
-        bitDepth: r.int16(),
-        offset: offset,
-    };
+    const width = r.int16();
+    const height = r.int16();
+    const bytesPerRow = r.int16();
+    const flags = r.uint16();
+    const bitDepth = r.int16();
 
-    const columnOrder = 0 != (bitmap.flags & COLUMN_ORDER_BIT);
-    bitmap.columnOrder = columnOrder;
-    
-    const nSlices = columnOrder ? bitmap.width : bitmap.height;
-    const sliceSize = columnOrder ? bitmap.height : bitmap.width;
+    const columnOrder = 0 != (flags & COLUMN_ORDER_BIT);
+    const nSlices = columnOrder ? width : height;
+    const sliceSize = columnOrder ? height : width;
 
-    console.assert(bitmap.width <= 2048);
-    console.assert(bitmap.height <= 2048);
-    console.assert(-1 === bitmap.bytesPerRow ||
-                   sliceSize === bitmap.bytesPerRow);
-    console.assert(8 === bitmap.bitDepth);
-    
+    console.assert(width <= 2048);
+    console.assert(height <= 2048);
+    console.assert(-1 === bytesPerRow ||
+        sliceSize === bytesPerRow);
+    console.assert(8 === bitDepth);
+
     r.skip(20);
     r.skip(4 * nSlices);
 
-    if (bitmap.bytesPerRow < 0) {
-        bitmap.data = new Uint8Array(bitmap.width * bitmap.height);
+    let data: Uint8Array;
+    if (bytesPerRow < 0) {
+        data = new Uint8Array(width * height);
         for (let i = 0; i < nSlices; ++i) {
             const begin = r.int16();
             const end = r.int16();
             console.assert(begin >= 0 && begin < 2048);
             console.assert(end >= 0 && end < 2048);
             for (let j = begin; j < end; ++j) {
-                bitmap.data[sliceSize * i + j] = r.uint8();
+                data[sliceSize * i + j] = r.uint8();
             }
         }
     } else {
-        bitmap.data = r.raw(bitmap.width * bitmap.height);
+        data = r.raw(width * height);
     }
 
-    return bitmap;
+    return {
+        width,
+        height,
+        bytesPerRow,
+        flags,
+        bitDepth,
+        offset,
+        columnOrder,
+        data,
+    }
 }
 
-function readBitmaps(bytes, collection) {
-     const r = new Reader(bytes.slice(
+function readBitmaps(bytes: ArrayBuffer, collection: CollectionHeaders): Bitmap[] {
+    const r = new Reader(bytes.slice(
         collection.bitmapTableOffset,
         collection.bitmapTableOffset + 4 * collection.bitmapCount));
 
@@ -123,7 +214,7 @@ function readBitmaps(bytes, collection) {
     return bitmaps;
 }
 
-function readFrame(bytes, offset) {
+function readFrame(bytes: ArrayBuffer, offset: number): Frame {
     const r = new Reader(bytes.slice(offset, offset + 36));
 
     return {
@@ -140,8 +231,8 @@ function readFrame(bytes, offset) {
     };
 }
 
-function readFrames(bytes, collection) {
-     const r = new Reader(bytes.slice(
+function readFrames(bytes: ArrayBuffer, collection: CollectionHeaders): Frame[] {
+    const r = new Reader(bytes.slice(
         collection.frameTableOffset,
         collection.frameTableOffset + 4 * collection.frameCount));
 
@@ -154,10 +245,10 @@ function readFrames(bytes, collection) {
     return frames;
 }
 
-function readSequence(bytes, offset) {
+function readSequence(bytes: ArrayBuffer, offset: number): Sequence {
     const r = new Reader(bytes.slice(offset, offset + 88));
 
-    const seq =  {
+    const seq = {
         type: r.int16(),
         flags: r.uint16(),
         name: r.pascalString(34),
@@ -173,12 +264,12 @@ function readSequence(bytes, offset) {
         scaleFactor: r.int16(),
         loopFrame: r.int16(),
     };
-    
+
     return seq;
 }
 
 // Sequence, aka high level shapes in marathon terminology
-async function readSequences(bytes, collection) {
+function readSequences(bytes: ArrayBuffer, collection: CollectionHeaders): Sequence[] {
     const r = new Reader(bytes.slice(
         collection.sequenceTableOffset,
         collection.sequenceTableOffset + 4 * collection.sequenceCount));
@@ -192,7 +283,7 @@ async function readSequences(bytes, collection) {
     return sequences;
 }
 
-export async function readCollection(file, header) {
+export async function readCollection(file: RandomAccess, header: ShapesHeader): Promise<Collection> {
     console.log('load', header);
     let offset, length;
     if (header.offset16 <= 0 || header.length16 <= 0) {
@@ -203,18 +294,18 @@ export async function readCollection(file, header) {
         length = header.offset16;
     }
     if (offset <= 0 || length <= 0) {
-        return null;
+        throw new Error('empty collection')
     }
 
     const collectionBytes = await readRange(file, offset, offset + length);
     const r = new Reader(collectionBytes);
-    
-    const collection = {
+
+    const collectionHeaders = {
         header: header,
         version: r.int16(),
-	type: r.int16(),
+        type: r.int16(),
         flags: r.uint16(),
-	colorsPerTable: r.int16(),
+        colorsPerTable: r.int16(),
         colorTableCount: r.int16(),
         colorTablesOffset: r.int32(),
         sequenceCount: r.int16(),
@@ -227,14 +318,18 @@ export async function readCollection(file, header) {
         collectionSize: r.int32(),
     };
 
-    collection.sequences = readSequences(collectionBytes, collection);
-    collection.frames = readFrames(collectionBytes, collection);
-    collection.bitmaps = readBitmaps(collectionBytes, collection);
-    collection.colorTables = readColorTables(collectionBytes, collection);
+    const collection = {
+        ...collectionHeaders,
+        sequences: readSequences(collectionBytes, collectionHeaders),
+        frames: readFrames(collectionBytes, collectionHeaders),
+        bitmaps: readBitmaps(collectionBytes, collectionHeaders),
+        colorTables: readColorTables(collectionBytes, collectionHeaders),
+    }
+
     return collection;
 }
 
-export async function readShapesHeaders(file) {
+export async function readShapesHeaders(file: RandomAccess): Promise<ShapesHeader[]> {
     const r = new Reader(await readRange(
         file,
         0,
@@ -255,28 +350,12 @@ export async function readShapesHeaders(file) {
     return headers;
 }
 
-export async function readShapes(file) {
-    const headers = await readShapesHeaders(file);
-    // const r = new Reader(await readRange(
-    //     file,
-    //     0,
-    //     nCollections * collectionHeaderSize));
-    // const headers = [];
-    // for (let i = 0; i < nCollections; ++i) {
-    //     const header = {
-    //         status: r.int16(),
-    //         flags: r.uint16(),
-    //         offset8: r.int32(),
-    //         length8: r.int32(),
-    //         offset16: r.int32(),
-    //         length16: r.int32(),
-    //     };
-    //     r.skip(12);
-    //     headers.push(header);
-    // }
+interface AllShapes {
+    [idx: number]: Collection
+}
 
-    // const collectionIndexes = Object.values(collectionIndex).flatMap(
-    //     category => Object.values(category));
+export async function readShapes(file: RandomAccess): Promise<AllShapes> {
+    const headers = await readShapesHeaders(file);
     const collectionIndexes = [
         0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19,
         20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31];

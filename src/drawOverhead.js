@@ -4,9 +4,9 @@ import {
     v2direction,
     isClockwise
 } from './vector2';
-import { ClipArea } from './clip.js';
+import { ClipArea } from './clip';
 
-import { Transformation } from './transform2d.js';
+import { Transformation } from './transform2d';
 
 export function drawOverhead(canvas, player, world) {
     const top = -2;

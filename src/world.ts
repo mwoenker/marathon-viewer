@@ -1,16 +1,61 @@
-import { collideLineSegments, lineSegmentIntersectsHorizontalPolygon } from './collision.js';
+import { Collision2d, closerCollision, collideLineSegments, lineSegmentIntersectsHorizontalPolygon } from './collision';
 import { lerp, floorMod } from './utils';
-import { mediaDefinitions, sideType } from './files/wad.js';
-import { makeShapeDescriptor } from './files/shapes.js';
+import { Vec2 } from './vector2';
+import { Vec3 } from './vector3';
+import { Line } from './files/map/line';
+import { Side, SideTex } from './files/map/side';
+import { Polygon } from './files/map/polygon';
+import { Light } from './files/map/light';
+import { MapObject } from './files/map/object';
+import { Media } from './files/map/media';
+import { mediaDefinitions, sideType } from './files/wad';
+import { MapGeometry } from './files/map';
+import { makeShapeDescriptor } from './files/shapes';
 export const worldUnitSize = 1024;
 
+interface HorizontalSurfaceInfo {
+    height: number;
+    textureOffset: Vec2;
+    texture: number;
+    transferMode: number;
+    lightIntensity: number;
+}
+
+interface FloorCeilingInfo {
+    floor: HorizontalSurfaceInfo;
+    ceiling: HorizontalSurfaceInfo;
+}
+
+interface RayCollisionFloorCeiling {
+    type: 'floor' | 'ceiling';
+    polygonIndex: number;
+}
+
+interface RayCollisionWall {
+    type: 'wallPrimary' | 'wallSecondary';
+    polygonIndex: number;
+    wallIndex: number;
+    sideType: sideType;
+}
+
+type RayCollision = RayCollisionFloorCeiling | RayCollisionWall
+
 export class World {
-    constructor(map) {
+    map: MapGeometry;
+    points: Vec2[];
+    lines: Line[];
+    sides: Side[];
+    polygons: Polygon[];
+    lights: Light[];
+    objects: MapObject[];
+    media: Media[];
+
+    constructor(map: MapGeometry) {
         this.map = map;
         this.points = map.points.map(([x, y]) => [x / worldUnitSize, y / worldUnitSize]);
         this.lines = map.lines;
         this.sides = map.sides;
-        this.polygons = map.polygons.map(p => ({
+        this.polygons = map.polygons.map((p: Polygon) => new Polygon({
             ...p,
             floorHeight: p.floorHeight / worldUnitSize,
             ceilingHeight: p.ceilingHeight / worldUnitSize,
@@ -32,35 +77,28 @@ export class World {
         }
     }
 
-    getPolygon(polygonIndex) {
+    getPolygon(polygonIndex: number): Polygon {
         if (polygonIndex < 0 || polygonIndex >= this.polygons.length) {
             throw new Error(`invalid polygon index: ${polygonIndex}`);
         }
         return this.polygons[polygonIndex];
     }
 
-    getSide(sideIndex) {
+    getSide(sideIndex: number): Side {
         if (sideIndex < 0 || sideIndex >= this.sides.length) {
             throw new Error(`invalid side index: ${sideIndex}`);
         }
         return this.sides[sideIndex];
     }
 
-    getPoint(pointIndex) {
+    getPoint(pointIndex: number): Vec2 {
         if (pointIndex < 0 || pointIndex >= this.points.length) {
             throw new Error(`invalid point index: ${pointIndex}`);
         }
         return this.points[pointIndex];
     }
 
-    getEdgeVertices(edge) {
-        const { lines, points } = this;
-        const line = lines[edge.line];
-        const [idx1, idx2] = edge.reverse ? [line[1], line[0]] : [line[0], line[1]];
-        return [points[idx1], points[idx2]];
-    }
-
-    getLineVertices(polygonIndex, linePosition) {
+    getLineVertices(polygonIndex: number, linePosition: number): [Vec2, Vec2] {
         const polygon = this.polygons[polygonIndex];
         return [
             this.points[polygon.endpoints[linePosition]],
@@ -68,7 +106,7 @@ export class World {
         ];
     }
 
-    getPortal(polygonIndex, linePosition) {
+    getPortal(polygonIndex: number, linePosition: number): number {
         const polygon = this.polygons[polygonIndex];
         const line = this.lines[polygon.lines[linePosition]];
         if (line.frontPoly === polygonIndex) {
@@ -80,7 +118,7 @@ export class World {
         }
     }
 
-    getTexOffset(sideTexDef) {
+    getTexOffset(sideTexDef: SideTex): Vec2 {
         if (!sideTexDef) {
             return [0, 0];
         }
@@ -90,18 +128,18 @@ export class World {
         ];
     }
 
-    getLightIntensity(lightIndex) {
+    getLightIntensity(lightIndex: number): number {
         const light = this.lights[lightIndex];
         const intensityFixed = light.primaryActive.intensity;
         return intensityFixed / 0xffff;
     }
 
-    getPolygonPoints(polygonIndex) {
+    getPolygonPoints(polygonIndex: number): Vec2[] {
         const polygon = this.polygons[polygonIndex];
         return polygon.endpoints.map(index => this.points[index]);
     }
 
-    getFloorOffset(polygonIndex) {
+    getFloorOffset(polygonIndex: number): Vec2 {
         const polygon = this.polygons[polygonIndex];
         return [
             polygon.floorOrigin[0] / worldUnitSize,
@@ -109,7 +147,7 @@ export class World {
         ];
     }
 
-    getCeilingOffset(polygonIndex) {
+    getCeilingOffset(polygonIndex: number): Vec2 {
         const polygon = this.polygons[polygonIndex];
         return [
             polygon.ceilingOrigin[0] / worldUnitSize,
@@ -117,7 +155,7 @@ export class World {
         ];
     }
 
-    getMediaInfo(polygonIndex, seconds = 0) {
+    getMediaInfo(polygonIndex: number, seconds = 0): HorizontalSurfaceInfo | null {
         const polygon = this.polygons[polygonIndex];
         const mediaIndex = polygon.media;
 
@@ -140,7 +178,11 @@ export class World {
         };
     }
 
-    getPolygonFloorCeiling(polygonIndex, playerHeight, isSubmerged, seconds = 0) {
+    getPolygonFloorCeiling(
+        polygonIndex: number,
+        playerHeight: number,
+        isSubmerged: boolean,
+        seconds = 0): FloorCeilingInfo {
         const polygon = this.polygons[polygonIndex];
         const media = this.getMediaInfo(polygonIndex, seconds);
 
@@ -169,20 +211,19 @@ export class World {
         return { floor: low, ceiling: high };
     }
 
-    movePlayer(oldPosition, position, polygonIndex) {
+    movePlayer(oldPosition: Vec2, position: Vec2, polygonIndex: number): [Vec2, number] {
         const polygon = this.polygons[polygonIndex];
-        let intersection = null;
+        let intersection: Collision2d | null = null;
         let intersectLinePosition = null;
         for (let linePosition = 0; linePosition < polygon.lines.length; ++linePosition) {
             const line = this.getLineVertices(polygonIndex, linePosition);
             const thisIntersection = collideLineSegments([oldPosition, position], line);
-            if ((!intersection && thisIntersection) ||
-                (thisIntersection && thisIntersection.t < intersection.t)) {
-                intersection = thisIntersection;
-                intersectLinePosition = linePosition;
+            intersection = closerCollision(intersection, thisIntersection);
+            if (intersection && intersection === thisIntersection) {
+                intersectLinePosition = linePosition
             }
         }
-        if (intersection) {
+        if (intersection && intersectLinePosition !== null) {
             const portalTo = this.getPortal(polygonIndex, intersectLinePosition);
             if (portalTo !== undefined && portalTo !== null && portalTo !== -1) {
                 return this.movePlayer(intersection.collidePosition, position, portalTo);
@@ -196,7 +237,7 @@ export class World {
 
     // cast a "ray" (really, find first intersection of world along line segment
     // between two points)
-    intersectLineSegment(polygonIndex, startPosition, endPosition) {
+    intersectLineSegment(polygonIndex: number, startPosition: Vec3, endPosition: Vec3): RayCollision | null {
         const polygon = this.polygons[polygonIndex];
         const points = this.getPolygonPoints(polygonIndex);
 
@@ -218,10 +259,12 @@ export class World {
             };
         }
 
+        const startPosition2d: Vec2 = [startPosition[0], startPosition[1]];
+        const endPosition2d: Vec2 = [endPosition[0], endPosition[1]];
+
         for (let wallIndex = 0; wallIndex < polygon.lines.length; ++wallIndex) {
             const line = this.getLineVertices(polygonIndex, wallIndex);
-            const intersection = collideLineSegments([startPosition, endPosition], line);
-            const sideIndex = polygon.sides[wallIndex];
+            const intersection = collideLineSegments([startPosition2d, endPosition2d], line);
 
             if (intersection) {
                 const portalTo = this.getPortal(polygonIndex, wallIndex);

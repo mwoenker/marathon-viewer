@@ -1,28 +1,77 @@
-import { v2add, v2sub } from '../vector2';
-import { Side, SideTex } from './map/side.js';
-import { Polygon } from './map/polygon.js';
+import { Vec2, v2add, v2sub } from '../../vector2';
+import { Side, SideTex } from './side';
+import { Polygon } from './polygon';
+import { Light } from './light';
+import { MapObject } from './object';
+import { Line } from './line';
+import { ItemPlacement } from './item-placement';
+import { Endpoint } from './endpoint';
+import { Media } from './media';
+import { AmbientSound } from './ambient-sound';
+import { RandomSound } from './random-sound';
+import { Note } from './note';
+import { Platform } from './platform';
+import { MapInfo } from './map-info';
+import { WadHeader } from '../wad'
 
-function outOfRange(pt) {
+interface FloorCeilingRequest {
+    polygonIndex: number,
+    shape: number,
+    offset: Vec2,
+}
+
+type TextureSlot = 'primary' | 'secondary' | 'transparent'
+
+interface WallTextureRequest {
+    polygonIndex: number,
+    wallIndex: number,
+    sideType: number,
+    textureSlot: TextureSlot,
+    shape: number,
+    offset: Vec2
+}
+
+interface MapGeometryConstructor {
+    index: number;
+    header: WadHeader;
+    info: MapInfo;
+    points: Vec2[];
+    lights: Light[];
+    lines: Line[];
+    sides: Side[];
+    polygons: Polygon[];
+    media: Media[];
+    objects: MapObject[];
+    itemPlacement: ItemPlacement[];
+    ambientSounds: AmbientSound[];
+    randomSounds: RandomSound[];
+    notes: Note[];
+    platforms: Platform[];
+}
+
+function outOfRange(pt: Vec2): boolean {
     return pt[0] < -0x8000 || pt[0] > 0x7fff ||
         pt[1] < -0x8000 || pt[1] > 0x7fff;
 }
 
 // Holds sets of object indices
 class Dependencies {
+    objects: Map<string, number[]>
+
     constructor() {
         this.objects = new Map();
     }
 
     // Add object, but not its dependencies. Returns true if object is already
     // in list.
-    _add(type, index) {
+    _add(type: string, index: number): boolean {
         if (!this.objects.has(type)) {
             this.objects.set(type, [index]);
             return true;
         } else {
             const typeObjs = this.objects.get(type);
-            if (!typeObjs.includes(index)) {
-                this.objects.get(type).push(index);
+            if (typeObjs && !typeObjs.includes(index)) {
+                typeObjs.push(index);
                 return true;
             } else {
                 return false;
@@ -30,11 +79,11 @@ class Dependencies {
         }
     }
 
-    objectsOfType(type) {
+    objectsOfType(type: string): number[] {
         return this.objects.get(type) || [];
     }
 
-    includes(type, index) {
+    includes(type: string, index: number): boolean {
         return this.objectsOfType(type).includes(index);
     }
 
@@ -43,7 +92,7 @@ class Dependencies {
     // -- i.e. a line is dependent on its two endpoints because when one of its
     // endpoints is deleted, the line can no longer exist.
 
-    addPoint(map, pointIndex) {
+    addPoint(map: MapGeometry, pointIndex: number) {
         if (this._add('points', pointIndex)) {
             for (let i = 0; i < map.lines.length; ++i) {
                 const line = map.lines[i];
@@ -53,7 +102,7 @@ class Dependencies {
             }
         }
     }
-    addLine(map, lineIndex) {
+    addLine(map: MapGeometry, lineIndex: number): void {
         if (this._add('lines', lineIndex)) {
             const line = map.lines[lineIndex];
             if (-1 !== line.frontSide) {
@@ -70,7 +119,7 @@ class Dependencies {
             }
         }
     }
-    addSide(map, sideIndex) {
+    addSide(map: MapGeometry, sideIndex: number): void {
         if (this._add('sides', sideIndex)) {
             const side = map.sides[sideIndex];
             if (-1 !== side.polygonIndex) {
@@ -78,7 +127,7 @@ class Dependencies {
             }
         }
     }
-    addPolygon(map, polygonIndex) {
+    addPolygon(map: MapGeometry, polygonIndex: number): void {
         if (this._add('polygons', polygonIndex)) {
             const polygon = map.polygons[polygonIndex];
             for (const sideIndex of polygon.sides) {
@@ -99,8 +148,12 @@ class Dependencies {
             }
         }
     }
-    addObject(map, objectIndex) { this._add('objects', objectIndex); }
-    addNote(map, noteIndex) { this._add('notes', noteIndex); }
+    addObject(map: MapGeometry, objectIndex: number): void {
+        this._add('objects', objectIndex);
+    }
+    addNote(map: MapGeometry, noteIndex: number): void {
+        this._add('notes', noteIndex);
+    }
 }
 
 const objectTypes = [
@@ -110,7 +163,7 @@ const objectTypes = [
     'polygons',
     'lights',
     'objects',
-    'frequencies',
+    'itemPlacement',
     'media',
     'ambientSounds',
     'randomSounds',
@@ -120,8 +173,8 @@ const objectTypes = [
 
 // return new object with updates merged into original. If updates don't
 // actually change any values of the original, return the original unchanged
-function updateObject(original, updates) {
-    function compare(a, b) {
+function updateObject(original: any, updates: any): any {
+    function compare(a: any, b: any): boolean {
         // return true if objects are the same or are arrays with identical
         // elements
         if (a === b) {
@@ -148,18 +201,30 @@ function updateObject(original, updates) {
 }
 
 export class MapGeometry {
-    constructor({ index, header, info, ...arrays }) {
-        this.index = index;
-        this.header = header;
-        this.info = info;
-        for (const type of objectTypes) {
-            this[type] = arrays[type] || [];
-        }
+    index: number;
+    header: WadHeader;
+    info: MapInfo;
+    points: Vec2[];
+    endpoints: Endpoint[];
+    lights: Light[];
+    lines: Line[];
+    sides: Side[];
+    polygons: Polygon[];
+    media: Media[];
+    objects: MapObject[];
+    itemPlacement: ItemPlacement[];
+    ambientSounds: AmbientSound[];
+    randomSounds: RandomSound[];
+    notes: Note[];
+    platforms: Platform[];
+
+    constructor(data: MapGeometryConstructor) {
+        Object.assign(this, data);
     }
 
-    movePoint(i, [x, y]) {
+    movePoint(i: number, [x, y]: Vec2): MapGeometry {
         const newPoints = [...this.points];
-        newPoints[i] = [parseInt(x), parseInt(y)];
+        newPoints[i] = [Math.floor(x), Math.floor(y)];
         if (outOfRange(newPoints[i])) {
             return this;
         } else {
@@ -167,14 +232,14 @@ export class MapGeometry {
         }
     }
 
-    movePolygon(polyIdx, position) {
+    movePolygon(polyIdx: number, position: Vec2): MapGeometry {
         const polygon = this.polygons[polyIdx];
         const referencePos = this.points[polygon.endpoints[0]];
         const offset = v2sub(position, referencePos);
         const newPoints = [...this.points];
         for (const ptIdx of polygon.endpoints) {
             newPoints[ptIdx] = v2add(newPoints[ptIdx], offset).map(x =>
-                parseInt(x));
+                Math.floor(x)) as Vec2;
             if (outOfRange(newPoints[ptIdx])) {
                 return this;
             }
@@ -182,7 +247,14 @@ export class MapGeometry {
         return new MapGeometry({ ...this, points: newPoints });
     }
 
-    setWallTexture({ polygonIndex, wallIndex, sideType, textureSlot, shape, offset }) {
+    setWallTexture({
+        polygonIndex,
+        wallIndex,
+        sideType,
+        textureSlot,
+        shape,
+        offset
+    }: WallTextureRequest): MapGeometry {
         const sideTex = new SideTex({ texture: shape, offset });
         const polygon = this.polygons[polygonIndex];
         const sideIndex = polygon.sides[wallIndex];
@@ -222,7 +294,7 @@ export class MapGeometry {
         }
     }
 
-    setFloorTexture({ polygonIndex, shape, offset }) {
+    setFloorTexture({ polygonIndex, shape, offset }: FloorCeilingRequest): MapGeometry {
         const polygons = [...this.polygons];
         polygons[polygonIndex] = new Polygon({
             ...polygons[polygonIndex],
@@ -232,7 +304,7 @@ export class MapGeometry {
         return new MapGeometry({ ...this, polygons });
     }
 
-    setCeilingTexture({ polygonIndex, shape, offset }) {
+    setCeilingTexture({ polygonIndex, shape, offset }: FloorCeilingRequest): MapGeometry {
         const polygons = [...this.polygons];
         polygons[polygonIndex] = new Polygon({
             ...polygons[polygonIndex],
@@ -242,29 +314,34 @@ export class MapGeometry {
         return new MapGeometry({ ...this, polygons });
     }
 
-    removeObjectsAndRenumber(deadObjects) {
-        const newIndices = {};
-        const newObjects = {};
+    removeObjectsAndRenumber(deadObjects: Dependencies): MapGeometry {
+        type indexMap = { [type: string]: number[] }
+        type objectMap = { [type: string]: any[] }
+        const newIndices: indexMap = {};
+        const newObjects: objectMap = {};
 
         // For each object type, calculate new object arrays w/o the dead
         // objects and a index array mapping the old indexes to the new. Dead
         // objects are assigned index -1
         for (const type of objectTypes) {
-            newIndices[type] = new Array(this[type].length);
+            // a whole lot of type unsave hackery
+            const objectsByType = this as any;
+            const objectsOfType = objectsByType[type] as any[];
+            newIndices[type] = new Array(objectsOfType.length);
             newObjects[type] = new Array(
-                this[type].length - deadObjects.objectsOfType(type).length);
-            for (let i = 0, newIndex = 0; i < this[type].length; ++i) {
+                objectsOfType.length - deadObjects.objectsOfType(type).length);
+            for (let i = 0, newIndex = 0; i < objectsOfType.length; ++i) {
                 if (deadObjects.includes(type, i)) {
                     newIndices[type][i] = -1;
                 } else {
                     newIndices[type][i] = newIndex;
-                    newObjects[type][newIndex] = this[type][i];
+                    newObjects[type][newIndex] = objectsOfType[i];
                     ++newIndex;
                 }
             }
         }
 
-        function remap(type, index) {
+        function remap(type: string, index: number): number {
             return -1 === index
                 ? -1
                 : newIndices[type][index];
@@ -302,14 +379,14 @@ export class MapGeometry {
         for (let i = 0; i < newObjects.polygons.length; ++i) {
             const polygon = newObjects.polygons[i];
             newObjects.polygons[i] = updateObject(polygon, {
-                endpoints: polygon.endpoints.map(j => remap('points', j)),
-                lines: polygon.lines.map(j => remap('lines', j)),
-                sides: polygon.sides.map(j => remap('sides', j)),
+                endpoints: polygon.endpoints.map((j: number) => remap('points', j)),
+                lines: polygon.lines.map((j: number) => remap('lines', j)),
+                sides: polygon.sides.map((j: number) => remap('sides', j)),
                 floorLightsource: remap('lights', polygon.floorLightsource),
                 ceilingLightsource: remap(
                     'lights', polygon.ceilingLightsource),
                 adjacentPolygons: polygon.adjacentPolygons.map(
-                    j => remap('polygons', j)),
+                    (j: number) => remap('polygons', j)),
             });
         }
 
@@ -318,25 +395,24 @@ export class MapGeometry {
             header: this.header,
             info: this.info,
             ...newObjects,
-        });
+        } as MapGeometryConstructor);
     }
 
-    deletePolygon(polygonIdx) {
+    deletePolygon(polygonIdx: number): MapGeometry {
         const deletions = new Dependencies();
         deletions.addPolygon(this, polygonIdx);
         return this.removeObjectsAndRenumber(deletions);
     }
 
-    deleteLine(pointIdx) {
+    deleteLine(pointIdx: number): MapGeometry {
         const deletions = new Dependencies();
         deletions.addLine(this, pointIdx);
         return this.removeObjectsAndRenumber(deletions);
     }
 
-    deletePoint(pointIdx) {
+    deletePoint(pointIdx: number): MapGeometry {
         const deletions = new Dependencies();
         deletions.addPoint(this, pointIdx);
         return this.removeObjectsAndRenumber(deletions);
     }
 }
-

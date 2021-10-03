@@ -3,7 +3,7 @@ var HtmlWebpackPlugin = require('html-webpack-plugin');
 
 module.exports = {
     entry: {
-        main: './src/index.js',
+        main: './src/index.ts',
     },
     output: {
         path: path.resolve(__dirname, 'dist'),
@@ -31,5 +31,8 @@ module.exports = {
             filename: 'index.html',
             chunks: ['main'],
         }),
-    ]
+    ],
+    watchOptions: {
+        ignored: /node_modules/,
+    },
 }

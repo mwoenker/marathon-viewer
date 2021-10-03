@@ -1,4 +1,4 @@
-type Vec3 = [number, number, number]
+export type Vec3 = [number, number, number]
 
 export function v3length([x, y, z]: Vec3): number {
     return Math.sqrt(x * x + y * y + z * z);
