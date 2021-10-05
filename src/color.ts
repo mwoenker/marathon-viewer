@@ -26,7 +26,7 @@ export function unpackColor(val: number): ColorComponents {
     };
 }
 
-const nShadingLevels = 64;
+const nShadingLevels = 256;
 
 export type SourceColor = {
     r: number;

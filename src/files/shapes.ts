@@ -284,7 +284,6 @@ function readSequences(bytes: ArrayBuffer, collection: CollectionHeaders): Seque
 }
 
 export async function readCollection(file: RandomAccess, header: ShapesHeader): Promise<Collection> {
-    console.log('load', header);
     let offset, length;
     if (header.offset16 <= 0 || header.length16 <= 0) {
         offset = header.offset8;

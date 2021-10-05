@@ -1,21 +1,30 @@
 import { Reader, Writer } from '../binary-read'
-import { Vec2 } from '../../vector2';
+import { Vec3 } from '../../vector3';
+
+export enum ObjectType {
+    monster = 0,
+    oject,
+    item,
+    player,
+    goal,
+    savedSoundSource
+}
 
 interface MapObjectConstructor {
-    group: number;
+    type: ObjectType;
     index: number;
     facing: number;
     polygon: number;
-    position: [number, number, number];
+    position: Vec3;
     flags: number;
 }
 
 export class MapObject {
-    group: number;
+    type: ObjectType;
     index: number;
     facing: number;
     polygon: number;
-    position: Vec2;
+    position: Vec3;
     flags: number;
 
     constructor(data: MapObjectConstructor) {
@@ -24,7 +33,7 @@ export class MapObject {
 
     static read(reader: Reader): MapObject {
         return new MapObject({
-            group: reader.uint16(),
+            type: reader.uint16(),
             index: reader.uint16(),
             facing: reader.uint16(),
             polygon: reader.uint16(),
@@ -34,7 +43,7 @@ export class MapObject {
     }
 
     write(writer: Writer): void {
-        writer.uint16(this.group);
+        writer.uint16(this.type);
         writer.uint16(this.index);
         writer.uint16(this.facing);
         writer.uint16(this.polygon);

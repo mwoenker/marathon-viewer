@@ -6,3 +6,4 @@ export function floorMod(num: number, div: number): number {
     const mod = num % div;
     return mod < 0 ? mod + div : mod;
 }
+

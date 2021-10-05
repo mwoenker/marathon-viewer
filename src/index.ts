@@ -6,6 +6,7 @@ import { magenta } from './color';
 import { drawOverhead } from './drawOverhead';
 import { makeShapeDescriptor } from './files/shapes';
 import { MapGeometry } from './files/map';
+import { ObjectType } from './files/map/object';
 import {
     Vec2,
     v2scale,
@@ -14,7 +15,7 @@ import {
 } from './vector2';
 import { Vec3 } from './vector3';
 import { v3scale } from './vector3';
-import { World } from './world';
+import { World, fromFixedAngle, fromMapCoords3d } from './world';
 import {
     readMapSummaries,
     readMapFromSummary,
@@ -160,24 +161,37 @@ function initWorld(
     const vFov = 2 * Math.atan(Math.tan(hFov / 2) * canvas.height / canvas.width);
     let world = new World(map);
     // const targetPolygon = 100;
-    const targetPolygon = 1;
+    let targetPolygon = 1;
 
     const zeroVec: Vec2 = [0, 0];
     const sum = map.polygons[targetPolygon].endpoints.reduce(
         (sum, pointIndex) => v2add(sum, map.points[pointIndex]),
         zeroVec,
     );
-    const average = v2scale(1 / map.polygons[targetPolygon].endpoints.length / 1024, sum);
+    let playerPosition = v2scale(1 / map.polygons[targetPolygon].endpoints.length / 1024, sum);
+    let facingAngle = 0;
+    let playerHeight = map.polygons[targetPolygon].floorHeight + 0.66
+
+    for (const mapObject of map.objects) {
+        if (mapObject.type === ObjectType.player) {
+            targetPolygon = mapObject.polygon;
+            const pos3d = fromMapCoords3d(mapObject.position);
+            playerPosition = [pos3d[0], pos3d[1]];
+            playerHeight = world.polygons[targetPolygon].floorHeight + pos3d[2] + 0.66;
+            facingAngle = fromFixedAngle(mapObject.facing);
+            break;
+        }
+    }
 
     let player = {
-        position: average, // [2, 2],
+        position: playerPosition,
         polygon: targetPolygon,
-        facingAngle: 0.05,
+        facingAngle: facingAngle,
         verticalAngle: 0.0,
         hFov,
         vFov,
         wallBitmapIndex: 31,
-        height: map.polygons[targetPolygon].floorHeight / 1024 + 0.66,
+        height: playerHeight,
         secondsElapsed: 0,
     };
 
@@ -346,8 +360,14 @@ function populateLevelSelect(levelSelect: HTMLSelectElement, summaries: MapSumma
 // const shapesUrl = 'Eternal-Shapes.shpA';
 // const mapUrl = 'Eternal-Maps.sceA';
 
-const shapesUrl = 'Phoenix Shapes.shpA';
-const mapUrl = 'Phoenix Map.sceA';
+// const shapesUrl = 'Phoenix Shapes.shpA';
+// const mapUrl = 'Phoenix Map.sceA';
+
+// const shapesUrl = 'Megiddo Shapes.shpA';
+// const mapUrl = 'Megiddo Map.sceA';
+
+const shapesUrl = 'Rubicon Shapes.shpA';
+const mapUrl = 'Rubicon Map.sceA';
 
 interface Constructor { new(...args: unknown[]): unknown }
 

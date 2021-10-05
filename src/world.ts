@@ -11,7 +11,47 @@ import { Media } from './files/map/media';
 import { mediaDefinitions, sideType } from './files/wad';
 import { MapGeometry } from './files/map';
 import { makeShapeDescriptor } from './files/shapes';
+
 export const worldUnitSize = 1024;
+const numFixedAngles = 512;
+
+export function toFixedAngle(radians: number): number {
+    return floorMod(Math.floor(radians * numFixedAngles / Math.PI / 2), numFixedAngles);
+}
+
+export function fromFixedAngle(fixedAngle: number): number {
+    return fixedAngle / numFixedAngles * Math.PI * 2;
+}
+
+export function toMapCoords2d(p: Vec2): Vec2 {
+    return [
+        0xffff & (p[0] * worldUnitSize),
+        0xffff & (p[1] * worldUnitSize),
+    ];
+}
+
+export function toMapCoords3d(p: Vec3): Vec3 {
+    return [
+        0xffff & (p[0] * worldUnitSize),
+        0xffff & (p[1] * worldUnitSize),
+        0xffff & (p[2] * worldUnitSize),
+    ];
+}
+
+export function fromMapCoords2d(p: Vec2): Vec2 {
+    return [
+        p[0] / worldUnitSize,
+        p[1] / worldUnitSize,
+    ];
+}
+
+export function fromMapCoords3d(p: Vec3): Vec3 {
+    return [
+        p[0] / worldUnitSize,
+        p[1] / worldUnitSize,
+        p[2] / worldUnitSize,
+    ];
+}
 
 interface HorizontalSurfaceInfo {
     height: number;
