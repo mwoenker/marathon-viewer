@@ -29,7 +29,6 @@ export interface RenderTexture {
     data: Uint8Array;
     width: number;
     height: number;
-    shadingTables: ColorTable[]
 }
 
 interface RenderPolygon {
@@ -43,6 +42,7 @@ interface RenderPolygonProps {
     brightness: number;
     transfer: number;
     isTransparent?: boolean;
+    shadingTables: ColorTable[] | null;
 }
 
 interface WallSlice {
@@ -167,9 +167,9 @@ export class Rasterizer {
     }
 
     textureWall(
-        { polygon, texture, brightness, isTransparent = false }: RenderPolygonProps
+        { polygon, texture, shadingTables, brightness, isTransparent = false }: RenderPolygonProps
     ): void {
-        if (!texture) {
+        if (!texture || !shadingTables) {
             return;
         }
 
@@ -210,17 +210,22 @@ export class Rasterizer {
 
         const xMin = Math.max(0, Math.ceil(left));
         const xMax = Math.min(this.width, Math.ceil(right));
-        this.textureWallRange(xMin, xMax, texture, brightness, isTransparent);
+        this.textureWallRange(xMin, xMax, texture, shadingTables, brightness, isTransparent);
     }
 
     textureWallRange(
-        xMin: number, xMax: number, texture: RenderTexture, brightness: number, isTransparent: boolean
+        xMin: number,
+        xMax: number,
+        texture: RenderTexture,
+        shadingTables: ColorTable[],
+        brightness: number,
+        isTransparent: boolean
     ): void {
         for (let x = xMin; x < xMax; ++x) {
             const topParams = this.topParamList[x];
             const bottomParams = this.bottomParamList[x];
             const z = 1 / topParams.oneOverZ;
-            const shadingTable = shadingTableForDistance(texture.shadingTables, z, brightness);
+            const shadingTable = shadingTableForDistance(shadingTables, z, brightness);
 
             if (isTransparent) {
                 this.textureWallSliceTransparent({
@@ -302,8 +307,8 @@ export class Rasterizer {
         }
     }
 
-    drawHorizontalPolygon({ polygon, texture, brightness, transfer }: RenderPolygonProps): void {
-        this.textureHorizontalPolygon({ polygon, texture, brightness, transfer });
+    drawHorizontalPolygon({ polygon, texture, shadingTables, brightness, transfer }: RenderPolygonProps): void {
+        this.textureHorizontalPolygon({ polygon, texture, shadingTables, brightness, transfer });
     }
 
     calcLineTextureParamsHorizontal(
@@ -336,8 +341,8 @@ export class Rasterizer {
         }
     }
 
-    textureHorizontalPolygon({ polygon, texture, brightness, transfer }: RenderPolygonProps): void {
-        if (!texture) {
+    textureHorizontalPolygon({ polygon, texture, shadingTables, brightness, transfer }: RenderPolygonProps): void {
+        if (!texture || !shadingTables) {
             return;
         }
 
@@ -378,13 +383,14 @@ export class Rasterizer {
 
         const yMin = Math.max(0, Math.ceil(top));
         const yMax = Math.min(this.height, Math.ceil(bottom));
-        this.textureHorizontalRange(yMin, yMax, texture, brightness, transfer);
+        this.textureHorizontalRange(yMin, yMax, texture, shadingTables, brightness, transfer);
     }
 
     textureHorizontalRange(
         yMin: number,
         yMax: number,
         texture: RenderTexture,
+        shadingTables: ColorTable[],
         brightness: number,
         transfer: number
     ): void {
@@ -394,7 +400,7 @@ export class Rasterizer {
             const z = 1 / leftParams.oneOverZ;
 
             if (transfer === TransferMode.landscape) {
-                const shadingTable = shadingTableForDistance(texture.shadingTables, 0, 1);
+                const shadingTable = shadingTableForDistance(shadingTables, 0, 1);
                 this.landscapeHorizontalSpan({
                     y,
                     left: leftParams.x,
@@ -407,7 +413,7 @@ export class Rasterizer {
                     textureRightY: rightParams.textureYOverZ * z,
                 });
             } else {
-                const shadingTable = shadingTableForDistance(texture.shadingTables, z, brightness);
+                const shadingTable = shadingTableForDistance(shadingTables, z, brightness);
                 this.textureHorizontalSpan({
                     y,
                     left: leftParams.x,

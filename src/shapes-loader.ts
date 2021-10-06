@@ -43,7 +43,10 @@ export class Shapes {
                     const clutShadingTables = collection.colorTables.map((table) => {
                         return makeShadingTables(table);
                     });
-                    this.collections[index] = { ...collection, clutShadingTables };
+                    this.collections[index] = {
+                        ...collection,
+                        clutShadingTables,
+                    };
                     console.log(`loaded collection ${index}`);
                 })
                 .catch((e) => {
@@ -62,8 +65,8 @@ export class Shapes {
         return collection && collection !== 'loading';
     }
 
-    getBitmap(descriptor: number): BitmapWithShading | null {
-        const { collectionIndex, clutIndex, bitmapIndex } = parseShapeDescriptor(descriptor);
+    getBitmap(descriptor: number): Bitmap | null {
+        const { collectionIndex, bitmapIndex } = parseShapeDescriptor(descriptor);
         const collection = this.collections[collectionIndex];
         if (!collection) {
             this.loadCollection(collectionIndex);
@@ -71,15 +74,20 @@ export class Shapes {
         } else if (collection === 'loading') {
             return null;
         } else {
-            const bitmap = collection?.bitmaps[bitmapIndex];
-            if (!bitmap) {
-                return null;
-            }
-            const withShading = {
-                ...bitmap,
-                shadingTables: collection.clutShadingTables[clutIndex],
-            };
-            return withShading;
+            return collection?.bitmaps[bitmapIndex] || null;
+        }
+    }
+
+    getShadingTables(descriptor: number): ColorTable[] | null {
+        const { collectionIndex, clutIndex } = parseShapeDescriptor(descriptor)
+        const collection = this.collections[collectionIndex];
+        if (!collection) {
+            this.loadCollection(collectionIndex);
+            return null;
+        } else if (collection === 'loading') {
+            return null;
+        } else {
+            return collection.clutShadingTables[clutIndex]
         }
     }
 }

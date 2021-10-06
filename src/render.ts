@@ -15,6 +15,7 @@ import { ScreenTransform } from './screen-transform';
 import { World } from './world';
 import { Shapes } from './shapes-loader';
 import { Rasterizer, RenderTexture } from './rasterize';
+import { ColorTable } from './color'
 
 interface RendererConstructor {
     world: World;
@@ -38,6 +39,7 @@ interface DrawHorizontalPolygonProps {
     clipArea: ClipArea3d;
     isCeiling: boolean;
     texture: RenderTexture | null;
+    shadingTables: ColorTable[] | null;
     brightness: number;
     polyTransferMode: number;
 }
@@ -159,6 +161,7 @@ class Renderer {
         clipArea,
         isCeiling,
         texture,
+        shadingTables,
         brightness,
         polyTransferMode
     }: DrawHorizontalPolygonProps) {
@@ -184,6 +187,7 @@ class Renderer {
             this.rasterizer.drawHorizontalPolygon({
                 polygon: textured,
                 texture,
+                shadingTables,
                 brightness,
                 transfer: polyTransferMode,
             });
@@ -238,6 +242,7 @@ class Renderer {
                     this.rasterizer.drawWall({
                         polygon: texturedPolygon, // abovePoly,
                         texture: this.shapes.getBitmap(side.primaryTexture.texture),
+                        shadingTables: this.shapes.getShadingTables(side.primaryTexture.texture),
                         brightness: this.world.getLightIntensity(side.primaryLightsourceIndex),
                         transfer: side?.primaryTransferMode || TransferMode.normal,
                     });
@@ -270,6 +275,7 @@ class Renderer {
                     this.rasterizer.drawWall({
                         polygon: texturedPolygon,
                         texture: this.shapes.getBitmap(sideTex.texture),
+                        shadingTables: this.shapes.getShadingTables(sideTex.texture),
                         brightness: this.world.getLightIntensity(
                             (side.type === sideType.split
                                 ? side.secondaryLightsourceIndex
@@ -302,6 +308,7 @@ class Renderer {
                     this.rasterizer.drawWall({
                         polygon: texturedPolygon,
                         texture: this.shapes.getBitmap(sideTex.texture),
+                        shadingTables: this.shapes.getShadingTables(sideTex.texture),
                         brightness: this.world.getLightIntensity(side.transparentLightsourceIndex),
                         transfer: side?.transparentTransferMode,
                         isTransparent: true,
@@ -330,6 +337,7 @@ class Renderer {
                 this.rasterizer.drawWall({
                     polygon: texturedPolygon, // clippedPolygon,
                     texture: this.shapes.getBitmap(side.primaryTexture.texture),
+                    shadingTables: this.shapes.getShadingTables(side.primaryTexture.texture),
                     brightness: this.world.getLightIntensity(side.primaryLightsourceIndex),
                     transfer: side?.primaryTransferMode || TransferMode.normal,
                 });
@@ -362,6 +370,7 @@ class Renderer {
                 clipArea,
                 isCeiling: true,
                 texture: this.shapes.getBitmap(ceiling.texture),
+                shadingTables: this.shapes.getShadingTables(ceiling.texture),
                 brightness: ceiling.lightIntensity,
                 polyTransferMode: ceiling.transferMode,
             });
@@ -375,6 +384,7 @@ class Renderer {
                 clipArea,
                 isCeiling: false,
                 texture: this.shapes.getBitmap(floor.texture),
+                shadingTables: this.shapes.getShadingTables(floor.texture),
                 brightness: floor.lightIntensity,
                 polyTransferMode: floor.transferMode,
             });

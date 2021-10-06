@@ -351,8 +351,8 @@ function populateLevelSelect(levelSelect: HTMLSelectElement, summaries: MapSumma
     });
 }
 
-// const shapesUrl = 'minf.shpA';
-// const mapUrl = 'minf.sceA';
+const shapesUrl = 'minf.shpA';
+const mapUrl = 'minf.sceA';
 
 // const shapesUrl = 'm2.shpA';
 // const mapUrl = 'm2.sceA';
@@ -366,8 +366,8 @@ function populateLevelSelect(levelSelect: HTMLSelectElement, summaries: MapSumma
 // const shapesUrl = 'Megiddo Shapes.shpA';
 // const mapUrl = 'Megiddo Map.sceA';
 
-const shapesUrl = 'Rubicon Shapes.shpA';
-const mapUrl = 'Rubicon Map.sceA';
+// const shapesUrl = 'Rubicon Shapes.shpA';
+// const mapUrl = 'Rubicon Map.sceA';
 
 interface Constructor { new(...args: unknown[]): unknown }
 
