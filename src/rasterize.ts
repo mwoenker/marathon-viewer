@@ -37,7 +37,7 @@ interface RenderPolygon {
     texCoord: Vec2;
 }
 
-interface RenderPolygonProps {
+export interface RenderPolygonProps {
     polygon: RenderPolygon[];
     texture: RenderTexture | null;
     brightness: number;

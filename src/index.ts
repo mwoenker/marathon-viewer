@@ -345,8 +345,8 @@ function populateLevelSelect(levelSelect: HTMLSelectElement, summaries: MapSumma
     });
 }
 
-const shapesUrl = 'minf.shpA';
-const mapUrl = 'minf.sceA';
+// const shapesUrl = 'minf.shpA';
+// const mapUrl = 'minf.sceA';
 
 // const shapesUrl = 'm2.shpA';
 // const mapUrl = 'm2.sceA';
@@ -354,8 +354,8 @@ const mapUrl = 'minf.sceA';
 // const shapesUrl = 'Eternal-Shapes.shpA';
 // const mapUrl = 'Eternal-Maps.sceA';
 
-// const shapesUrl = 'Phoenix Shapes.shpA';
-// const mapUrl = 'Phoenix Map.sceA';
+const shapesUrl = 'Phoenix Shapes.shpA';
+const mapUrl = 'Phoenix Map.sceA';
 
 // const shapesUrl = 'Megiddo Shapes.shpA';
 // const mapUrl = 'Megiddo Map.sceA';

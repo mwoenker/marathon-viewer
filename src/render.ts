@@ -14,7 +14,7 @@ import { floorMod } from './utils';
 import { ScreenTransform } from './screen-transform';
 import { World } from './world';
 import { Shapes } from './shapes-loader';
-import { Rasterizer, RenderTexture } from './rasterize';
+import { Rasterizer, RenderTexture, RenderPolygonProps } from './rasterize';
 import { ColorTable } from './color'
 
 interface RendererConstructor {
@@ -36,7 +36,6 @@ interface DrawHorizontalPolygonProps {
     viewPoints: Vec2[];
     textureOffset: Vec2;
     height: number;
-    clipArea: ClipArea3d;
     isCeiling: boolean;
     texture: RenderTexture | null;
     shadingTables: ColorTable[] | null;
@@ -51,6 +50,10 @@ export interface RenderProps {
     world: World;
     shapes: Shapes;
     seconds: number;
+}
+
+interface DrawListPolygon extends RenderPolygonProps {
+    type: 'vertical' | 'horizontal';
 }
 
 class Renderer {
@@ -71,6 +74,7 @@ class Renderer {
     landscapeTiltCorrection: number;
     isSubmerged: boolean;
     screenTransform: ScreenTransform;
+    drawList: DrawListPolygon[]
 
     constructor({ world, player, shapes, rasterizer, seconds }: RendererConstructor) {
         this.world = world;
@@ -104,6 +108,21 @@ class Renderer {
 
         const playerPolyMedia = world.getMediaInfo(player.polygon, seconds);
         this.isSubmerged = Boolean(playerPolyMedia && playerPolyMedia.height > player.height);
+        this.drawList = []
+    }
+
+    addDrawPolygon(poly: DrawListPolygon) {
+        this.drawList.push(poly);
+        if (this.drawList.length > 100) {
+            for (const poly of this.drawList) {
+                if (poly.type === 'vertical') {
+                    this.rasterizer.drawWall(poly);
+                } else {
+                    this.rasterizer.drawHorizontalPolygon(poly);
+                }
+            }
+            this.drawList.length = 0;
+        }
     }
 
     makeWallPolygon({ p1View, p2View, top, bottom }: MakeWallPolygoProps) {
@@ -161,7 +180,6 @@ class Renderer {
         viewPoints,
         textureOffset,
         height,
-        clipArea,
         isCeiling,
         texture,
         shadingTables,
@@ -188,7 +206,8 @@ class Renderer {
                 });
             }
 
-            this.rasterizer.drawHorizontalPolygon({
+            this.addDrawPolygon({
+                type: 'horizontal',
                 polygon: textured,
                 texture,
                 shadingTables,
@@ -230,7 +249,7 @@ class Renderer {
             const clippedPolygon = clipArea.clipPolygon(viewPolygon);
             if (clippedPolygon.length > 0) {
                 const newClipArea = ClipArea3d.fromPolygon(clippedPolygon);
-                this.renderPolygon(portalTo, newClipArea);
+                this.buildPolygonList(portalTo, newClipArea);
             }
 
             if (neighbor.ceilingHeight < polygon.ceilingHeight && side) {
@@ -249,7 +268,8 @@ class Renderer {
                         abovePoly,
                         side?.primaryTransferMode || TransferMode.normal,
                         this.world.getTexOffset(side?.primaryTexture));
-                    this.rasterizer.drawWall({
+                    this.addDrawPolygon({
+                        type: 'vertical',
                         polygon: texturedPolygon, // abovePoly,
                         texture: this.shapes.getBitmap(side.primaryTexture.texture),
                         shadingTables: this.shapes.getShadingTables(side.primaryTexture.texture),
@@ -283,7 +303,8 @@ class Renderer {
                         transferMode || TransferMode.normal,
                         this.world.getTexOffset(sideTex));
 
-                    this.rasterizer.drawWall({
+                    this.addDrawPolygon({
+                        type: 'vertical',
                         polygon: texturedPolygon,
                         texture: this.shapes.getBitmap(sideTex.texture),
                         shadingTables: this.shapes.getShadingTables(sideTex.texture),
@@ -317,7 +338,8 @@ class Renderer {
                         side?.transparentTransferMode,
                         this.world.getTexOffset(sideTex));
 
-                    this.rasterizer.drawWall({
+                    this.addDrawPolygon({
+                        type: 'vertical',
                         polygon: texturedPolygon,
                         texture: this.shapes.getBitmap(sideTex.texture),
                         shadingTables: this.shapes.getShadingTables(sideTex.texture),
@@ -347,7 +369,8 @@ class Renderer {
                     side?.primaryTransferMode || TransferMode.normal,
                     this.world.getTexOffset(side?.primaryTexture));
 
-                this.rasterizer.drawWall({
+                this.addDrawPolygon({
+                    type: 'vertical',
                     polygon: texturedPolygon, // clippedPolygon,
                     texture: this.shapes.getBitmap(side.primaryTexture.texture),
                     shadingTables: this.shapes.getShadingTables(side.primaryTexture.texture),
@@ -360,7 +383,7 @@ class Renderer {
 
     }
 
-    renderPolygon(polygonIndex: number, clipArea: ClipArea3d) {
+    buildPolygonList(polygonIndex: number, clipArea: ClipArea3d) {
         const screenClipRect = clipArea.screenClipRect(this.screenTransform)
         const polygon = this.world.getPolygon(polygonIndex);
 
@@ -382,7 +405,6 @@ class Renderer {
                 viewPoints,
                 textureOffset: ceiling.textureOffset,
                 height: ceiling.height - this.player.height,
-                clipArea,
                 isCeiling: true,
                 texture: this.shapes.getBitmap(ceiling.texture),
                 shadingTables: this.shapes.getShadingTables(ceiling.texture),
@@ -397,7 +419,6 @@ class Renderer {
                 viewPoints,
                 textureOffset: floor.textureOffset,
                 height: floor.height - this.player.height,
-                clipArea,
                 isCeiling: false,
                 texture: this.shapes.getBitmap(floor.texture),
                 shadingTables: this.shapes.getShadingTables(floor.texture),
@@ -409,7 +430,14 @@ class Renderer {
     }
 
     render() {
-        this.renderPolygon(this.player.polygon, this.clipArea);
+        this.buildPolygonList(this.player.polygon, this.clipArea);
+        for (const poly of this.drawList) {
+            if (poly.type === 'vertical') {
+                this.rasterizer.drawWall(poly);
+            } else {
+                this.rasterizer.drawHorizontalPolygon(poly);
+            }
+        }
     }
 }
 
