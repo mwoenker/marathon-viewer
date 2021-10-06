@@ -7,7 +7,7 @@ import {
 } from './vector2';
 import { Vec3 } from './vector3';
 import { Player } from './index'
-import { ClipArea3d } from './clip';
+import { ClipArea3d, ScreenClipRect } from './clip';
 import { sideType, TransferMode } from './files/wad';
 import { Transformation } from './transform2d';
 import { floorMod } from './utils';
@@ -42,6 +42,7 @@ interface DrawHorizontalPolygonProps {
     shadingTables: ColorTable[] | null;
     brightness: number;
     polyTransferMode: number;
+    screenClipRect: ScreenClipRect;
 }
 
 export interface RenderProps {
@@ -69,6 +70,7 @@ class Renderer {
     landscapeYOffset: number;
     landscapeTiltCorrection: number;
     isSubmerged: boolean;
+    screenTransform: ScreenTransform;
 
     constructor({ world, player, shapes, rasterizer, seconds }: RendererConstructor) {
         this.world = world;
@@ -79,6 +81,7 @@ class Renderer {
 
         const screenTransform = new ScreenTransform(
             rasterizer.width, rasterizer.height, player.hFov, player.vFov, player.verticalAngle);
+        this.screenTransform = screenTransform;
 
         this.viewTransform = new Transformation(player.position, player.facingAngle);
         const epsilon = 0.0001;
@@ -163,9 +166,10 @@ class Renderer {
         texture,
         shadingTables,
         brightness,
-        polyTransferMode
+        polyTransferMode,
+        screenClipRect,
     }: DrawHorizontalPolygonProps) {
-        const polygon = clipArea.clipPolygon(viewPoints.map((v) => [v[0], height, v[1]]));
+        const polygon = this.clipArea.clipPolygon(viewPoints.map((v) => [v[0], height, v[1]]));
 
         if (isCeiling) {
             polygon.reverse();
@@ -190,11 +194,17 @@ class Renderer {
                 shadingTables,
                 brightness,
                 transfer: polyTransferMode,
+                screenClipRect,
             });
         }
     }
 
-    renderWall(polygonIndex: number, polyLineIndex: number, clipArea: ClipArea3d) {
+    renderWall(
+        polygonIndex: number,
+        polyLineIndex: number,
+        clipArea: ClipArea3d,
+        screenClipRect: ScreenClipRect,
+    ) {
         const polygon = this.world.getPolygon(polygonIndex);
         const sideIndex = polygon.sides[polyLineIndex];
         const side = -1 === sideIndex ? null : this.world.getSide(polygon.sides[polyLineIndex]);
@@ -224,7 +234,7 @@ class Renderer {
             }
 
             if (neighbor.ceilingHeight < polygon.ceilingHeight && side) {
-                const abovePoly = clipArea.clipPolygon(this.makeWallPolygon({
+                const abovePoly = this.clipArea.clipPolygon(this.makeWallPolygon({
                     p1View,
                     p2View,
                     top: polygon.ceilingHeight,
@@ -245,6 +255,7 @@ class Renderer {
                         shadingTables: this.shapes.getShadingTables(side.primaryTexture.texture),
                         brightness: this.world.getLightIntensity(side.primaryLightsourceIndex),
                         transfer: side?.primaryTransferMode || TransferMode.normal,
+                        screenClipRect,
                     });
                 }
             }
@@ -256,7 +267,7 @@ class Renderer {
                 const transferMode = side.type === sideType.split
                     ? side.secondaryTransferMode
                     : side.primaryTransferMode;
-                const belowPoly = clipArea.clipPolygon(this.makeWallPolygon({
+                const belowPoly = this.clipArea.clipPolygon(this.makeWallPolygon({
                     p1View,
                     p2View,
                     top: neighbor.floorHeight,
@@ -281,6 +292,7 @@ class Renderer {
                                 ? side.secondaryLightsourceIndex
                                 : side.primaryLightsourceIndex)),
                         transfer: transferMode || TransferMode.normal,
+                        screenClipRect,
                     });
                 }
             }
@@ -289,7 +301,7 @@ class Renderer {
                 const bottom = Math.max(neighbor.floorHeight, polygon.floorHeight);
                 const top = Math.min(neighbor.ceilingHeight, polygon.ceilingHeight);
                 const sideTex = side.transparentTexture;
-                const transparentPoly = clipArea.clipPolygon(this.makeWallPolygon({
+                const transparentPoly = this.clipArea.clipPolygon(this.makeWallPolygon({
                     p1View,
                     p2View,
                     top,
@@ -312,6 +324,7 @@ class Renderer {
                         brightness: this.world.getLightIntensity(side.transparentLightsourceIndex),
                         transfer: side?.transparentTransferMode,
                         isTransparent: true,
+                        screenClipRect,
                     });
                 }
             }
@@ -323,7 +336,7 @@ class Renderer {
                 bottom: polygon.floorHeight,
             });
 
-            const clippedPolygon = clipArea.clipPolygon(viewPolygon);
+            const clippedPolygon = this.clipArea.clipPolygon(viewPolygon);
 
             if (side && clippedPolygon.length > 0) {
                 const texturedPolygon = this.textureWallPolygon(
@@ -340,6 +353,7 @@ class Renderer {
                     shadingTables: this.shapes.getShadingTables(side.primaryTexture.texture),
                     brightness: this.world.getLightIntensity(side.primaryLightsourceIndex),
                     transfer: side?.primaryTransferMode || TransferMode.normal,
+                    screenClipRect
                 });
             }
         }
@@ -347,10 +361,11 @@ class Renderer {
     }
 
     renderPolygon(polygonIndex: number, clipArea: ClipArea3d) {
+        const screenClipRect = clipArea.screenClipRect(this.screenTransform)
         const polygon = this.world.getPolygon(polygonIndex);
 
         for (let polyLineIndex = 0; polyLineIndex < polygon.vertexCount; ++polyLineIndex) {
-            this.renderWall(polygonIndex, polyLineIndex, clipArea);
+            this.renderWall(polygonIndex, polyLineIndex, clipArea, screenClipRect);
         }
 
         const vertices = polygon.endpoints.map(idx => this.world.getPoint(idx));
@@ -373,6 +388,7 @@ class Renderer {
                 shadingTables: this.shapes.getShadingTables(ceiling.texture),
                 brightness: ceiling.lightIntensity,
                 polyTransferMode: ceiling.transferMode,
+                screenClipRect,
             });
         }
 
@@ -387,6 +403,7 @@ class Renderer {
                 shadingTables: this.shapes.getShadingTables(floor.texture),
                 brightness: floor.lightIntensity,
                 polyTransferMode: floor.transferMode,
+                screenClipRect,
             });
         }
     }

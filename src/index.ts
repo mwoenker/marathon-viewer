@@ -65,9 +65,6 @@ function draw3d(canvas: HTMLCanvasElement, player: Player, world: World, shapes:
 
     pixels.fill(magenta);
 
-    context.fillStyle = 'white';
-    context.fillRect(0, 0, canvas.width, canvas.height);
-
     const rasterizer = new Rasterizer(canvas.width, canvas.height, pixels, player);
 
     render({ rasterizer, player, world, shapes, seconds });
@@ -293,7 +290,6 @@ function initWorld(
             if (lastFrameTime) {
                 player = update(player, world, actions, timeSlice, secondsElapsed);
                 if (lastPoly !== player.polygon) {
-                    console.log('poly', player.polygon);
                     lastPoly = player.polygon;
                 }
             }
@@ -340,8 +336,6 @@ function initWorld(
 function populateLevelSelect(levelSelect: HTMLSelectElement, summaries: MapSummary[]) {
     levelSelect.innerHTML = '';
     summaries.forEach((summary, i) => {
-        console.log({ summary });
-        console.log(summary.directoryEntry);
         if (summary && summary?.directoryEntry?.levelName) {
             const option = document.createElement('option');
             option.value = `${i}`;

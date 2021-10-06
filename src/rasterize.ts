@@ -4,6 +4,7 @@ import { lerp, floorMod } from './utils';
 import { ColorTable, shadingTableForDistance } from './color';
 import { TransferMode } from './files/wad';
 import { ScreenTransform } from './screen-transform';
+import { ScreenClipRect } from './clip';
 
 interface PlayerProps {
     hFov: number;
@@ -43,6 +44,7 @@ interface RenderPolygonProps {
     transfer: number;
     isTransparent?: boolean;
     shadingTables: ColorTable[] | null;
+    screenClipRect: ScreenClipRect;
 }
 
 interface WallSlice {
@@ -53,7 +55,8 @@ interface WallSlice {
     texXOffset: number,
     texture: RenderTexture,
     textureTop: number,
-    textureBottom: number
+    textureBottom: number,
+    screenClipRect: ScreenClipRect,
 }
 
 interface HorizontalSpan {
@@ -66,6 +69,7 @@ interface HorizontalSpan {
     textureLeftY: number,
     textureRightX: number,
     textureRightY: number,
+    screenClipRect: ScreenClipRect,
 }
 
 export class Rasterizer {
@@ -133,7 +137,9 @@ export class Rasterizer {
         rightVertex: Vec3,
         leftTexCoord: Vec2,
         rightTexCoord: Vec2,
-        params: VerticalPolyLineParams[]
+        params: VerticalPolyLineParams[],
+        clipLeft: number,
+        clipRight: number,
     ): void {
         const yStart = leftVertex[1];
         const yEnd = rightVertex[1];
@@ -146,8 +152,8 @@ export class Rasterizer {
         const texYOverZEnd = rightTexCoord[1] * oneOverZEnd;
 
         const xDiff = rightVertex[0] - leftVertex[0];
-        const xMin = Math.max(0, Math.ceil(leftVertex[0]));
-        const xMax = Math.min(this.width, Math.ceil(rightVertex[0]));
+        const xMin = Math.max(0, clipLeft, Math.ceil(leftVertex[0]));
+        const xMax = Math.min(this.width, clipRight, Math.ceil(rightVertex[0]));
 
         for (let x = xMin; x < xMax; ++x) {
             const t = (x - leftVertex[0]) / xDiff;
@@ -167,7 +173,7 @@ export class Rasterizer {
     }
 
     textureWall(
-        { polygon, texture, shadingTables, brightness, isTransparent = false }: RenderPolygonProps
+        { polygon, texture, brightness, shadingTables, isTransparent = false, screenClipRect }: RenderPolygonProps
     ): void {
         if (!texture || !shadingTables) {
             return;
@@ -175,6 +181,23 @@ export class Rasterizer {
 
         const screenPosition = polygon.map(({ position }) =>
             this.screenTransform.viewToScreen(position));
+
+        let allLeft = true;
+        let allRight = true;
+
+        for (const position of screenPosition) {
+            if (position[0] >= screenClipRect.left) {
+                allLeft = false;
+            }
+            if (position[0] <= screenClipRect.right) {
+                allRight = false;
+            }
+        }
+
+        if (allLeft || allRight) {
+            return;
+        }
+
         let left = this.width;
         let right = 0;
         for (let i = 0; i < polygon.length; ++i) {
@@ -188,7 +211,10 @@ export class Rasterizer {
                     nextPosition,
                     polygon[i].texCoord,
                     polygon[nextI].texCoord,
-                    this.topParamList);
+                    this.topParamList,
+                    screenClipRect.left,
+                    screenClipRect.right
+                );
             } else if (nextPosition[0] < position[0]) {
                 // bottom of polygon
                 this.calcLineTextureParams(
@@ -196,7 +222,9 @@ export class Rasterizer {
                     position,
                     polygon[nextI].texCoord,
                     polygon[i].texCoord,
-                    this.bottomParamList);
+                    this.bottomParamList,
+                    screenClipRect.left,
+                    screenClipRect.right);
             }
 
             const x = position[0];
@@ -208,9 +236,9 @@ export class Rasterizer {
             }
         }
 
-        const xMin = Math.max(0, Math.ceil(left));
-        const xMax = Math.min(this.width, Math.ceil(right));
-        this.textureWallRange(xMin, xMax, texture, shadingTables, brightness, isTransparent);
+        const xMin = Math.max(0, screenClipRect.left, Math.ceil(left));
+        const xMax = Math.min(this.width, screenClipRect.right, Math.ceil(right));
+        this.textureWallRange(xMin, xMax, texture, shadingTables, brightness, isTransparent, screenClipRect);
     }
 
     textureWallRange(
@@ -219,7 +247,8 @@ export class Rasterizer {
         texture: RenderTexture,
         shadingTables: ColorTable[],
         brightness: number,
-        isTransparent: boolean
+        isTransparent: boolean,
+        screenClipRect: ScreenClipRect,
     ): void {
         for (let x = xMin; x < xMax; ++x) {
             const topParams = this.topParamList[x];
@@ -237,6 +266,7 @@ export class Rasterizer {
                     texture,
                     textureTop: topParams.textureYOverZ * z,
                     textureBottom: bottomParams.textureYOverZ * z,
+                    screenClipRect,
                 });
             } else {
                 this.textureWallSlice({
@@ -248,16 +278,17 @@ export class Rasterizer {
                     texture,
                     textureTop: topParams.textureYOverZ * z,
                     textureBottom: bottomParams.textureYOverZ * z,
+                    screenClipRect,
                 });
             }
         }
     }
 
     textureWallSlice(
-        { x, top, bottom, colorTable, texXOffset, texture, textureTop, textureBottom }: WallSlice
+        { x, top, bottom, colorTable, texXOffset, texture, textureTop, textureBottom, screenClipRect }: WallSlice
     ): void {
-        const intTop = Math.max(0, Math.floor(Math.ceil(top)));
-        const intBottom = Math.min(this.height, Math.floor(Math.ceil(bottom)));
+        const intTop = Math.max(0, screenClipRect.top, Math.ceil(top));
+        const intBottom = Math.min(this.height, screenClipRect.bottom, Math.ceil(bottom));
         const texels = texture.data;
 
         let offset = x + this.width * intTop;
@@ -279,11 +310,19 @@ export class Rasterizer {
         }
     }
 
-    textureWallSliceTransparent(
-        { x, top, bottom, colorTable, texXOffset, texture, textureTop, textureBottom }: WallSlice
-    ): void {
-        const intTop = Math.max(0, Math.floor(Math.ceil(top)));
-        const intBottom = Math.min(this.height, Math.floor(Math.ceil(bottom)));
+    textureWallSliceTransparent({
+        x,
+        top,
+        bottom,
+        colorTable,
+        texXOffset,
+        texture,
+        textureTop,
+        textureBottom,
+        screenClipRect
+    }: WallSlice): void {
+        const intTop = Math.max(0, screenClipRect.top, Math.ceil(top));
+        const intBottom = Math.min(this.height, screenClipRect.bottom, Math.ceil(bottom));
         const texels = texture.data;
 
         let offset = x + this.width * intTop;
@@ -307,8 +346,8 @@ export class Rasterizer {
         }
     }
 
-    drawHorizontalPolygon({ polygon, texture, shadingTables, brightness, transfer }: RenderPolygonProps): void {
-        this.textureHorizontalPolygon({ polygon, texture, shadingTables, brightness, transfer });
+    drawHorizontalPolygon(props: RenderPolygonProps): void {
+        this.textureHorizontalPolygon(props)
     }
 
     calcLineTextureParamsHorizontal(
@@ -316,7 +355,9 @@ export class Rasterizer {
         rightVertex: Vec3,
         leftTexCoord: Vec2,
         rightTexCoord: Vec2,
-        params: HorizontalPolyLineParams[]
+        params: HorizontalPolyLineParams[],
+        clipTop: number,
+        clipBottom: number,
     ): void {
         const xStart = leftVertex[0];
         const xEnd = rightVertex[0];
@@ -329,8 +370,8 @@ export class Rasterizer {
         const texYOverZEnd = rightTexCoord[1] * oneOverZEnd;
 
         const yDiff = rightVertex[1] - leftVertex[1];
-        const yMin = Math.max(0, Math.ceil(leftVertex[1]));
-        const yMax = Math.min(this.height, Math.ceil(rightVertex[1]));
+        const yMin = Math.max(0, clipTop, Math.ceil(leftVertex[1]));
+        const yMax = Math.min(this.height, clipBottom, Math.ceil(rightVertex[1]));
 
         for (let y = yMin; y < yMax; ++y) {
             const t = (y - leftVertex[1]) / yDiff;
@@ -341,7 +382,7 @@ export class Rasterizer {
         }
     }
 
-    textureHorizontalPolygon({ polygon, texture, shadingTables, brightness, transfer }: RenderPolygonProps): void {
+    textureHorizontalPolygon({ polygon, texture, brightness, shadingTables, transfer, screenClipRect }: RenderPolygonProps): void {
         if (!texture || !shadingTables) {
             return;
         }
@@ -361,7 +402,9 @@ export class Rasterizer {
                     nextPosition,
                     polygon[i].texCoord,
                     polygon[nextI].texCoord,
-                    this.rightParamList);
+                    this.rightParamList,
+                    screenClipRect.top,
+                    screenClipRect.bottom);
             } else if (nextPosition[1] < position[1]) {
                 // bottom of polygon
                 this.calcLineTextureParamsHorizontal(
@@ -369,7 +412,9 @@ export class Rasterizer {
                     position,
                     polygon[nextI].texCoord,
                     polygon[i].texCoord,
-                    this.leftParamList);
+                    this.leftParamList,
+                    screenClipRect.top,
+                    screenClipRect.bottom);
             }
 
             const y = position[1];
@@ -381,9 +426,9 @@ export class Rasterizer {
             }
         }
 
-        const yMin = Math.max(0, Math.ceil(top));
-        const yMax = Math.min(this.height, Math.ceil(bottom));
-        this.textureHorizontalRange(yMin, yMax, texture, shadingTables, brightness, transfer);
+        const yMin = Math.max(0, screenClipRect.top, Math.ceil(top));
+        const yMax = Math.min(this.height, screenClipRect.bottom, Math.ceil(bottom));
+        this.textureHorizontalRange(yMin, yMax, texture, shadingTables, brightness, transfer, screenClipRect)
     }
 
     textureHorizontalRange(
@@ -392,7 +437,8 @@ export class Rasterizer {
         texture: RenderTexture,
         shadingTables: ColorTable[],
         brightness: number,
-        transfer: number
+        transfer: number,
+        screenClipRect: ScreenClipRect
     ): void {
         for (let y = yMin; y < yMax; ++y) {
             const leftParams = this.leftParamList[y];
@@ -411,6 +457,7 @@ export class Rasterizer {
                     textureLeftY: leftParams.textureYOverZ * z,
                     textureRightX: rightParams.textureXOverZ * z,
                     textureRightY: rightParams.textureYOverZ * z,
+                    screenClipRect
                 });
             } else {
                 const shadingTable = shadingTableForDistance(shadingTables, z, brightness);
@@ -424,6 +471,7 @@ export class Rasterizer {
                     textureLeftY: leftParams.textureYOverZ * z,
                     textureRightX: rightParams.textureXOverZ * z,
                     textureRightY: rightParams.textureYOverZ * z,
+                    screenClipRect
                 });
             }
         }
@@ -439,6 +487,7 @@ export class Rasterizer {
         textureLeftY,
         textureRightX,
         textureRightY,
+        screenClipRect,
     }: HorizontalSpan): void {
         const texels = texture.data;
 
@@ -456,8 +505,8 @@ export class Rasterizer {
         const uMask = 0 | (texture.width - 1) * texture.height;
         const vMask = 0 | (texture.height - 1);
 
-        const xStart = Math.ceil(left);
-        const xEnd = Math.ceil(right);
+        const xStart = Math.max(screenClipRect.left, Math.ceil(left));
+        const xEnd = Math.min(screenClipRect.right, Math.ceil(right));
 
         const nudge = xStart - left;
         u += nudge * du;
@@ -484,6 +533,7 @@ export class Rasterizer {
         textureLeftX,
         textureLeftY,
         textureRightX,
+        screenClipRect,
     }: HorizontalSpan): void {
         const texels = texture.data;
 
@@ -503,8 +553,8 @@ export class Rasterizer {
         const uMask = texture.height - 1;
         const rowStart = texture.height * v;
 
-        const xStart = Math.ceil(left);
-        const xEnd = Math.ceil(right);
+        const xStart = Math.max(screenClipRect.left, Math.ceil(left));
+        const xEnd = Math.min(screenClipRect.right, Math.ceil(right));
 
         const nudge = xStart - left;
         u += nudge * du;

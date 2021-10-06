@@ -1,5 +1,13 @@
 import { Vec2, v2scale, v2dot, v2lerp } from './vector2';
 import { Vec3, v3scale, v3dot, v3lerp } from './vector3';
+import { ScreenTransform } from './screen-transform';
+
+export interface ScreenClipRect {
+    left: number;
+    right: number
+    top: number;
+    bottom: number;
+}
 
 export class ClipArea {
     leftPlane: Vec2
@@ -60,17 +68,44 @@ export class ClipArea {
     }
 }
 
+let n = 0;
+
 export class ClipArea3d {
     planes: Vec3[]
+    left: number;
+    right: number;
+    top: number;
+    bottom: number;
 
-    constructor(planes: Vec3[]) {
-        this.planes = planes;
+    constructor(left: number, right: number, top: number, bottom: number) {
+        this.left = left;
+        this.right = right;
+        this.top = top;
+        this.bottom = bottom;
+        // console.log({ left, right, top, bottom });
+        this.planes = [
+            [1, 0, -left],
+            [-1, 0, right],
+            [0, 1, -bottom],
+            [0, -1, top],
+        ]
+    }
+
+    screenClipRect(screenTransform: ScreenTransform): ScreenClipRect {
+        const margin = 0;
+        return {
+            left: Math.ceil(screenTransform.viewXToColumn(this.left, 1)) + margin,
+            right: Math.ceil(screenTransform.viewXToColumn(this.right, 1)) - margin,
+            top: Math.ceil(screenTransform.viewYToRow(this.top, 1)) + margin,
+            bottom: Math.ceil(screenTransform.viewYToRow(this.bottom, 1)) - margin,
+        }
     }
 
     static fromPolygon(polygon: Vec3[]): ClipArea3d {
         // project points of polygon onto z=1 plane and construct four planes containing
         // the polygon. These planes clip the polygons in view space, but end up effectively
         // clipping an orthogonal rectangle in screen space
+
         let left = polygon[0][0] / polygon[0][2];
         let right = left;
         let top = polygon[0][1] / polygon[0][2];
@@ -85,65 +120,24 @@ export class ClipArea3d {
             if (projectedX > right) {
                 right = projectedX;
             }
-            if (projectedY < top) {
+            if (projectedY > top) {
                 top = projectedY;
             }
-            if (projectedY > bottom) {
+            if (projectedY < bottom) {
                 bottom = projectedY;
             }
         }
+
         // const projectedX = polygon.map((position) => position[0] / position[2]);
         // const projectedY = polygon.map((position) => position[1] / position[2]);
         // const left = Math.min(...projectedX);
         // const right = Math.max(...projectedX);
         // const top = Math.min(...projectedY);
         // const bottom = Math.max(...projectedY);
-        return new ClipArea3d([
-            [1, 0, -left],
-            [-1, 0, right],
-            [0, 1, -top],
-            [0, -1, bottom],
-        ]);
-    }
-
-    static from2dPoints(p1Short: Vec2, p2Short: Vec2): ClipArea3d {
-        const p1: Vec3 = [p1Short[0], 0, p1Short[1]];
-        const p2: Vec3 = [p2Short[0], 0, p2Short[1]];
-        let leftPlane: Vec3, rightPlane: Vec3;
-        const p1Plane: Vec3 = [-p1[2], 0, p1[0]];
-        if (v3dot(p1Plane, p2) > 0) {
-            // line from origin to p2 defines the left edge of the area
-            leftPlane = [p2[2], 0, -p2[0]];
-            rightPlane = p1Plane;
-        } else {
-            // line from origin to p1 defines left edge
-            leftPlane = v3scale(-1, p1Plane);
-            rightPlane = [-p2[2], 0, p2[0]];
-        }
-        return new ClipArea3d([leftPlane, rightPlane]);
+        return new ClipArea3d(left, right, top, bottom);
     }
 
     clipPolygonByPlane(polygon: Vec3[], plane: Vec3): Vec3[] {
-        // let allIn = true;
-        // let allOut = true;
-
-        // const distances = this.distances;
-
-        // for (let i = 0; i < polygon.length; ++i) {
-        //     const dist = v3dot(polygon[i], plane);
-        //     if (dist < 0) {
-        //         allIn = false;
-        //     } else if (dist >= 0) {
-        //         allOut = false;
-        //     }
-        //     // distances[i] = dist;
-        // }
-
-        // if (allOut) {
-        //     return [];
-        // } else if (allIn) {
-        //     return polygon;
-        // } else {
         const result = [];
         for (let i = 0; i < polygon.length; ++i) {
             const nextI = (i + 1) % polygon.length;
@@ -163,7 +157,6 @@ export class ClipArea3d {
             }
         }
         return result;
-        // }
     }
 
     clipPolygon(polygon: Vec3[]): Vec3[] {
@@ -186,20 +179,6 @@ export class ClipArea3d {
         if (allIn) {
             return polygon
         }
-
-        // for (let planeIndex = 0; planeIndex < this.planes.length; ++planeIndex) {
-        //     let allOut = true;
-        //     for (let polyIndex = 0; polyIndex < polygon.length; ++polyIndex) {
-        //         const dist = v3dot(polygon[polyIndex], this.planes[planeIndex]);
-        //         if (dist > 0) {
-        //             allOut = false;
-        //             break;
-        //         }
-        //     }
-        //     if (allOut) {
-        //         return [];
-        //     }
-        // }
 
         for (const plane of this.planes) {
             polygon = this.clipPolygonByPlane(polygon, plane);
