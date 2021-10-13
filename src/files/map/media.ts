@@ -1,6 +1,7 @@
-import { Reader, Writer } from '../binary-read'
-import { Vec2 } from '../../vector2'
-import { readPoint, writePoint } from './utils'
+import { Reader, Writer } from '../binary-read';
+import { Vec2, v2direction, v2scale, v2add } from '../../vector2';
+import { readPoint, writePoint } from './utils';
+import { fromFixedAngle } from '../../world';
 
 interface MediaConstructor {
     type: number;
@@ -32,7 +33,7 @@ export class Media {
     transferMode: number;
 
     constructor(data: MediaConstructor) {
-        Object.assign(this, data)
+        Object.assign(this, data);
     }
 
     static read(reader: Reader): Media {
@@ -49,7 +50,7 @@ export class Media {
             minimumLightIntensity: reader.int32(), // fixed point
             texture: reader.uint16(), // shape descriptor
             transferMode: reader.int16(),
-        })
+        });
         reader.skip(4);
         return media;
     }
@@ -68,5 +69,12 @@ export class Media {
         writer.uint16(this.texture);
         writer.int16(this.transferMode);
         writer.zeros(4);
+    }
+
+    originAtTime(elapsedSeconds: number): Vec2 {
+        const dirRadians = fromFixedAngle(this.currentDirection);
+        const dirVec: Vec2 = v2scale(this.currentMagnitude, v2direction(dirRadians));
+        const ticksElapsed = 30 * elapsedSeconds;
+        return v2add(this.origin, v2scale(ticksElapsed, dirVec));
     }
 }

@@ -10,6 +10,16 @@ export enum ObjectType {
     savedSoundSource
 }
 
+export enum ObjectFlags {
+    invisible = 0x0001,
+    platformSound = 0x001,
+    hangingFromCeiling = 0x0002,
+    blind = 0x0004,
+    deaf = 0x0008,
+    floating = 0x0010,
+    networkOnly = 0x0020,
+}
+
 interface MapObjectConstructor {
     type: ObjectType;
     index: number;

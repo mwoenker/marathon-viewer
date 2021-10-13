@@ -4,18 +4,21 @@ import {
     v2sub,
     v2dot,
     isClockwise,
+    v2length,
+    v2scale,
+    v2add,
 } from './vector2';
-import { Vec3 } from './vector3';
-import { Player } from './index'
+import { v3add, Vec3 } from './vector3';
+import { Player } from './index';
 import { ClipArea3d } from './clip';
 import { sideType, TransferMode } from './files/wad';
 import { Transformation } from './transform2d';
 import { floorMod } from './utils';
 import { ScreenTransform } from './screen-transform';
-import { World } from './world';
+import { ticksPerSecond, World, worldUnitSize } from './world';
 import { Shapes } from './shapes-loader';
 import { Rasterizer, RenderTexture } from './rasterize';
-import { ColorTable } from './color'
+import { ColorTable } from './color';
 
 interface RendererConstructor {
     world: World;
@@ -99,7 +102,7 @@ class Renderer {
         this.landscapeYOffset = (1 - this.landscapeHeight) / 2;
         this.landscapeTiltCorrection = Math.tan(this.player.verticalAngle);
 
-        const playerPolyMedia = world.getMediaInfo(player.polygon, seconds);
+        const playerPolyMedia = world.getMediaInfo(player.polygon);
         this.isSubmerged = Boolean(playerPolyMedia && playerPolyMedia.height > player.height);
     }
 
@@ -118,11 +121,11 @@ class Renderer {
             const fracX = (projX - this.left) / (this.right - this.left);
             const fracY = (projY - this.bottom + this.landscapeTiltCorrection) / (this.top - this.bottom);
             const rotationFrac = floorMod(this.player.facingAngle / Math.PI / 2, 1);
-            const projected: Vec3 = [projX, projY, 1]
+            const projected: Vec3 = [projX, projY, 1];
             const texCoord: Vec2 = [
                 fracX * this.landscapeWidth + rotationFrac,
                 fracY * this.landscapeHeight + this.landscapeYOffset,
-            ]
+            ];
 
             return { position: projected, texCoord };
         });
@@ -139,18 +142,31 @@ class Renderer {
             return this.textureLandscapePolygon(clippedPositions);
         } else {
             const xDirection = v2normalize(v2sub(p2View, p1View));
+            if (polyTransferMode === TransferMode.horizontalSlide) {
+                const phase = this.world.timeElapsed * ticksPerSecond;
+                textureOffset[0] -= floorMod(phase * 4 / worldUnitSize, 1);
+            } else if (polyTransferMode === TransferMode.fastHorizontalSlide) {
+                const phase = this.world.timeElapsed * ticksPerSecond;
+                textureOffset[0] -= floorMod(phase * 8 / worldUnitSize, 1);
+            } else if (polyTransferMode === TransferMode.verticalSlide) {
+                const phase = this.world.timeElapsed * ticksPerSecond;
+                textureOffset[1] -= floorMod(phase * 4 / worldUnitSize, 1);
+            } else if (polyTransferMode === TransferMode.fastVerticalSlide) {
+                const phase = this.world.timeElapsed * ticksPerSecond;
+                textureOffset[1] -= floorMod(phase * 8 / worldUnitSize, 1);
+            }
             const xStart = v2dot(xDirection, p1View);
             const yStart = texTop - this.player.height;
             return clippedPositions.map(position => {
                 const texCoord: Vec2 = [
                     v2dot(xDirection, [position[0], position[2]]) - xStart + textureOffset[0],
                     textureOffset[1] - (position[1] - yStart),
-                ]
+                ];
                 return {
                     position,
                     texCoord,
-                }
-            })
+                };
+            });
         }
     }
 
@@ -176,6 +192,20 @@ class Renderer {
             if (polyTransferMode === TransferMode.landscape) {
                 textured = this.textureLandscapePolygon(polygon);
             } else {
+                if (polyTransferMode === TransferMode.horizontalSlide) {
+                    const phase = this.world.timeElapsed * ticksPerSecond;
+                    textureOffset[0] -= floorMod(phase * 4 / worldUnitSize, 1);
+                } else if (polyTransferMode === TransferMode.fastHorizontalSlide) {
+                    const phase = this.world.timeElapsed * ticksPerSecond;
+                    textureOffset[0] -= floorMod(phase * 8 / worldUnitSize, 1);
+                } else if (polyTransferMode === TransferMode.verticalSlide) {
+                    const phase = this.world.timeElapsed * ticksPerSecond;
+                    textureOffset[1] -= floorMod(phase * 4 / worldUnitSize, 1);
+                } else if (polyTransferMode === TransferMode.fastVerticalSlide) {
+                    const phase = this.world.timeElapsed * ticksPerSecond;
+                    textureOffset[1] -= floorMod(phase * 8 / worldUnitSize, 1);
+                }
+
                 textured = polygon.map(position => {
                     const worldVertex = this.viewTransform.unTransform([position[0], position[2]]);
                     const texCoord: Vec2 =
@@ -358,8 +388,7 @@ class Renderer {
         const { floor, ceiling } = this.world.getPolygonFloorCeiling(
             polygonIndex,
             this.player.height,
-            this.isSubmerged,
-            this.seconds);
+            this.isSubmerged);
 
         const viewPoints = vertices.map((p) => this.viewTransform.transform(p));
         if (polygon.ceilingHeight > this.player.height) {

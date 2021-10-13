@@ -6,7 +6,7 @@ import { magenta } from './color';
 import { drawOverhead } from './drawOverhead';
 import { makeShapeDescriptor } from './files/shapes';
 import { MapGeometry } from './files/map';
-import { ObjectType } from './files/map/object';
+import { ObjectType, ObjectFlags } from './files/map/object';
 import {
     Vec2,
     v2scale,
@@ -58,7 +58,7 @@ function draw3d(canvas: HTMLCanvasElement, player: Player, world: World, shapes:
         console.log('create imagedata');
         imageData = context.createImageData(canvas.width, canvas.height);
         if (!imageData) {
-            throw new Error('createImageData failed')
+            throw new Error('createImageData failed');
         }
         pixels = new Uint32Array(imageData.data.buffer);
     }
@@ -85,6 +85,7 @@ function update(
     const forward = v2direction(facingAngle);
     const left = v2direction(facingAngle - Math.PI / 2);
     const oldPosition = position;
+    world.advanceTimeSlice(timeSlice);
 
     if (actions.has('forward')) {
         position = v2add(position, v2scale(timeSlice * 4, forward));
@@ -159,7 +160,7 @@ function initWorld(
     const hFov = 90 / 180 * Math.PI;
 
     const vFov = 2 * Math.atan(Math.tan(hFov / 2) * canvas.height / canvas.width);
-    let world = new World(map);
+    const world = new World(map);
     // const targetPolygon = 100;
     let targetPolygon = 1;
 
@@ -170,14 +171,19 @@ function initWorld(
     );
     let playerPosition = v2scale(1 / map.polygons[targetPolygon].endpoints.length / 1024, sum);
     let facingAngle = 0;
-    let playerHeight = map.polygons[targetPolygon].floorHeight + 0.66
+    let playerHeight = map.polygons[targetPolygon].floorHeight + 0.66;
 
     for (const mapObject of map.objects) {
         if (mapObject.type === ObjectType.player) {
             targetPolygon = mapObject.polygon;
             const pos3d = fromMapCoords3d(mapObject.position);
             playerPosition = [pos3d[0], pos3d[1]];
-            playerHeight = world.polygons[targetPolygon].floorHeight + pos3d[2] + 0.66;
+            if (mapObject.flags & ObjectFlags.hangingFromCeiling) {
+                console.log('hanging');
+                playerHeight = world.polygons[targetPolygon].ceilingHeight + pos3d[2] + 0.66;
+            } else {
+                playerHeight = world.polygons[targetPolygon].floorHeight + pos3d[2] + 0.66;
+            }
             facingAngle = fromFixedAngle(mapObject.facing);
             break;
         }
@@ -272,7 +278,7 @@ function initWorld(
                 });
             }
 
-            world = new World(map);
+            world.updateMap(map);
         }
     });
 
@@ -353,6 +359,7 @@ function populateLevelSelect(levelSelect: HTMLSelectElement, summaries: MapSumma
 
 const shapesUrl = 'minf.shpA';
 const mapUrl = 'minf.sceA';
+// const mapUrl = 'XCT2k310.sceA';
 
 // const shapesUrl = 'm2.shpA';
 // const mapUrl = 'm2.sceA';
@@ -369,29 +376,32 @@ const mapUrl = 'minf.sceA';
 // const shapesUrl = 'Rubicon Shapes.shpA';
 // const mapUrl = 'Rubicon Map.sceA';
 
+// const shapesUrl = 'Wrk.shpA';
+// const mapUrl = 'Wrk.sceA';
+
 interface Constructor { new(...args: unknown[]): unknown }
 
 function elementById<T extends Constructor>(id: string, klass: T): InstanceType<T> | null {
     const element = document.getElementById(id);
     if (!element) {
-        return null
+        return null;
     }
     if (element instanceof klass) {
         return element as InstanceType<T>;
     } else {
-        throw new Error('dom node not instance of ${klass}')
+        throw new Error('dom node not instance of ${klass}');
     }
 }
 
 window.addEventListener('load', async () => {
     const levelSelect = elementById('levelSelect', HTMLSelectElement);
     const screenSizeSelect = elementById('screenSizeSelect', HTMLSelectElement);
-    const canvas = elementById('world', HTMLCanvasElement)
+    const canvas = elementById('world', HTMLCanvasElement);
     const overheadCanvas = elementById('overhead', HTMLCanvasElement);
     const fpsCounter = elementById('fpsCounter', HTMLElement);
 
     if (!canvas) {
-        throw new Error('no canvas!')
+        throw new Error('no canvas!');
     }
 
     const file = new HttpFile(mapUrl);

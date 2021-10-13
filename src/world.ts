@@ -1,18 +1,19 @@
 import { Collision2d, closerCollision, collideLineSegments, lineSegmentIntersectsHorizontalPolygon } from './collision';
 import { lerp, floorMod } from './utils';
-import { Vec2 } from './vector2';
+import { v2scale, Vec2 } from './vector2';
 import { Vec3 } from './vector3';
 import { Line } from './files/map/line';
 import { Side, SideTex } from './files/map/side';
 import { Polygon } from './files/map/polygon';
-import { Light } from './files/map/light';
 import { MapObject } from './files/map/object';
 import { Media } from './files/map/media';
 import { mediaDefinitions, sideType } from './files/wad';
 import { MapGeometry } from './files/map';
 import { makeShapeDescriptor } from './files/shapes';
+import { LightState } from './light';
 
 export const worldUnitSize = 1024;
+export const ticksPerSecond = 30;
 const numFixedAngles = 512;
 
 export function toFixedAngle(radians: number): number {
@@ -86,11 +87,26 @@ export class World {
     lines: Line[];
     sides: Side[];
     polygons: Polygon[];
-    lights: Light[];
+    // lights: Light[];
     objects: MapObject[];
     media: Media[];
+    lightState: LightState[];
+    timeElapsed: number;
 
     constructor(map: MapGeometry) {
+        this.updateMap(map);
+        this.lightState = map.lights.map(light => new LightState(light));
+        this.timeElapsed = 0;
+    }
+
+    advanceTimeSlice(slice: number): void {
+        const prevTicks = Math.floor(this.timeElapsed * 30);
+        this.timeElapsed += slice;
+        const nextTicks = Math.floor(this.timeElapsed * 30);
+        this.lightState.forEach(state => state.advanceTicks(nextTicks - prevTicks));
+    }
+
+    updateMap(map: MapGeometry): void {
         this.map = map;
         this.points = map.points.map(([x, y]) => [x / worldUnitSize, y / worldUnitSize]);
         this.lines = map.lines;
@@ -100,21 +116,9 @@ export class World {
             floorHeight: p.floorHeight / worldUnitSize,
             ceilingHeight: p.ceilingHeight / worldUnitSize,
         }));
-        this.lights = map.lights;
+        // this.lights = map.lights;
         this.objects = map.objects;
         this.media = map.media;
-
-        const transferModes = new Set();
-        for (const side of this.sides) {
-            transferModes.add(side.primaryTransferMode);
-            transferModes.add(side.secondaryTransferMode);
-            transferModes.add(side.transparentTransferMode);
-        }
-
-        for (const polygon of this.polygons) {
-            transferModes.add(polygon.floorTransferMode);
-            transferModes.add(polygon.ceilingTransferMode);
-        }
     }
 
     getPolygon(polygonIndex: number): Polygon {
@@ -169,9 +173,12 @@ export class World {
     }
 
     getLightIntensity(lightIndex: number): number {
-        const light = this.lights[lightIndex];
-        const intensityFixed = light.primaryActive.intensity;
-        return intensityFixed / 0xffff;
+        const intensity = this.lightState[lightIndex].intensity / 0x10000;
+        if (intensity !== 0 && !intensity) {
+            console.log(lightIndex, this.lightState);
+            throw new Error('blam2');
+        }
+        return intensity;
     }
 
     getPolygonPoints(polygonIndex: number): Vec2[] {
@@ -195,7 +202,7 @@ export class World {
         ];
     }
 
-    getMediaInfo(polygonIndex: number, seconds = 0): HorizontalSurfaceInfo | null {
+    getMediaInfo(polygonIndex: number): HorizontalSurfaceInfo | null {
         const polygon = this.polygons[polygonIndex];
         const mediaIndex = polygon.media;
 
@@ -203,15 +210,15 @@ export class World {
             return null;
         }
         const media = this.media[mediaIndex];
-        //const lightLevel = this.getLightIntensity(media.lightIndex);
-        const lightLevel = 0.5 + Math.sin(seconds / 4) / 2;
+        const lightLevel = this.getLightIntensity(media.lightIndex);
+        // const lightLevel = 0.5 + Math.sin(seconds / 4) / 2;
         const height = lerp(lightLevel, media.low, media.high) / worldUnitSize;
 
         const def = mediaDefinitions[media.type];
 
         return {
             height,
-            textureOffset: media.origin,
+            textureOffset: v2scale(1 / worldUnitSize, media.originAtTime(this.timeElapsed)), // media.origin,
             texture: makeShapeDescriptor(0, def.collection, def.shape),
             transferMode: media.transferMode,
             lightIntensity: this.getLightIntensity(polygon.mediaLightsource),
@@ -221,14 +228,13 @@ export class World {
     getPolygonFloorCeiling(
         polygonIndex: number,
         playerHeight: number,
-        isSubmerged: boolean,
-        seconds = 0): FloorCeilingInfo {
+        isSubmerged: boolean): FloorCeilingInfo {
         const polygon = this.polygons[polygonIndex];
-        const media = this.getMediaInfo(polygonIndex, seconds);
+        const media = this.getMediaInfo(polygonIndex);
 
         let low = {
             height: polygon.floorHeight,
-            textureOffset: polygon.floorOrigin,
+            textureOffset: v2scale(1 / worldUnitSize, polygon.floorOrigin),
             texture: polygon.floorTexture,
             transferMode: polygon.floorTransferMode,
             lightIntensity: this.getLightIntensity(polygon.floorLightsource),
@@ -236,7 +242,7 @@ export class World {
 
         let high = {
             height: polygon.ceilingHeight,
-            textureOffset: polygon.ceilingOrigin,
+            textureOffset: v2scale(1 / worldUnitSize, polygon.ceilingOrigin),
             texture: polygon.ceilingTexture,
             transferMode: polygon.ceilingTransferMode,
             lightIntensity: this.getLightIntensity(polygon.ceilingLightsource),
@@ -260,7 +266,7 @@ export class World {
             const thisIntersection = collideLineSegments([oldPosition, position], line);
             intersection = closerCollision(intersection, thisIntersection);
             if (intersection && intersection === thisIntersection) {
-                intersectLinePosition = linePosition
+                intersectLinePosition = linePosition;
             }
         }
         if (intersection && intersectLinePosition !== null) {

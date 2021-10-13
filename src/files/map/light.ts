@@ -1,7 +1,25 @@
 import { Reader, Writer } from '../binary-read'
 
-interface LightFunction {
-    func: number;
+export enum LightFunctionType {
+    constant,
+    linear,
+    smooth,
+    flicker
+}
+
+export enum LightStateType {
+    becomingActive,
+    primaryActive,
+    secondaryActive,
+    becomingInactive,
+    primaryInactive,
+    secondaryInactive,
+}
+
+const nStateTypes = 6;
+
+export interface LightFunction {
+    func: LightFunctionType;
     period: number;
     deltaPeriod: number;
     intensity: number;
@@ -12,37 +30,28 @@ interface LightConstructor {
     type: number;
     flags: number;
     phase: number;
-    primaryActive: LightFunction;
-    secondaryActive: LightFunction;
-    becomingActive: LightFunction;
-    primaryInactive: LightFunction;
-    secondaryInactive: LightFunction;
-    becomingInactive: LightFunction;
+    states: LightFunction[];
     tag: number;
+}
+
+enum LightFlagBits {
+    initiallyActive,
+    hasSlavedIntensities, // not used for anything?
+    stateless,
 }
 
 export class Light {
     type: number;
     flags: number;
     phase: number;
-    primaryActive: LightFunction;
-    secondaryActive: LightFunction;
-    becomingActive: LightFunction;
-    primaryInactive: LightFunction;
-    secondaryInactive: LightFunction;
-    becomingInactive: LightFunction;
+    states: LightFunction[];
     tag: number;
 
     constructor(data: LightConstructor) {
         this.type = data.type;
         this.flags = data.flags;
         this.phase = data.phase;
-        this.primaryActive = data.primaryActive;
-        this.secondaryActive = data.secondaryActive;
-        this.becomingActive = data.becomingActive;
-        this.primaryInactive = data.primaryInactive;
-        this.secondaryInactive = data.secondaryInactive;
-        this.becomingInactive = data.becomingInactive;
+        this.states = data.states;
         this.tag = data.tag;
     }
 
@@ -54,16 +63,22 @@ export class Light {
             intensity: reader.int32(),
             deltaIntensity: reader.int32(),
         });
+        const parseLightFunctions = () => {
+            const states = new Array(nStateTypes);
+            states[LightStateType.primaryActive] = lightFunction();
+            states[LightStateType.secondaryActive] = lightFunction();
+            states[LightStateType.becomingActive] = lightFunction();
+            states[LightStateType.primaryInactive] = lightFunction();
+            states[LightStateType.secondaryInactive] = lightFunction();
+            states[LightStateType.becomingInactive] = lightFunction();
+            return states;
+        };
+
         const light = {
             type: reader.int16(),
             flags: reader.uint16(),
             phase: reader.int16(),
-            primaryActive: lightFunction(),
-            secondaryActive: lightFunction(),
-            becomingActive: lightFunction(),
-            primaryInactive: lightFunction(),
-            secondaryInactive: lightFunction(),
-            becomingInactive: lightFunction(),
+            states: parseLightFunctions(),
             tag: reader.int16(),
         };
         reader.skip(8);
@@ -82,13 +97,23 @@ export class Light {
         writer.int16(this.type);
         writer.int16(this.flags);
         writer.int16(this.phase);
-        writeLightFunction(this.primaryActive);
-        writeLightFunction(this.secondaryActive);
-        writeLightFunction(this.becomingActive);
-        writeLightFunction(this.primaryInactive);
-        writeLightFunction(this.secondaryInactive);
-        writeLightFunction(this.becomingInactive);
+
+        for (let i = 0; i < nStateTypes; ++i) {
+            writeLightFunction(this.states[i])
+        }
         writer.int16(this.tag);
         writer.zeros(8);
+    }
+
+    testFlag(flag: LightFlagBits): boolean {
+        return (this.flags & (1 << flag)) !== 0
+    }
+
+    isStateless(): boolean {
+        return this.testFlag(LightFlagBits.stateless);
+    }
+
+    initiallyActive(): boolean {
+        return this.testFlag(LightFlagBits.initiallyActive);
     }
 }

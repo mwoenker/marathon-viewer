@@ -226,6 +226,9 @@ export class Rasterizer {
             const bottomParams = this.bottomParamList[x];
             const z = 1 / topParams.oneOverZ;
             const shadingTable = shadingTableForDistance(shadingTables, z, brightness);
+            if (!shadingTable) {
+                console.log('blam', shadingTables, z, brightness)
+            }
 
             if (isTransparent) {
                 this.textureWallSliceTransparent({

@@ -54,7 +54,7 @@ interface ChunkHeader {
     size: number
 }
 
-function readDirectoryEntry(bytes: ArrayBuffer, entrySize: number, wadVersion: number): WadDirectoryEntry {
+function readDirectoryEntry(bytes: ArrayBuffer, fullEntrySize: number, wadVersion: number): WadDirectoryEntry {
     const r = new Reader(bytes);
     const offset = r.uint32();
     const length = r.uint32();
@@ -64,10 +64,19 @@ function readDirectoryEntry(bytes: ArrayBuffer, entrySize: number, wadVersion: n
     }
 
     const index = r.uint16();
-    const missionFlags = r.int16();
-    const environmentFlags = r.int16();
-    const entryPointFlags = r.int32();
-    const levelName = r.cString(66);
+
+    let missionFlags = 0;
+    let environmentFlags = 0;
+    let entryPointFlags = 0;
+    let levelName = 'Untitled';
+
+    console.log({ fullEntrySize })
+    if (fullEntrySize >= 84) {
+        missionFlags = r.int16();
+        environmentFlags = r.int16();
+        entryPointFlags = r.int32();
+        levelName = r.cString(66);
+    }
 
     return { offset, length, index, missionFlags, environmentFlags, entryPointFlags, levelName };
 }
@@ -93,7 +102,7 @@ async function readWadHeader(file: RandomAccess): Promise<WadHeader> {
         const start = (i * fullEntrySize);
         const end = start + fullEntrySize;
         const entryData = dirData.slice(start, end);
-        directory.push(readDirectoryEntry(entryData, entrySize, wadVersion));
+        directory.push(readDirectoryEntry(entryData, fullEntrySize, wadVersion));
     }
 
     return {

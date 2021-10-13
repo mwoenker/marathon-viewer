@@ -62,7 +62,7 @@ export function shadingTableForDistance(
     const minerLightDist = 8;
     const minerLightFrac = Math.max(0, Math.min(minerLightDist, dist)) / minerLightDist;
     const minerLightBrightness = 0.3 * (1 - minerLightFrac);
-    const brightness = Math.min(1, minerLightBrightness + surfaceBrightness);
+    const brightness = Math.max(0, Math.min(1, minerLightBrightness + surfaceBrightness));
     // const minerLight = Math.max(0, Math.min(nShadingLevels - 1, nShadingLevels - (dist * 8) - 1));
     // const shadingLevel = Math.max(0, Math.min(nShadingLevels - 1, nShadingLevels - (dist * 8) - 1));
     return tables[Math.floor(brightness * (nShadingLevels - 1))];
