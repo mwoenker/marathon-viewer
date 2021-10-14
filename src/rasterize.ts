@@ -1,7 +1,7 @@
-import { Vec3 } from './vector3'
-import { Vec2 } from './vector2'
+import { Vec3 } from './vector3';
+import { Vec2 } from './vector2';
 import { lerp, floorMod } from './utils';
-import { ColorTable, shadingTableForDistance } from './color';
+import { ColorTable, shadingTableForDistance, packColor } from './color';
 import { TransferMode } from './files/wad';
 import { ScreenTransform } from './screen-transform';
 
@@ -159,7 +159,7 @@ export class Rasterizer {
     }
 
     drawWall(props: RenderPolygonProps): void {
-        if (props.transfer === TransferMode.landscape) {
+        if (props.transfer === TransferMode.landscape || props.transfer == TransferMode.static) {
             this.textureHorizontalPolygon(props);
         } else {
             this.textureWall(props);
@@ -227,7 +227,7 @@ export class Rasterizer {
             const z = 1 / topParams.oneOverZ;
             const shadingTable = shadingTableForDistance(shadingTables, z, brightness);
             if (!shadingTable) {
-                console.log('blam', shadingTables, z, brightness)
+                console.log('blam', shadingTables, z, brightness);
             }
 
             if (isTransparent) {
@@ -415,6 +415,17 @@ export class Rasterizer {
                     textureRightX: rightParams.textureXOverZ * z,
                     textureRightY: rightParams.textureYOverZ * z,
                 });
+            } else if (transfer === TransferMode.static) {
+                this.staticHorizontalSpan({
+                    y,
+                    left: leftParams.x,
+                    right: rightParams.x,
+                    texture,
+                    textureLeftX: leftParams.textureXOverZ * z,
+                    textureLeftY: leftParams.textureYOverZ * z,
+                    textureRightX: rightParams.textureXOverZ * z,
+                    textureRightY: rightParams.textureYOverZ * z,
+                });
             } else {
                 const shadingTable = shadingTableForDistance(shadingTables, z, brightness);
                 this.textureHorizontalSpan({
@@ -519,6 +530,24 @@ export class Rasterizer {
             const color = colorTable[texel];
             this.pixels[offset++] = color;
             u += du;
+        }
+    }
+
+    staticHorizontalSpan({
+        y,
+        left,
+        right,
+    }: HorizontalSpan): void {
+        const xStart = Math.ceil(left);
+        const xEnd = Math.ceil(right);
+        const colorMask = packColor(255, 255, 255, 0);
+        const alpha = packColor(0, 0, 0, 255);
+
+        let offset = this.width * y + xStart;
+
+        for (let x = xStart; x < xEnd; ++x) {
+            const color = colorMask & (Math.random() * 0xffffffff) | alpha;
+            this.pixels[offset++] = color;
         }
     }
 }

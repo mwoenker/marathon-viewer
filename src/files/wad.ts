@@ -15,7 +15,7 @@ import { RandomSound } from './map/random-sound';
 import { Note } from './map/note';
 import { Platform } from './map/platform';
 import { MapInfo } from './map/map-info';
-import { Vec2 } from '../vector2'
+import { Vec2 } from '../vector2';
 
 export interface WadDirectoryEntry {
     offset: number,
@@ -60,7 +60,7 @@ function readDirectoryEntry(bytes: ArrayBuffer, fullEntrySize: number, wadVersio
     const length = r.uint32();
 
     if (wadVersion < 2) {
-        throw new Error("Wad version <2 not supported")
+        throw new Error("Wad version <2 not supported");
     }
 
     const index = r.uint16();
@@ -70,7 +70,7 @@ function readDirectoryEntry(bytes: ArrayBuffer, fullEntrySize: number, wadVersio
     let entryPointFlags = 0;
     let levelName = 'Untitled';
 
-    console.log({ fullEntrySize })
+    console.log({ fullEntrySize });
     if (fullEntrySize >= 84) {
         missionFlags = r.int16();
         environmentFlags = r.int16();
@@ -153,15 +153,15 @@ const chunkParser = new ChunkParser();
 
 chunkParser.defineArray('EPNT', (r) => Endpoint.read(r));
 chunkParser.defineArray('PNTS', readPoint);
-chunkParser.defineArray('LINS', (r) => Line.read(r))
+chunkParser.defineArray('LINS', (r) => Line.read(r));
 chunkParser.defineArray('SIDS', (r) => Side.read(r));
 chunkParser.defineArray('POLY', (r) => Polygon.read(r));
 chunkParser.defineArray('LITE', (r) => Light.read(r));
-chunkParser.defineArray('OBJS', (r) => MapObject.read(r))
+chunkParser.defineArray('OBJS', (r) => MapObject.read(r));
 chunkParser.defineArray('plac', r => ItemPlacement.read(r));
 chunkParser.defineArray('medi', r => Media.read(r));
 chunkParser.defineArray('ambi', r => AmbientSound.read(r));
-chunkParser.defineArray('bonk', r => RandomSound.read(r))
+chunkParser.defineArray('bonk', r => RandomSound.read(r));
 chunkParser.defineArray('NOTE', r => Note.read(r));
 chunkParser.defineArray('PLAT', r => Platform.read(r));
 chunkParser.define('Minf', (r) => MapInfo.read(r));
@@ -221,7 +221,7 @@ async function readMap(file: RandomAccess, wadHeader: WadHeader, index: number):
         points = (chunks.get('PNTS') as Vec2[]);
     } else if (chunks.has('EPNT')) {
         points = (chunks.get('EPNT') as Endpoint[]).map((endpoint: Endpoint) => {
-            return endpoint.position
+            return endpoint.position;
         });
     } else {
         throw Error('No EPNT or PNTS chunk');

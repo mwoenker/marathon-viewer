@@ -12,7 +12,7 @@ import { RandomSound } from './random-sound';
 import { Note } from './note';
 import { Platform } from './platform';
 import { MapInfo } from './map-info';
-import { WadHeader } from '../wad'
+import { TransferMode, WadHeader } from '../wad';
 
 interface FloorCeilingRequest {
     polygonIndex: number,
@@ -28,7 +28,8 @@ interface WallTextureRequest {
     sideType: number,
     textureSlot: TextureSlot,
     shape: number,
-    offset: Vec2
+    offset: Vec2,
+    transferMode?: TransferMode
 }
 
 interface MapGeometryConstructor {
@@ -136,7 +137,6 @@ class Dependencies {
                 }
             }
             for (let i = 0; i < map.objects.length; ++i) {
-                const obj = map.objects[i];
                 if (map.objects[i].polygon === polygonIndex) {
                     this.addObject(map, i);
                 }
@@ -253,7 +253,8 @@ export class MapGeometry {
         sideType,
         textureSlot,
         shape,
-        offset
+        offset,
+        transferMode = TransferMode.normal
     }: WallTextureRequest): MapGeometry {
         const sideTex = new SideTex({ texture: shape, offset });
         const polygon = this.polygons[polygonIndex];
@@ -266,7 +267,9 @@ export class MapGeometry {
                 primaryTexture: textureSlot === 'primary' ? sideTex : new SideTex(),
                 secondaryTexture: textureSlot === 'secondary' ? sideTex : new SideTex(),
                 transparentTexture: textureSlot === 'transparent' ? sideTex : new SideTex(),
-
+                primaryTransferMode: textureSlot === 'primary' ? transferMode : TransferMode.normal,
+                secondaryTransferMode: textureSlot === 'secondary' ? transferMode : TransferMode.normal,
+                transparentTransferMode: textureSlot === 'transparent' ? transferMode : TransferMode.normal,
             });
             const sides = [...this.sides, side];
             const polygonSides = [...polygon.sides];
@@ -287,6 +290,12 @@ export class MapGeometry {
                 primaryTexture: textureSlot === 'primary' ? sideTex : oldSide.primaryTexture,
                 secondaryTexture: textureSlot === 'secondary' ? sideTex : oldSide.secondaryTexture,
                 transparentTexture: textureSlot === 'transparent' ? sideTex : oldSide.transparentTexture,
+                primaryTransferMode: textureSlot === 'primary'
+                    ? transferMode : oldSide.primaryTransferMode,
+                secondaryTransferMode: textureSlot === 'secondary'
+                    ? transferMode : oldSide.secondaryTransferMode,
+                transparentTransferMode: textureSlot === 'transparent'
+                    ? transferMode : oldSide.transparentTransferMode,
             });
             const sides = [...this.sides];
             sides[sideIndex] = side;
@@ -300,6 +309,7 @@ export class MapGeometry {
             ...polygons[polygonIndex],
             floorTexture: shape,
             floorOrigin: offset,
+            floorTransferMode: TransferMode.normal,
         });
         return new MapGeometry({ ...this, polygons });
     }
@@ -310,6 +320,7 @@ export class MapGeometry {
             ...polygons[polygonIndex],
             ceilingTexture: shape,
             ceilingOrigin: offset,
+            ceilingTransferMode: TransferMode.normal,
         });
         return new MapGeometry({ ...this, polygons });
     }
