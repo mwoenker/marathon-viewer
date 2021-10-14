@@ -358,8 +358,8 @@ function populateLevelSelect(levelSelect: HTMLSelectElement, summaries: MapSumma
 }
 
 const shapesUrl = 'minf.shpA';
-const mapUrl = 'minf.sceA';
-// const mapUrl = 'XCT2k310.sceA';
+// const mapUrl = 'minf.sceA';
+const mapUrl = 'XCT2k310.sceA';
 
 // const shapesUrl = 'm2.shpA';
 // const mapUrl = 'm2.sceA';
