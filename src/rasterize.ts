@@ -416,10 +416,12 @@ export class Rasterizer {
                     textureRightY: rightParams.textureYOverZ * z,
                 });
             } else if (transfer === TransferMode.static) {
+                const shadingTable = shadingTableForDistance(shadingTables, 0, 1);
                 this.staticHorizontalSpan({
                     y,
                     left: leftParams.x,
                     right: rightParams.x,
+                    colorTable: shadingTable,
                     texture,
                     textureLeftX: leftParams.textureXOverZ * z,
                     textureLeftY: leftParams.textureYOverZ * z,

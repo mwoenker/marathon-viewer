@@ -247,6 +247,31 @@ export class MapGeometry {
         return new MapGeometry({ ...this, points: newPoints });
     }
 
+    getWallTexInfo(
+        polygonIndex: number,
+        wallIndex: number,
+        textureSlot: 'primary' | 'secondary'
+    ): null | { light: Light } {
+        const polygon = this.polygons[polygonIndex];
+        const sideIndex = polygon.sides[wallIndex];
+        if (sideIndex === -1) {
+            return null;
+        } else {
+            const side = this.sides[sideIndex];
+            let lightIndex;
+            if (textureSlot === 'primary') {
+                lightIndex = side.primaryLightsourceIndex;
+            } else if (textureSlot === 'secondary') {
+                lightIndex = side.secondaryLightsourceIndex;
+            } else {
+                throw new Error(`invalid texture slot ${textureSlot}`);
+            }
+
+            const light = this.lights[lightIndex];
+            return { light };
+        }
+    }
+
     setWallTexture({
         polygonIndex,
         wallIndex,

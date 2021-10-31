@@ -1,4 +1,4 @@
-import { Reader, Writer } from '../binary-read'
+import { Reader, Writer } from '../binary-read';
 
 export enum LightFunctionType {
     constant,
@@ -82,7 +82,7 @@ export class Light {
             tag: reader.int16(),
         };
         reader.skip(8);
-        return new Light(light)
+        return new Light(light);
 
     }
 
@@ -93,24 +93,26 @@ export class Light {
             writer.int16(lightFunction.deltaPeriod);
             writer.int32(lightFunction.intensity);
             writer.int32(lightFunction.deltaIntensity);
-        }
+        };
         writer.int16(this.type);
         writer.int16(this.flags);
         writer.int16(this.phase);
 
         for (let i = 0; i < nStateTypes; ++i) {
-            writeLightFunction(this.states[i])
+            writeLightFunction(this.states[i]);
         }
         writer.int16(this.tag);
         writer.zeros(8);
     }
 
     testFlag(flag: LightFlagBits): boolean {
-        return (this.flags & (1 << flag)) !== 0
+        return (this.flags & (1 << flag)) !== 0;
     }
 
     isStateless(): boolean {
-        return this.testFlag(LightFlagBits.stateless);
+        //return this.testFlag(LightFlagBits.stateless);
+        // lol bungie broke this
+        return false;
     }
 
     initiallyActive(): boolean {

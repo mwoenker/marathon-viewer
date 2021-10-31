@@ -359,6 +359,7 @@ function populateLevelSelect(levelSelect: HTMLSelectElement, summaries: MapSumma
 
 const shapesUrl = 'minf.shpA';
 const mapUrl = 'minf.sceA';
+// const mapUrl = 'NEFX - Minotransformation.sceA';
 // const mapUrl = 'XCT2k310.sceA';
 
 // const shapesUrl = 'm2.shpA';
@@ -369,6 +370,7 @@ const mapUrl = 'minf.sceA';
 
 // const shapesUrl = 'Phoenix Shapes.shpA';
 // const mapUrl = 'Phoenix Map.sceA';
+// const mapUrl = 'Ashen_Map.sceA';
 
 // const shapesUrl = 'Megiddo Shapes.shpA';
 // const mapUrl = 'Megiddo Map.sceA';

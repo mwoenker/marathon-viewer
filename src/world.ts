@@ -128,9 +128,10 @@ export class World {
         return this.polygons[polygonIndex];
     }
 
-    getSide(sideIndex: number): Side {
+    getSide(sideIndex: number): Side | null {
         if (sideIndex < 0 || sideIndex >= this.sides.length) {
-            throw new Error(`invalid side index: ${sideIndex}`);
+            return null;
+            //throw new Error(`invalid side index: ${sideIndex} must be >=0, < ${this.sides.length}`);
         }
         return this.sides[sideIndex];
     }
