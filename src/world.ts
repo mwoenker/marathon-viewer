@@ -258,7 +258,7 @@ export class World {
         return { floor: low, ceiling: high };
     }
 
-    movePlayer(oldPosition: Vec2, position: Vec2, polygonIndex: number): [Vec2, number] {
+    movePlayer(oldPosition: Vec2, position: Vec2, polygonIndex: number): [Vec2, number] | null {
         const polygon = this.polygons[polygonIndex];
         let intersection: Collision2d | null = null;
         let intersectLinePosition = null;
@@ -270,12 +270,16 @@ export class World {
                 intersectLinePosition = linePosition;
             }
         }
+        if (intersection) {
+            console.log({ intersection });
+        }
         if (intersection && intersectLinePosition !== null) {
             const portalTo = this.getPortal(polygonIndex, intersectLinePosition);
             if (portalTo !== undefined && portalTo !== null && portalTo !== -1) {
-                return this.movePlayer(intersection.collidePosition, position, portalTo);
+                //return this.movePlayer(intersection.collidePosition, position, portalTo);
+                return this.movePlayer(oldPosition, position, portalTo);
             } else {
-                return [oldPosition, polygonIndex];
+                return null;
             }
         } else {
             return [position, polygonIndex];

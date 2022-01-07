@@ -1,0 +1,136 @@
+import { errorName } from './error-name';
+import { getShaderProgram, ShaderInfo } from './shaders';
+import { ShapeTextures } from './shape-textures';
+import { RenderVertex } from '../rasterize';
+
+const positionNumCoords = 3;
+const texNumCoords = 2;
+const lightNumCoords = 1;
+const vertexSize = positionNumCoords + texNumCoords + lightNumCoords;
+const triangleSize = vertexSize * 3;
+const vertexBufferMaxSize = triangleSize * 4096;
+const vertexBufferBytes = 4 * vertexBufferMaxSize;
+
+interface DrawCall {
+    first: number,
+    count: number,
+    shapeDescriptor: number;
+}
+
+export class GeometryBuffer {
+    elementsWritten: number;
+    vertexBuffer: Float32Array;
+    gl: WebGL2RenderingContext;
+    shapeTextures: ShapeTextures;
+    buffer: WebGLBuffer;
+    drawCalls: DrawCall[];
+    nDrawCalls: number;
+
+    constructor(gl: WebGL2RenderingContext, shapeTextures: ShapeTextures) {
+        this.gl = gl;
+        this.vertexBuffer = new Float32Array(vertexBufferMaxSize);
+        this.elementsWritten = 0;
+        this.shapeTextures = shapeTextures;
+        const buffer = gl.createBuffer();
+        if (!buffer) {
+            throw new Error(`gl.createBuffer failed: ${errorName(gl)}`);
+        }
+        this.buffer = buffer;
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.buffer);
+        gl.bufferData(gl.ARRAY_BUFFER, vertexBufferBytes, gl.STREAM_DRAW);
+        this.buffer = buffer;
+        this.nDrawCalls = 0;
+        this.drawCalls = [];
+    }
+
+    flush(isFinal = false): void {
+        this.nDrawCalls += this.drawCalls.length;
+        if (isFinal) {
+            //console.log('draw calls', this.nDrawCalls);
+        }
+        const gl = this.gl;
+
+        if (this.elementsWritten > 0) {
+            gl.bindBuffer(gl.ARRAY_BUFFER, this.buffer);
+
+            const shaderInfo = getShaderProgram(gl);
+            gl.useProgram(shaderInfo.program);
+
+            const type = gl.FLOAT;
+            const normalize = false;
+
+            gl.vertexAttribPointer(
+                shaderInfo.vertexPosition,
+                positionNumCoords,
+                type,
+                normalize,
+                shaderInfo.stride,
+                shaderInfo.vertexOffset);
+            gl.vertexAttribPointer(
+                shaderInfo.texCoord,
+                texNumCoords,
+                type,
+                normalize,
+                shaderInfo.stride,
+                shaderInfo.texCoordOffset);
+            gl.vertexAttribPointer(
+                shaderInfo.light,
+                lightNumCoords,
+                type,
+                normalize,
+                shaderInfo.stride,
+                shaderInfo.lightOffset);
+            gl.enableVertexAttribArray(shaderInfo.vertexPosition);
+            gl.enableVertexAttribArray(shaderInfo.texCoord);
+            gl.enableVertexAttribArray(shaderInfo.light);
+            gl.bufferSubData(gl.ARRAY_BUFFER, 0, this.vertexBuffer, 0, this.elementsWritten);
+            gl.activeTexture(gl.TEXTURE0);
+            gl.uniform1i(shaderInfo.textureSampler, 0);
+
+            for (const { first, count, shapeDescriptor } of this.drawCalls) {
+                gl.bindTexture(gl.TEXTURE_2D, this.shapeTextures.get(shapeDescriptor));
+                gl.drawArrays(gl.TRIANGLES, first, count);
+            }
+        }
+        this.elementsWritten = 0;
+        this.drawCalls = [];
+    }
+
+    addVertex(p: RenderVertex, light: number): void {
+        this.vertexBuffer[this.elementsWritten++] = p.position[0];
+        this.vertexBuffer[this.elementsWritten++] = p.position[1];
+        this.vertexBuffer[this.elementsWritten++] = p.position[2];
+        this.vertexBuffer[this.elementsWritten++] = p.texCoord[0];
+        this.vertexBuffer[this.elementsWritten++] = p.texCoord[1];
+        this.vertexBuffer[this.elementsWritten++] = light;
+    }
+
+    addTriangle(p1: RenderVertex, p2: RenderVertex, p3: RenderVertex, light: number): void {
+        this.addVertex(p1, light);
+        this.addVertex(p2, light);
+        this.addVertex(p3, light);
+    }
+
+    addPolygon(shapeDescriptor: number, vertices: RenderVertex[], light: number): void {
+        const nDrawVertices = 3 * (vertices.length - 2);
+        if (this.elementsWritten + (vertexSize * nDrawVertices) >= this.vertexBuffer.length) {
+            this.flush();
+        }
+        const startElement = this.elementsWritten;
+        for (let i = 1; i < vertices.length - 1; ++i) {
+            this.addTriangle(vertices[0], vertices[i], vertices[i + 1], light);
+        }
+
+        if (this.drawCalls.length > 0 &&
+            this.drawCalls[this.drawCalls.length - 1].shapeDescriptor === shapeDescriptor) {
+            const lastShape = this.drawCalls[this.drawCalls.length - 1];
+            lastShape.count += nDrawVertices;
+        } else {
+            this.drawCalls.push({
+                first: startElement / vertexSize,
+                count: nDrawVertices,
+                shapeDescriptor
+            });
+        }
+    }
+}

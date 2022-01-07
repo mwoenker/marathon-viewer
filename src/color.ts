@@ -12,7 +12,7 @@ export function packColor(r: number, g: number, b: number, a = 255): number {
     color8[0] = Math.floor(Math.max(0, Math.min(r, 255)));
     color8[1] = Math.floor(Math.max(0, Math.min(g, 255)));
     color8[2] = Math.floor(Math.max(0, Math.min(b, 255)));
-    color8[3] = Math.floor(Math.max(0, Math.min(a, 255)))
+    color8[3] = Math.floor(Math.max(0, Math.min(a, 255)));
     return color32[0];
 }
 
@@ -40,12 +40,14 @@ export type ColorTable = number[]
 export function makeShadingTables(colorTable: SourceColorTable): ColorTable[] {
     const shadingLevels = new Array(nShadingLevels);
     for (let i = 0; i < nShadingLevels; ++i) {
-        shadingLevels[i] = colorTable.map(({ r, g, b }) => {
+        shadingLevels[i] = colorTable.map(({ r, g, b }, colorIndex) => {
             const brightness = i / (nShadingLevels - 1);
+            const alpha = colorIndex === 0 ? 0 : 1;
             return packColor(
-                r * brightness / 256,
-                g * brightness / 256,
-                b * brightness / 256,
+                r * alpha * brightness / 256,
+                g * alpha * brightness / 256,
+                b * alpha * brightness / 256,
+                alpha * 255
             );
         });
     }
@@ -66,4 +68,8 @@ export function shadingTableForDistance(
     // const minerLight = Math.max(0, Math.min(nShadingLevels - 1, nShadingLevels - (dist * 8) - 1));
     // const shadingLevel = Math.max(0, Math.min(nShadingLevels - 1, nShadingLevels - (dist * 8) - 1));
     return tables[Math.floor(brightness * (nShadingLevels - 1))];
+}
+
+export function fullBrightShadingTable(tables: ColorTable[]): ColorTable {
+    return tables[tables.length - 1];
 }

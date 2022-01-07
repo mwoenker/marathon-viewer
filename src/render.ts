@@ -4,11 +4,8 @@ import {
     v2sub,
     v2dot,
     isClockwise,
-    v2length,
-    v2scale,
-    v2add,
 } from './vector2';
-import { v3add, Vec3 } from './vector3';
+import { Vec3 } from './vector3';
 import { Player } from './index';
 import { ClipArea3d } from './clip';
 import { sideType, TransferMode } from './files/wad';
@@ -16,14 +13,11 @@ import { Transformation } from './transform2d';
 import { floorMod } from './utils';
 import { ScreenTransform } from './screen-transform';
 import { ticksPerSecond, World, worldUnitSize } from './world';
-import { Shapes } from './shapes-loader';
-import { Rasterizer, RenderTexture } from './rasterize';
-import { ColorTable } from './color';
+import { Rasterizer } from './rasterize';
 
 interface RendererConstructor {
     world: World;
     player: Player;
-    shapes: Shapes;
     rasterizer: Rasterizer;
     seconds: number;
 }
@@ -41,8 +35,7 @@ interface DrawHorizontalPolygonProps {
     height: number;
     clipArea: ClipArea3d;
     isCeiling: boolean;
-    texture: RenderTexture | null;
-    shadingTables: ColorTable[] | null;
+    textureDescriptor: number,
     brightness: number;
     polyTransferMode: number;
 }
@@ -51,14 +44,12 @@ export interface RenderProps {
     rasterizer: Rasterizer;
     player: Player;
     world: World;
-    shapes: Shapes;
     seconds: number;
 }
 
 class Renderer {
     world: World;
     player: Player;
-    shapes: Shapes;
     rasterizer: Rasterizer;
     seconds: number;
     viewTransform: Transformation;
@@ -73,10 +64,9 @@ class Renderer {
     landscapeTiltCorrection: number;
     isSubmerged: boolean;
 
-    constructor({ world, player, shapes, rasterizer, seconds }: RendererConstructor) {
+    constructor({ world, player, rasterizer, seconds }: RendererConstructor) {
         this.world = world;
         this.player = player;
-        this.shapes = shapes;
         this.rasterizer = rasterizer;
         this.seconds = seconds;
 
@@ -123,8 +113,8 @@ class Renderer {
             const rotationFrac = floorMod(this.player.facingAngle / Math.PI / 2, 1);
             const projected: Vec3 = [projX, projY, 1];
             const texCoord: Vec2 = [
-                fracX * this.landscapeWidth + rotationFrac,
                 fracY * this.landscapeHeight + this.landscapeYOffset,
+                fracX * this.landscapeWidth + rotationFrac,
             ];
 
             return { position: projected, texCoord };
@@ -176,8 +166,7 @@ class Renderer {
         height,
         clipArea,
         isCeiling,
-        texture,
-        shadingTables,
+        textureDescriptor,
         brightness,
         polyTransferMode
     }: DrawHorizontalPolygonProps) {
@@ -216,8 +205,7 @@ class Renderer {
 
             this.rasterizer.drawHorizontalPolygon({
                 polygon: textured,
-                texture,
-                shadingTables,
+                textureDescriptor,
                 brightness,
                 transfer: polyTransferMode,
             });
@@ -271,8 +259,7 @@ class Renderer {
                         this.world.getTexOffset(side?.primaryTexture));
                     this.rasterizer.drawWall({
                         polygon: texturedPolygon, // abovePoly,
-                        texture: this.shapes.getBitmap(side.primaryTexture.texture),
-                        shadingTables: this.shapes.getShadingTables(side.primaryTexture.texture),
+                        textureDescriptor: side.primaryTexture.texture,
                         brightness: this.world.getLightIntensity(side.primaryLightsourceIndex),
                         transfer: side?.primaryTransferMode || TransferMode.normal,
                     });
@@ -304,8 +291,7 @@ class Renderer {
 
                     this.rasterizer.drawWall({
                         polygon: texturedPolygon,
-                        texture: this.shapes.getBitmap(sideTex.texture),
-                        shadingTables: this.shapes.getShadingTables(sideTex.texture),
+                        textureDescriptor: sideTex.texture,
                         brightness: this.world.getLightIntensity(
                             (side.type === sideType.split
                                 ? side.secondaryLightsourceIndex
@@ -337,8 +323,7 @@ class Renderer {
 
                     this.rasterizer.drawWall({
                         polygon: texturedPolygon,
-                        texture: this.shapes.getBitmap(sideTex.texture),
-                        shadingTables: this.shapes.getShadingTables(sideTex.texture),
+                        textureDescriptor: sideTex.texture,
                         brightness: this.world.getLightIntensity(side.transparentLightsourceIndex),
                         transfer: side?.transparentTransferMode,
                         isTransparent: true,
@@ -366,8 +351,7 @@ class Renderer {
 
                 this.rasterizer.drawWall({
                     polygon: texturedPolygon, // clippedPolygon,
-                    texture: this.shapes.getBitmap(side.primaryTexture.texture),
-                    shadingTables: this.shapes.getShadingTables(side.primaryTexture.texture),
+                    textureDescriptor: side.primaryTexture.texture,
                     brightness: this.world.getLightIntensity(side.primaryLightsourceIndex),
                     transfer: side?.primaryTransferMode || TransferMode.normal,
                 });
@@ -398,8 +382,7 @@ class Renderer {
                 height: ceiling.height - this.player.height,
                 clipArea,
                 isCeiling: true,
-                texture: this.shapes.getBitmap(ceiling.texture),
-                shadingTables: this.shapes.getShadingTables(ceiling.texture),
+                textureDescriptor: ceiling.texture,
                 brightness: ceiling.lightIntensity,
                 polyTransferMode: ceiling.transferMode,
             });
@@ -412,8 +395,7 @@ class Renderer {
                 height: floor.height - this.player.height,
                 clipArea,
                 isCeiling: false,
-                texture: this.shapes.getBitmap(floor.texture),
-                shadingTables: this.shapes.getShadingTables(floor.texture),
+                textureDescriptor: floor.texture,
                 brightness: floor.lightIntensity,
                 polyTransferMode: floor.transferMode,
             });
@@ -425,7 +407,7 @@ class Renderer {
     }
 }
 
-export function render({ rasterizer, player, world, shapes, seconds }: RenderProps): void {
-    const renderer = new Renderer({ world, player, shapes, rasterizer, seconds });
+export function render({ rasterizer, player, world, seconds }: RenderProps): void {
+    const renderer = new Renderer({ world, player, rasterizer, seconds });
     renderer.render();
 }

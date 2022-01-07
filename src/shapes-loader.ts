@@ -37,7 +37,7 @@ export class Shapes {
     loadCollection(index: number): void {
         if (this.headers && !this.collectionLoading(index)) {
             console.log(`loading collection ${index}...`);
-            this.collections[index] = 'loading'
+            this.collections[index] = 'loading';
             readCollection(this.file, this.headers[index])
                 .then((collection) => {
                     const clutShadingTables = collection.colorTables.map((table) => {
@@ -79,7 +79,7 @@ export class Shapes {
     }
 
     getShadingTables(descriptor: number): ColorTable[] | null {
-        const { collectionIndex, clutIndex } = parseShapeDescriptor(descriptor)
+        const { collectionIndex, clutIndex } = parseShapeDescriptor(descriptor);
         const collection = this.collections[collectionIndex];
         if (!collection) {
             this.loadCollection(collectionIndex);

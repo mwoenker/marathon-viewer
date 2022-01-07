@@ -1,5 +1,5 @@
 import { RandomAccess, Reader, readRange } from './binary-read';
-import { Vec2 } from '../vector2'
+import { Vec2 } from '../vector2';
 const nCollections = 32;
 const collectionHeaderSize = 32;
 

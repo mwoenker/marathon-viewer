@@ -2,7 +2,6 @@
 
 import { HttpFile } from './files/binary-read';
 import { Shapes } from './shapes-loader';
-import { magenta } from './color';
 import { drawOverhead } from './drawOverhead';
 import { makeShapeDescriptor } from './files/shapes';
 import { MapGeometry } from './files/map';
@@ -21,25 +20,13 @@ import {
     readMapFromSummary,
     MapSummary
 } from './files/wad';
-import { SoftwareRasterizer } from './rasterize';
-import { render } from './render';
 import { Transformation } from './transform2d';
 import { ScreenTransform } from './screen-transform';
+import { glRender } from './gl';
+import { Player } from './player';
 
-let imageData: ImageData | null = null;
-let pixels: Uint32Array | null = null;
-
-export interface Player {
-    position: Vec2;
-    polygon: number;
-    facingAngle: number;
-    verticalAngle: number;
-    hFov: number;
-    vFov: number;
-    wallBitmapIndex: number;
-    height: number;
-    secondsElapsed: number,
-}
+// let imageData: ImageData | null = null;
+// let pixels: Uint32Array | null = null;
 
 interface ExtendedWindow extends Window {
     teleport(poly: number): void
@@ -47,32 +34,8 @@ interface ExtendedWindow extends Window {
 
 declare const window: ExtendedWindow;
 
-function draw3d(canvas: HTMLCanvasElement, player: Player, world: World, shapes: Shapes, seconds: number) {
-    const context = canvas.getContext('2d');
-
-    if (!context) {
-        throw new Error("Can't get context!");
-    }
-
-    if (!pixels || !imageData || imageData.width !== canvas.width || imageData.height !== canvas.height) {
-        console.log('create imagedata');
-        imageData = context.createImageData(canvas.width, canvas.height);
-        if (!imageData) {
-            throw new Error('createImageData failed');
-        }
-        pixels = new Uint32Array(imageData.data.buffer);
-    }
-
-    pixels.fill(magenta);
-
-    context.fillStyle = 'white';
-    context.fillRect(0, 0, canvas.width, canvas.height);
-
-    const rasterizer = new SoftwareRasterizer(canvas.width, canvas.height, pixels, player, shapes);
-
-    render({ rasterizer, player, world, seconds });
-
-    context.putImageData(imageData, 0, 0);
+function draw3d(gl: WebGL2RenderingContext, player: Player, world: World, shapes: Shapes, seconds: number) {
+    glRender(gl, player, world, shapes, seconds);
 }
 
 function update(
@@ -290,6 +253,11 @@ function initWorld(
         }
     });
 
+    const gl = canvas.getContext('webgl2');
+    if (!gl) {
+        throw new Error("Please buy a new computer");
+    }
+
     const startTime = (new Date()).getTime();
     let fpsCounterBegin = (new Date()).getTime();
     let fpsCounted = 0;
@@ -312,9 +280,7 @@ function initWorld(
                 }
             }
 
-            if (canvas) {
-                draw3d(canvas, player, world, shapes, secondsElapsed);
-            }
+            draw3d(gl, player, world, shapes, secondsElapsed);
 
             if (overheadCanvas) {
                 drawOverhead(overheadCanvas, player, world);
@@ -369,7 +335,6 @@ function populateLevelSelect(levelSelect: HTMLSelectElement, summaries: MapSumma
 // const mapUrl = 'minf.sceA';
 // const mapUrl = 'NEFX - Minotransformation.sceA';
 // const mapUrl = 'XCT2k310.sceA';
-// const mapUrl = 'NoCircles.sceA';
 
 // const shapesUrl = 'm2.shpA';
 // const mapUrl = 'm2.sceA';

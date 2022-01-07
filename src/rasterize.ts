@@ -4,6 +4,7 @@ import { lerp, floorMod } from './utils';
 import { ColorTable, shadingTableForDistance, packColor } from './color';
 import { TransferMode } from './files/wad';
 import { ScreenTransform } from './screen-transform';
+import { Shapes } from './shapes-loader';
 
 interface PlayerProps {
     hFov: number;
@@ -31,18 +32,17 @@ export interface RenderTexture {
     height: number;
 }
 
-interface RenderPolygon {
+export interface RenderVertex {
     position: Vec3;
     texCoord: Vec2;
 }
 
-interface RenderPolygonProps {
-    polygon: RenderPolygon[];
-    texture: RenderTexture | null;
+export interface RenderPolygonProps {
+    polygon: RenderVertex[];
     brightness: number;
     transfer: number;
     isTransparent?: boolean;
-    shadingTables: ColorTable[] | null;
+    textureDescriptor: number;
 }
 
 interface WallSlice {
@@ -68,7 +68,14 @@ interface HorizontalSpan {
     textureRightY: number,
 }
 
-export class Rasterizer {
+export abstract class Rasterizer {
+    abstract drawWall(props: RenderPolygonProps): void
+    abstract drawHorizontalPolygon(props: RenderPolygonProps): void
+    width: number;
+    height: number;
+}
+
+export class SoftwareRasterizer extends Rasterizer {
     pixels: Uint32Array;
     screenTransform: ScreenTransform;
     width: number;
@@ -77,9 +84,12 @@ export class Rasterizer {
     bottomParamList: VerticalPolyLineParams[];
     leftParamList: HorizontalPolyLineParams[];
     rightParamList: HorizontalPolyLineParams[];
+    shapes: Shapes;
 
-    constructor(width: number, height: number, pixels: Uint32Array, player: PlayerProps) {
+    constructor(width: number, height: number, pixels: Uint32Array, player: PlayerProps, shapes: Shapes) {
+        super();
         this.pixels = pixels;
+        this.shapes = shapes;
         this.screenTransform = new ScreenTransform(
             width,
             height,
@@ -128,7 +138,7 @@ export class Rasterizer {
         }
     }
 
-    calcLineTextureParams(
+    private calcLineTextureParams(
         leftVertex: Vec3,
         rightVertex: Vec3,
         leftTexCoord: Vec2,
@@ -167,8 +177,11 @@ export class Rasterizer {
     }
 
     textureWall(
-        { polygon, texture, shadingTables, brightness, isTransparent = false }: RenderPolygonProps
+        { polygon, textureDescriptor, brightness, isTransparent = false }: RenderPolygonProps
     ): void {
+        const texture = this.shapes.getBitmap(textureDescriptor);
+        const shadingTables = this.shapes.getShadingTables(textureDescriptor);
+
         if (!texture || !shadingTables) {
             return;
         }
@@ -213,7 +226,7 @@ export class Rasterizer {
         this.textureWallRange(xMin, xMax, texture, shadingTables, brightness, isTransparent);
     }
 
-    textureWallRange(
+    private textureWallRange(
         xMin: number,
         xMax: number,
         texture: RenderTexture,
@@ -256,7 +269,7 @@ export class Rasterizer {
         }
     }
 
-    textureWallSlice(
+    private textureWallSlice(
         { x, top, bottom, colorTable, texXOffset, texture, textureTop, textureBottom }: WallSlice
     ): void {
         const intTop = Math.max(0, Math.floor(Math.ceil(top)));
@@ -282,7 +295,7 @@ export class Rasterizer {
         }
     }
 
-    textureWallSliceTransparent(
+    private textureWallSliceTransparent(
         { x, top, bottom, colorTable, texXOffset, texture, textureTop, textureBottom }: WallSlice
     ): void {
         const intTop = Math.max(0, Math.floor(Math.ceil(top)));
@@ -310,11 +323,11 @@ export class Rasterizer {
         }
     }
 
-    drawHorizontalPolygon({ polygon, texture, shadingTables, brightness, transfer }: RenderPolygonProps): void {
-        this.textureHorizontalPolygon({ polygon, texture, shadingTables, brightness, transfer });
+    drawHorizontalPolygon({ polygon, textureDescriptor, brightness, transfer }: RenderPolygonProps): void {
+        this.textureHorizontalPolygon({ polygon, textureDescriptor, brightness, transfer });
     }
 
-    calcLineTextureParamsHorizontal(
+    private calcLineTextureParamsHorizontal(
         leftVertex: Vec3,
         rightVertex: Vec3,
         leftTexCoord: Vec2,
@@ -344,7 +357,9 @@ export class Rasterizer {
         }
     }
 
-    textureHorizontalPolygon({ polygon, texture, shadingTables, brightness, transfer }: RenderPolygonProps): void {
+    textureHorizontalPolygon({ polygon, textureDescriptor, brightness, transfer }: RenderPolygonProps): void {
+        const texture = this.shapes.getBitmap(textureDescriptor);
+        const shadingTables = this.shapes.getShadingTables(textureDescriptor);
         if (!texture || !shadingTables) {
             return;
         }
@@ -389,7 +404,7 @@ export class Rasterizer {
         this.textureHorizontalRange(yMin, yMax, texture, shadingTables, brightness, transfer);
     }
 
-    textureHorizontalRange(
+    private textureHorizontalRange(
         yMin: number,
         yMax: number,
         texture: RenderTexture,
@@ -445,7 +460,7 @@ export class Rasterizer {
         }
     }
 
-    textureHorizontalSpan({
+    private textureHorizontalSpan({
         y,
         left,
         right,
@@ -491,7 +506,7 @@ export class Rasterizer {
         }
     }
 
-    landscapeHorizontalSpan({
+    private landscapeHorizontalSpan({
         y,
         left,
         right,
@@ -535,7 +550,7 @@ export class Rasterizer {
         }
     }
 
-    staticHorizontalSpan({
+    private staticHorizontalSpan({
         y,
         left,
         right,

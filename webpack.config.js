@@ -4,6 +4,7 @@ var HtmlWebpackPlugin = require('html-webpack-plugin');
 module.exports = {
     entry: {
         main: './src/index.ts',
+        gltest: './src/gltest.ts',
     },
     output: {
         path: path.resolve(__dirname, 'dist'),
@@ -31,8 +32,13 @@ module.exports = {
             filename: 'index.html',
             chunks: ['main'],
         }),
+        new HtmlWebpackPlugin({
+            template: 'src/gltest.html',
+            filename: 'gltest.html',
+            chunks: ['gltest'],
+        }),
     ],
     watchOptions: {
         ignored: /node_modules/,
     },
-}
+};
