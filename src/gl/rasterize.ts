@@ -128,6 +128,7 @@ export class Rasterizer {
             position: this.screenTransform.viewToScreen(position),
             texCoord
         }));
-        this.geometryBuffer.addPolygon(textureDescriptor, transformed, brightness);
+        const realBrightness = transfer === TransferMode.landscape ? 1.0 : brightness;
+        this.geometryBuffer.addPolygon(textureDescriptor, transformed, realBrightness);
     }
 }

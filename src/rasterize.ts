@@ -40,7 +40,7 @@ export interface RenderVertex {
 export interface RenderPolygonProps {
     polygon: RenderVertex[];
     brightness: number;
-    transfer: number;
+    transfer: TransferMode;
     isTransparent?: boolean;
     textureDescriptor: number;
 }
