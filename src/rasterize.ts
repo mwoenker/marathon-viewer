@@ -514,18 +514,18 @@ export class SoftwareRasterizer extends Rasterizer {
         texture,
         textureLeftX,
         textureLeftY,
-        textureRightX,
+        textureRightY
     }: HorizontalSpan): void {
         const texels = texture.data;
 
         // height left <-> right
         // width top <-> bottom
 
-        let u = textureLeftX * texture.height;
-        const endU = textureRightX * texture.height;
+        let u = textureLeftY * texture.height;
+        const endU = textureRightY * texture.height;
         const du = (endU - u) / (right - left);
 
-        const v = Math.max(0, Math.min(texture.width - 1, 0 | (textureLeftY * texture.width)));
+        const v = Math.max(0, Math.min(texture.width - 1, 0 | (textureLeftX * texture.width)));
 
         if ((texture.height & (texture.height - 1)) !== 0) {
             throw new Error('landscape height not power of two');
