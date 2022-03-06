@@ -25,9 +25,10 @@ import { SoftwareRasterizer } from './rasterize';
 import { render } from './render';
 import { Transformation } from './transform2d';
 import { ScreenTransform } from './screen-transform';
+import { dither } from './dither';
 
 let imageData: ImageData | null = null;
-let pixels: Uint32Array | null = null;
+const pixels: Uint32Array | null = null;
 
 export interface Player {
     position: Vec2;
@@ -54,23 +55,23 @@ function draw3d(canvas: HTMLCanvasElement, player: Player, world: World, shapes:
         throw new Error("Can't get context!");
     }
 
-    if (!pixels || !imageData || imageData.width !== canvas.width || imageData.height !== canvas.height) {
+    if (!imageData || imageData.width !== canvas.width || imageData.height !== canvas.height) {
         console.log('create imagedata');
         imageData = context.createImageData(canvas.width, canvas.height);
         if (!imageData) {
             throw new Error('createImageData failed');
         }
-        pixels = new Uint32Array(imageData.data.buffer);
     }
 
-    pixels.fill(magenta);
-
+    const pixels = new Uint32Array(imageData.data.buffer);
+    const rgbPixels = new Uint32Array(canvas.width * canvas.height);
+    rgbPixels.fill(magenta);
     context.fillStyle = 'white';
     context.fillRect(0, 0, canvas.width, canvas.height);
 
     const rasterizer = new SoftwareRasterizer(canvas.width, canvas.height, pixels, player, shapes);
-
     render({ rasterizer, player, world, seconds });
+    dither(rgbPixels, pixels, canvas.width, canvas.height);
 
     context.putImageData(imageData, 0, 0);
 }
@@ -374,11 +375,11 @@ function populateLevelSelect(levelSelect: HTMLSelectElement, summaries: MapSumma
 // const shapesUrl = 'm2.shpA';
 // const mapUrl = 'm2.sceA';
 
-// const shapesUrl = 'Eternal-Shapes.shpA';
-// const mapUrl = 'Eternal-Maps.sceA';
+const shapesUrl = 'Eternal-Shapes.shpA';
+const mapUrl = 'Eternal-Maps.sceA';
 
-const shapesUrl = 'Phoenix Shapes.shpA';
-const mapUrl = 'Phoenix Map.sceA';
+// const shapesUrl = 'Phoenix Shapes.shpA';
+// const mapUrl = 'Phoenix Map.sceA';
 // const mapUrl = 'Ashen_Map.sceA';
 
 // const shapesUrl = 'Megiddo Shapes.shpA';
