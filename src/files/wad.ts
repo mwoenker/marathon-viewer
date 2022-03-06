@@ -70,7 +70,6 @@ function readDirectoryEntry(bytes: ArrayBuffer, fullEntrySize: number, wadVersio
     let entryPointFlags = 0;
     let levelName = 'Untitled';
 
-    console.log({ fullEntrySize });
     if (fullEntrySize >= 84) {
         missionFlags = r.int16();
         environmentFlags = r.int16();

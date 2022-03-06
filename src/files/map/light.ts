@@ -86,7 +86,7 @@ export class Light {
 
     }
 
-    writer(writer: Writer): void {
+    write(writer: Writer): void {
         const writeLightFunction = (lightFunction: LightFunction): void => {
             writer.int16(lightFunction.func);
             writer.int16(lightFunction.period);
