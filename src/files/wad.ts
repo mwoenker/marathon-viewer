@@ -1,21 +1,6 @@
 import { RandomAccess, Reader, readRange, getDataFork } from './binary-read';
 import { MapGeometry } from './map';
 import { Collections } from './shapes';
-// import { readPoint } from './map/utils';
-// import { Side } from './map/side';
-// import { Polygon } from './map/polygon';
-// import { Light } from './map/light';
-// import { MapObject } from './map/object';
-// import { Line } from './map/line';
-// import { ItemPlacement } from './map/item-placement';
-// import { Endpoint } from './map/endpoint';
-// import { Media } from './map/media';
-// import { AmbientSound } from './map/ambient-sound';
-// import { RandomSound } from './map/random-sound';
-// import { Note } from './map/note';
-// import { Platform } from './map/platform';
-// import { MapInfo } from './map/map-info';
-// import { Vec2 } from '../vector2';
 import { readMap } from './serializers';
 
 export interface WadDirectoryEntry {
@@ -47,12 +32,6 @@ export interface MapSummary {
     data: RandomAccess;
     directoryEntry: WadDirectoryEntry;
     header: WadHeader;
-}
-
-interface ChunkHeader {
-    name: string,
-    nextOffset: number,
-    size: number
 }
 
 function readDirectoryEntry(bytes: ArrayBuffer, fullEntrySize: number, wadVersion: number): WadDirectoryEntry {
@@ -119,141 +98,6 @@ async function readWadHeader(file: RandomAccess): Promise<WadHeader> {
         directory
     };
 }
-
-// type Parser = (reader: Reader) => any;
-
-// class ChunkParser {
-//     parsers: Map<string, Parser>
-//     constructor() {
-//         this.parsers = new Map();
-//     }
-//     define(type: string, parser: Parser) {
-//         this.parsers.set(type, parser);
-//     }
-//     defineArray(type: string, parseOne: Parser) {
-//         this.define(type, r => {
-//             const items = [];
-//             while (!r.eof()) {
-//                 items.push(parseOne(r));
-//             }
-//             return items;
-//         });
-//     }
-//     parse(header: ChunkHeader, data: ArrayBuffer) {
-//         const parser = this.parsers.get(header.name);
-//         const reader = new Reader(data);
-//         if (!parser) {
-//             return null;
-//         }
-//         return parser(reader);
-//     }
-// }
-
-// const chunkParser = new ChunkParser();
-
-// chunkParser.defineArray('EPNT', (r) => Endpoint.read(r));
-// chunkParser.defineArray('PNTS', readPoint);
-// chunkParser.defineArray('LINS', (r) => Line.read(r));
-// chunkParser.defineArray('SIDS', (r) => Side.read(r));
-// chunkParser.defineArray('POLY', (r) => Polygon.read(r));
-// chunkParser.defineArray('LITE', (r) => Light.read(r));
-// chunkParser.defineArray('OBJS', (r) => MapObject.read(r));
-// chunkParser.defineArray('plac', r => ItemPlacement.read(r));
-// chunkParser.defineArray('medi', r => Media.read(r));
-// chunkParser.defineArray('ambi', r => AmbientSound.read(r));
-// chunkParser.defineArray('bonk', r => RandomSound.read(r));
-// chunkParser.defineArray('NOTE', r => Note.read(r));
-// chunkParser.defineArray('PLAT', r => Platform.read(r));
-// chunkParser.define('Minf', (r) => MapInfo.read(r));
-
-// async function readEntryChunks(
-//     file: RandomAccess,
-//     wadHeader: WadHeader,
-//     index: number,
-//     whitelist?: string[]
-// ): Promise<Map<string, any>> {
-//     const entry = wadHeader.directory.find(entry => entry.index === index);
-//     if (!entry) {
-//         throw new Error(`entry ${index} not found`);
-//     }
-
-//     const chunks = new Map();
-//     const data = await readRange(
-//         file, entry.offset, entry.offset + entry.length);
-
-//     let chunkStart = 0;
-//     while (chunkStart < data.byteLength) {
-//         const headerSize = 0 === wadHeader.wadVersion ? 12 : wadHeader.chunkSize;
-//         const r = new Reader(
-//             data.slice(chunkStart, chunkStart + headerSize));
-//         const chunkHeader = {
-//             name: r.fixString(4),
-//             nextOffset: r.uint32(),
-//             size: r.uint32(),
-//         };
-
-//         const dataStart = chunkStart + headerSize;
-//         const chunkData = data.slice(dataStart, dataStart + chunkHeader.size);
-
-//         if (!whitelist || whitelist.includes(chunkHeader.name)) {
-//             const chunk = chunkParser.parse(chunkHeader, chunkData);
-//             if (chunk) {
-//                 chunks.set(chunkHeader.name, chunk);
-//             } else {
-//                 chunks.set(chunkHeader.name, chunkData);
-//             }
-//         }
-
-//         if (chunkHeader.nextOffset <= chunkStart) {
-//             break;
-//         }
-
-//         chunkStart = chunkHeader.nextOffset;
-//     }
-
-//     return chunks;
-// }
-
-// async function readMap(file: RandomAccess, wadHeader: WadHeader, index: number): Promise<MapGeometry> {
-//     const chunks = await readEntryChunks(file, wadHeader, index);
-//     let points: Vec2[] = [];
-//     if (chunks.has('PNTS')) {
-//         points = (chunks.get('PNTS') as Vec2[]);
-//     } else if (chunks.has('EPNT')) {
-//         points = (chunks.get('EPNT') as Endpoint[]).map((endpoint: Endpoint) => {
-//             return endpoint.position;
-//         });
-//     } else {
-//         throw Error('No EPNT or PNTS chunk');
-//     }
-
-//     if (!chunks.get('LINS')) {
-//         throw Error('No LINS chunk');
-//     }
-
-//     if (!chunks.get('POLY')) {
-//         throw Error('No POLY chunk');
-//     }
-
-//     return new MapGeometry({
-//         index: index,
-//         header: wadHeader,
-//         info: chunks.get('Minf') as MapInfo,
-//         points: points,
-//         lights: chunks.get('LITE') as Light[],
-//         lines: chunks.get('LINS') as Line[],
-//         sides: chunks.get('SIDS') as Side[],
-//         polygons: chunks.get('POLY') as Polygon[],
-//         media: (chunks.get('medi') || []) as Media[],
-//         objects: (chunks.get('OBJS') || []) as MapObject[],
-//         itemPlacement: (chunks.get('plac') || []) as ItemPlacement[],
-//         ambientSounds: (chunks.get('ambi') || []) as AmbientSound[],
-//         randomSounds: (chunks.get('bonk') || []) as RandomSound[],
-//         platforms: (chunks.get('PLAT') || []) as Platform[],
-//         // terminals: (chunks.get('term') || []) as Terminal[],
-//         notes: (chunks.get('NOTE') || []) as Note[],
-//     });
-// }
 
 async function readMapFromSummary(summary: MapSummary): Promise<MapGeometry> {
     return new MapGeometry(await readMap(summary.data, summary.header, summary.index));

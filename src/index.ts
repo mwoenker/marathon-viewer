@@ -2,58 +2,12 @@
 
 import { HttpFile } from './files/binary-read';
 import { Shapes } from './shapes-loader';
-import { makeShapeDescriptor } from './files/shapes';
-import { MapGeometry } from './files/map';
-import {
-    Vec2,
-    v2scale,
-    v2add,
-    v2direction,
-} from './vector2';
-import { Vec3 } from './vector3';
-import { v3scale } from './vector3';
-import { World } from './world';
 import {
     readMapSummaries,
     readMapFromSummary,
     MapSummary
 } from './files/wad';
-import { Transformation } from './transform2d';
-import { ScreenTransform } from './screen-transform';
-import { RenderFrameData, RenderManager, RendererType, RenderTargetData } from './render-backend';
 import { Environment } from './environment';
-
-export interface Player {
-    position: Vec2;
-    polygon: number;
-    facingAngle: number;
-    verticalAngle: number;
-    hFov: number;
-    vFov: number;
-    wallBitmapIndex: number;
-    height: number;
-    secondsElapsed: number,
-}
-
-interface ExtendedWindow extends Window {
-    teleport(poly: number): void
-}
-
-declare const window: ExtendedWindow;
-
-function populateLevelSelect(levelSelect: HTMLSelectElement, summaries: MapSummary[]) {
-    levelSelect.innerHTML = '';
-    summaries.forEach((summary, i) => {
-        console.log({ summary });
-        console.log(summary.directoryEntry);
-        if (summary && summary?.directoryEntry?.levelName) {
-            const option = document.createElement('option');
-            option.value = `${i}`;
-            option.innerText = summary.directoryEntry.levelName;
-            levelSelect.appendChild(option);
-        }
-    });
-}
 
 // const shapesUrl = 'minf.shpA';
 // const mapUrl = 'minf.sceA';
@@ -79,6 +33,26 @@ const mapUrl = 'Phoenix Map.sceA';
 
 // const shapesUrl = 'Wrk.shpA';
 // const mapUrl = 'Wrk.sceA';
+
+interface ExtendedWindow extends Window {
+    teleport(poly: number): void
+}
+
+declare const window: ExtendedWindow;
+
+function populateLevelSelect(levelSelect: HTMLSelectElement, summaries: MapSummary[]) {
+    levelSelect.innerHTML = '';
+    summaries.forEach((summary, i) => {
+        console.log({ summary });
+        console.log(summary.directoryEntry);
+        if (summary && summary?.directoryEntry?.levelName) {
+            const option = document.createElement('option');
+            option.value = `${i}`;
+            option.innerText = summary.directoryEntry.levelName;
+            levelSelect.appendChild(option);
+        }
+    });
+}
 
 interface Constructor { new(...args: unknown[]): unknown }
 

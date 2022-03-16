@@ -5,7 +5,6 @@ import { Light } from './light';
 import { MapObject } from './object';
 import { Line } from './line';
 import { ItemPlacement } from './item-placement';
-import { Endpoint } from './endpoint';
 import { Media } from './media';
 import { AmbientSound } from './ambient-sound';
 import { RandomSound } from './random-sound';

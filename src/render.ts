@@ -6,7 +6,7 @@ import {
     isClockwise,
 } from './vector2';
 import { Vec3 } from './vector3';
-import { Player } from './index';
+import { Player } from './player';
 import { ClipArea3d } from './clip';
 import { sideType, TransferMode } from './files/wad';
 import { Transformation } from './transform2d';
