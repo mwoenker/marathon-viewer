@@ -55,4 +55,11 @@ export class ShapeTextures {
 
         return this.textures.get(descriptor) || null;
     }
+
+    dispose(): void {
+        for (const texture of this.textures.values()) {
+            this.gl.deleteTexture(texture);
+        }
+        this.textures.clear();
+    }
 }

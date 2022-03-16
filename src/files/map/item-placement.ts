@@ -18,7 +18,12 @@ export class ItemPlacement {
     randomChance: number;
 
     constructor(data: ItemPlacementConstructor) {
-        Object.assign(this, data);
+        this.flags = data.flags;
+        this.initialCount = data.initialCount;
+        this.minimumCount = data.minimumCount;
+        this.maximumCount = data.maximumCount;
+        this.randomCount = data.randomCount;
+        this.randomChance = data.randomChance;
     }
 
     static read(reader: Reader): ItemPlacement {

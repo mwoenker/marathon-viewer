@@ -5,7 +5,7 @@ import { Vec3 } from './vector3';
 import { Line } from './files/map/line';
 import { Side, SideTex } from './files/map/side';
 import { Polygon } from './files/map/polygon';
-import { MapObject } from './files/map/object';
+import { MapObject, ObjectType, ObjectFlags } from './files/map/object';
 import { Media } from './files/map/media';
 import { mediaDefinitions, sideType } from './files/wad';
 import { MapGeometry } from './files/map';
@@ -79,17 +79,23 @@ interface RayCollisionWall {
     sideType: sideType;
 }
 
+interface PlayerStartPosition {
+    polygon: number
+    position: Vec2
+    height: number
+    facing: number
+}
+
 type RayCollision = RayCollisionFloorCeiling | RayCollisionWall
 
 export class World {
-    map: MapGeometry;
-    points: Vec2[];
-    lines: Line[];
-    sides: Side[];
-    polygons: Polygon[];
-    // lights: Light[];
-    objects: MapObject[];
-    media: Media[];
+    map!: MapGeometry;
+    points!: Vec2[];
+    lines!: Line[];
+    sides!: Side[];
+    polygons!: Polygon[];
+    objects!: MapObject[];
+    media!: Media[];
     lightState: LightState[];
     timeElapsed: number;
 
@@ -256,6 +262,28 @@ export class World {
         }
 
         return { floor: low, ceiling: high };
+    }
+
+    playerStartPosition(): PlayerStartPosition {
+        for (const mapObject of this.objects) {
+            if (mapObject.type === ObjectType.player) {
+                const polygon = mapObject.polygon;
+                const pos3d = fromMapCoords3d(mapObject.position);
+                const position: Vec2 = [pos3d[0], pos3d[1]];
+                let height: number;
+                if (mapObject.flags & ObjectFlags.hangingFromCeiling) {
+                    height = this.polygons[polygon].ceilingHeight
+                        + pos3d[2] + 0.66;
+                } else {
+                    height = this.polygons[polygon].floorHeight
+                        + pos3d[2] + 0.66;
+                }
+                const facing = fromFixedAngle(mapObject.facing);
+                return { polygon, position, height, facing };
+            }
+        }
+
+        throw new Error('No player object found');
     }
 
     movePlayer(oldPosition: Vec2, position: Vec2, polygonIndex: number): [Vec2, number] | null {

@@ -1,6 +1,6 @@
 import { readList, readPoint, writePoint } from './utils';
-import { Vec2 } from '../../vector2'
-import { Reader, Writer } from '../binary-read'
+import { Vec2 } from '../../vector2';
+import { Reader, Writer } from '../binary-read';
 
 export const maxVertices = 8;
 
@@ -190,7 +190,7 @@ export class Polygon {
         writePoint(writer, this.center);
         writePolyIndices(this.sides);
         writePoint(writer, this.floorOrigin);
-        writePoint(writer, this.ceilingOrigin)
+        writePoint(writer, this.ceilingOrigin);
         writer.int16(this.media);
         writer.uint16(this.mediaLightsource);
         writer.uint16(this.firstSoundSource);

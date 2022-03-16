@@ -1,4 +1,4 @@
-import { Reader, Writer } from '../binary-read'
+import { Reader, Writer } from '../binary-read';
 import { readList } from './utils';
 
 interface EndpointOwner {
@@ -46,7 +46,22 @@ export class Platform {
     tag: number;
 
     constructor(data: PlatformConstructor) {
-        Object.assign(this, data)
+        this.type = data.type;
+        this.staticFlags = data.staticFlags;
+        this.speed = data.speed;
+        this.delay = data.delay;
+        this.minFloorHeight = data.minFloorHeight;
+        this.maxFloorHeight = data.maxFloorHeight;
+        this.minCeilingHeight = data.minCeilingHeight;
+        this.maxCeilingHeight = data.maxCeilingHeight;
+        this.polygonIndex = data.polygonIndex;
+        this.dynamicFlags = data.dynamicFlags;
+        this.floorHeight = data.floorHeight;
+        this.ceilingHeight = data.ceilingHeight;
+        this.ticksUntilRestart = data.ticksUntilRestart;
+        this.endpointOwners = data.endpointOwners;
+        this.parentPlatformIndex = data.parentPlatformIndex;
+        this.tag = data.tag;
     }
 
     static read(reader: Reader): Platform {
@@ -100,7 +115,7 @@ export class Platform {
             writer.int16(owner.polygonIndexCount);
             writer.int16(owner.firstLineIndex);
             writer.int16(owner.lineIndexCount);
-        })
+        });
 
         writer.zeros(44);
     }

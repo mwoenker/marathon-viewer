@@ -71,8 +71,8 @@ interface HorizontalSpan {
 export abstract class Rasterizer {
     abstract drawWall(props: RenderPolygonProps): void
     abstract drawHorizontalPolygon(props: RenderPolygonProps): void
-    width: number;
-    height: number;
+    abstract width: number;
+    abstract height: number;
 }
 
 export class SoftwareRasterizer extends Rasterizer {

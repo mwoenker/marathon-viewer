@@ -73,21 +73,12 @@ function createShaderProgram(gl: WebGL2RenderingContext, vertexProgram: string, 
         throw new Error(`Unable to create shader program: ${gl.getProgramInfoLog(program)}`);
     }
 
-    return program;
+    return {
+        vertexShader,
+        fragmentShader,
+        program
+    };
 }
-
-export interface ShaderInfo {
-    program: WebGLProgram;
-    vertexPosition: GLint;
-    texCoord: GLint;
-    light: GLint,
-    textureSampler: WebGLUniformLocation;
-    stride: number,
-    vertexOffset: number,
-    texCoordOffset: number,
-    lightOffset: number,
-}
-let shaderInfo: ShaderInfo | null = null;
 
 function attribLocation(gl: WebGL2RenderingContext, program: WebGLProgram, name: string) {
     const result = gl.getAttribLocation(program, name);
@@ -107,21 +98,41 @@ function uniformLocation(gl: WebGL2RenderingContext, program: WebGLProgram, name
 
 const floatBytes = 4;
 
-export function getShaderProgram(gl: WebGL2RenderingContext): ShaderInfo {
-    if (!shaderInfo) {
-        const program = createShaderProgram(gl, vertexShaderText, fragmentShaderText);
-        shaderInfo = {
-            program,
-            vertexPosition: attribLocation(gl, program, 'position'),
-            texCoord: attribLocation(gl, program, 'tex_coord_attr'),
-            light: attribLocation(gl, program, 'light_attr'),
-            textureSampler: uniformLocation(gl, program, 'tex_sampler'),
-            stride: floatBytes * 6,
-            vertexOffset: 0,
-            texCoordOffset: floatBytes * 3,
-            lightOffset: floatBytes * 5
-        };
-    }
-    return shaderInfo;
-}
+export class Shader {
+    gl: WebGL2RenderingContext
+    program: WebGLProgram
+    fragmentShader: WebGLShader
+    vertexShader: WebGLShader
+    vertexPosition: number
+    texCoord: number
+    light: number
+    textureSampler: WebGLUniformLocation
+    stride: number
+    vertexOffset: number
+    texCoordOffset: number
+    lightOffset: number
 
+    constructor(gl: WebGL2RenderingContext) {
+        this.gl = gl;
+
+        const { program, vertexShader, fragmentShader } = createShaderProgram(
+            gl, vertexShaderText, fragmentShaderText);
+        this.program = program;
+        this.vertexShader = vertexShader;
+        this.fragmentShader = fragmentShader;
+        this.vertexPosition = attribLocation(gl, this.program, 'position');
+        this.texCoord = attribLocation(gl, this.program, 'tex_coord_attr');
+        this.light = attribLocation(gl, this.program, 'light_attr');
+        this.textureSampler = uniformLocation(gl, this.program, 'tex_sampler');
+        this.stride = floatBytes * 6;
+        this.vertexOffset = 0;
+        this.texCoordOffset = floatBytes * 3;
+        this.lightOffset = floatBytes * 5;
+    }
+
+    dispose(): void {
+        this.gl.deleteProgram(this.program);
+        this.gl.deleteShader(this.vertexShader);
+        this.gl.deleteShader(this.fragmentShader);
+    }
+}

@@ -1,12 +1,9 @@
-import { Vec3 } from '../vector3';
 import { TransferMode } from '../files/wad';
 import { ScreenTransform } from '../screen-transform';
-import { errorName } from './error-name';
-import { getShaderProgram } from './shaders';
 import { RenderPolygonProps } from '../rasterize';
-import { Shapes } from '../shapes-loader';
 import { ShapeTextures } from './shape-textures';
 import { GeometryBuffer } from './geometry-buffer';
+import { Shader } from './shaders';
 
 interface PlayerProps {
     hFov: number;
@@ -38,14 +35,15 @@ export class Rasterizer {
     screenTransform: ScreenTransform;
     width: number;
     height: number;
-    topParamList: VerticalPolyLineParams[];
-    bottomParamList: VerticalPolyLineParams[];
-    leftParamList: HorizontalPolyLineParams[];
-    rightParamList: HorizontalPolyLineParams[];
     geometryBuffer: GeometryBuffer
 
-    constructor(player: PlayerProps, gl: WebGL2RenderingContext, shapeTextures: ShapeTextures) {
-        this.geometryBuffer = new GeometryBuffer(gl, shapeTextures);
+    constructor(
+        player: PlayerProps,
+        gl: WebGL2RenderingContext,
+        shapeTextures: ShapeTextures,
+        shader: Shader
+    ) {
+        this.geometryBuffer = new GeometryBuffer(gl, shapeTextures, shader);
         const width = 1;
         const height = 1;
 
@@ -59,42 +57,6 @@ export class Rasterizer {
 
         this.width = width;
         this.height = height;
-
-        this.topParamList = new Array<VerticalPolyLineParams>(width);
-        this.bottomParamList = new Array<VerticalPolyLineParams>(width);
-
-        for (let i = 0; i < width; ++i) {
-            this.topParamList[i] = {
-                y: 0,
-                oneOverZ: 0,
-                textureXOverZ: 0,
-                textureYOverZ: 0,
-            };
-            this.bottomParamList[i] = {
-                y: 0,
-                oneOverZ: 0,
-                textureXOverZ: 0,
-                textureYOverZ: 0,
-            };
-        }
-
-        this.leftParamList = new Array(height);
-        this.rightParamList = new Array(height);
-
-        for (let i = 0; i < height; ++i) {
-            this.leftParamList[i] = {
-                x: 0,
-                oneOverZ: 0,
-                textureXOverZ: 0,
-                textureYOverZ: 0,
-            };
-            this.rightParamList[i] = {
-                x: 0,
-                oneOverZ: 0,
-                textureXOverZ: 0,
-                textureYOverZ: 0,
-            };
-        }
     }
 
     drawWall(props: RenderPolygonProps): void {
@@ -130,5 +92,9 @@ export class Rasterizer {
         }));
         const realBrightness = transfer === TransferMode.landscape ? 1.0 : brightness;
         this.geometryBuffer.addPolygon(textureDescriptor, transformed, realBrightness);
+    }
+
+    dispose(): void {
+        this.geometryBuffer.dispose();
     }
 }

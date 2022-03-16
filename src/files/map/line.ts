@@ -1,4 +1,4 @@
-import { Reader, Writer } from '../binary-read'
+import { Reader, Writer } from '../binary-read';
 
 interface LineConstructor {
     begin: number;
@@ -26,7 +26,16 @@ export class Line implements LineConstructor {
     backPoly: number;
 
     constructor(data: LineConstructor) {
-        Object.assign(this, data)
+        this.begin = data.begin;
+        this.end = data.end;
+        this.flags = data.flags;
+        this.length = data.length;
+        this.highestFloor = data.highestFloor;
+        this.highestCeiling = data.highestCeiling;
+        this.frontSide = data.frontSide;
+        this.backSide = data.backSide;
+        this.frontPoly = data.frontPoly;
+        this.backPoly = data.backPoly;
     }
 
     static read(reader: Reader): Line {
@@ -41,7 +50,7 @@ export class Line implements LineConstructor {
             backSide: reader.int16(),
             frontPoly: reader.int16(),
             backPoly: reader.int16()
-        })
+        });
         reader.skip(12)
         return line;
     }

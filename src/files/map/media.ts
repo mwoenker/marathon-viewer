@@ -33,7 +33,18 @@ export class Media {
     transferMode: number;
 
     constructor(data: MediaConstructor) {
-        Object.assign(this, data);
+        this.type = data.type;
+        this.flags = data.flags;
+        this.lightIndex = data.lightIndex;
+        this.currentDirection = data.currentDirection;
+        this.currentMagnitude = data.currentMagnitude;
+        this.low = data.low;
+        this.high = data.high;
+        this.origin = data.origin;
+        this.height = data.height;
+        this.minimumLightIntensity = data.minimumLightIntensity;
+        this.texture = data.texture;
+        this.transferMode = data.transferMode;
     }
 
     static read(reader: Reader): Media {

@@ -1,5 +1,5 @@
 import { errorName } from './error-name';
-import { getShaderProgram, ShaderInfo } from './shaders';
+import { Shader } from './shaders';
 import { ShapeTextures } from './shape-textures';
 import { RenderVertex } from '../rasterize';
 
@@ -21,13 +21,19 @@ export class GeometryBuffer {
     elementsWritten: number;
     vertexBuffer: Float32Array;
     gl: WebGL2RenderingContext;
+    shader: Shader;
     shapeTextures: ShapeTextures;
     buffer: WebGLBuffer;
     drawCalls: DrawCall[];
     nDrawCalls: number;
 
-    constructor(gl: WebGL2RenderingContext, shapeTextures: ShapeTextures) {
+    constructor(
+        gl: WebGL2RenderingContext,
+        shapeTextures: ShapeTextures,
+        shader: Shader
+    ) {
         this.gl = gl;
+        this.shader = shader;
         this.vertexBuffer = new Float32Array(vertexBufferMaxSize);
         this.elementsWritten = 0;
         this.shapeTextures = shapeTextures;
@@ -53,7 +59,7 @@ export class GeometryBuffer {
         if (this.elementsWritten > 0) {
             gl.bindBuffer(gl.ARRAY_BUFFER, this.buffer);
 
-            const shaderInfo = getShaderProgram(gl);
+            const shaderInfo = this.shader;
             gl.useProgram(shaderInfo.program);
 
             const type = gl.FLOAT;
@@ -132,5 +138,9 @@ export class GeometryBuffer {
                 shapeDescriptor
             });
         }
+    }
+
+    dispose(): void {
+        this.gl.deleteBuffer(this.buffer);
     }
 }

@@ -20,7 +20,12 @@ export class Endpoint {
     supportingPolyIdx: number;
 
     constructor(data: EndpointConstructor) {
-        Object.assign(this, data)
+        this.flags = data.flags;
+        this.highestFloor = data.highestFloor;
+        this.lowestCeiling = data.lowestCeiling;
+        this.position = data.position;
+        this.transformed = data.transformed;
+        this.supportingPolyIdx = data.supportingPolyIdx;
     }
 
     static read(reader: Reader): Endpoint {

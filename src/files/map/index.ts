@@ -205,7 +205,6 @@ export class MapGeometry {
     header: WadHeader;
     info: MapInfo;
     points: Vec2[];
-    endpoints: Endpoint[];
     lights: Light[];
     lines: Line[];
     sides: Side[];
@@ -219,7 +218,21 @@ export class MapGeometry {
     platforms: Platform[];
 
     constructor(data: MapGeometryConstructor) {
-        Object.assign(this, data);
+        this.index = data.index;
+        this.header = data.header;
+        this.info = data.info;
+        this.points = data.points;
+        this.lights = data.lights;
+        this.lines = data.lines;
+        this.sides = data.sides;
+        this.polygons = data.polygons;
+        this.media = data.media;
+        this.objects = data.objects;
+        this.itemPlacement = data.itemPlacement;
+        this.ambientSounds = data.ambientSounds;
+        this.randomSounds = data.randomSounds;
+        this.notes = data.notes;
+        this.platforms = data.platforms;
     }
 
     movePoint(i: number, [x, y]: Vec2): MapGeometry {

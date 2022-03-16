@@ -28,7 +28,17 @@ export class RandomSound {
     phase: number;
 
     constructor(data: RandomSoundConstructor) {
-        Object.assign(this, data)
+        this.flags = data.flags;
+        this.soundIndex = data.soundIndex;
+        this.volume = data.volume;
+        this.deltaVolume = data.deltaVolume;
+        this.period = data.period;
+        this.deltaPeriod = data.deltaPeriod;
+        this.direction = data.direction;
+        this.deltaDirection = data.deltaDirection;
+        this.pitch = data.pitch;
+        this.deltaPitch = data.deltaPitch;
+        this.phase = data.phase;
     }
 
     static read(reader: Reader): RandomSound {
@@ -62,6 +72,6 @@ export class RandomSound {
         writer.int32(this.deltaPitch);
         writer.int16(this.phase);
 
-        writer.zeros(6)
+        writer.zeros(6);
     }
 }

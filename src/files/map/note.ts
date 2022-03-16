@@ -1,6 +1,6 @@
-import { Reader, Writer } from '../binary-read'
+import { Reader, Writer } from '../binary-read';
 import { readPoint, writePoint } from './utils';
-import { Vec2 } from '../../vector2'
+import { Vec2 } from '../../vector2';
 
 interface NoteConstructor {
     type: number;
@@ -16,7 +16,10 @@ export class Note {
     text: string
 
     constructor(data: NoteConstructor) {
-        Object.assign(this, data)
+        this.type = data.type;
+        this.location = data.location;
+        this.polygonIndex = data.polygonIndex;
+        this.text = data.text;
     }
 
     static read(reader: Reader): Note {

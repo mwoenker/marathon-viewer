@@ -12,7 +12,9 @@ export class AmbientSound {
     volume: number;
 
     constructor(data: AmbientSoundConstructor) {
-        Object.assign(this, data)
+        this.flags = data.flags;
+        this.soundIndex = data.soundIndex;
+        this.volume = data.volume;
     }
 
     static read(reader: Reader): AmbientSound {

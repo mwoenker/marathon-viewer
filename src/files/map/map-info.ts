@@ -1,4 +1,4 @@
-import { Reader, Writer } from '../binary-read'
+import { Reader, Writer } from '../binary-read';
 
 interface MapInfoConstructor {
     environmentCode: number;
@@ -20,7 +20,13 @@ export class MapInfo {
     entryFlags: number;
 
     constructor(data: MapInfoConstructor) {
-        Object.assign(this, data)
+        this.environmentCode = data.environmentCode;
+        this.physicsModel = data.physicsModel;
+        this.musicId = data.musicId;
+        this.missionFlags = data.missionFlags;
+        this.environmentFlags = data.environmentFlags;
+        this.name = data.name;
+        this.entryFlags = data.entryFlags;
     }
 
     static read(reader: Reader): MapInfo {
@@ -41,7 +47,7 @@ export class MapInfo {
             environmentFlags,
             name,
             entryFlags,
-        })
+        });
     }
 
     write(writer: Writer): void {

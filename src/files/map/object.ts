@@ -1,4 +1,4 @@
-import { Reader, Writer } from '../binary-read'
+import { Reader, Writer } from '../binary-read';
 import { Vec3 } from '../../vector3';
 
 export enum ObjectType {
@@ -38,7 +38,12 @@ export class MapObject {
     flags: number;
 
     constructor(data: MapObjectConstructor) {
-        Object.assign(this, data)
+        this.type = data.type;
+        this.index = data.index;
+        this.facing = data.facing;
+        this.polygon = data.polygon;
+        this.position = data.position;
+        this.flags = data.flags;
     }
 
     static read(reader: Reader): MapObject {
@@ -49,7 +54,7 @@ export class MapObject {
             polygon: reader.uint16(),
             position: [reader.int16(), reader.int16(), reader.int16()],
             flags: reader.uint16(),
-        })
+        });
     }
 
     write(writer: Writer): void {

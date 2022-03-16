@@ -14,14 +14,13 @@
         <option>2560x1440</option>
         <option>3840x2160</option>
       </select>
+      <select id="backendSelect">
+        <option value='software'>Software Rendering</option>
+        <option value='webgl2' >WebGL2</option>
+      </select>
       <div id="fpsCounter">---</div>
     </div>
-    <!-- <canvas id="overhead" width="400" height="300" style='border: 1px solid black'> -->
-      <!-- </canvas> -->
-    
-    <!-- <canvas id="world" width="1024" height="768" style='border: 1px solid black'> -->
-    <!-- </canvas> -->
-    <canvas id="world" width="1024" height="768" style='border: 1px solid black'>
+    <div id="world" style='border: 1px solid black; display: inline-block'>
     </canvas>
   </body>
 </html>
