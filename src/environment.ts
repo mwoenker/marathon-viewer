@@ -172,9 +172,6 @@ export class Environment {
 
         const newPosition = this.world.movePlayer(oldPosition, position, polygon);
         if (newPosition) {
-            if (newPosition[1] !== polygon) {
-                console.log(newPosition);
-            }
             [position, polygon] = newPosition;
         } else {
             position = oldPosition;
@@ -243,8 +240,6 @@ export class Environment {
             this.player.polygon = polyIndex;
             this.player.position = average;
             this.player.height = this.map.polygons[polyIndex].floorHeight / 1024 + 0.66;
-
-            console.log(this.player.polygon, this.player.position, this.player.height);
         };
     }
 

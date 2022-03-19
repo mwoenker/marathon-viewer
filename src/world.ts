@@ -298,9 +298,6 @@ export class World {
                 intersectLinePosition = linePosition;
             }
         }
-        if (intersection) {
-            console.log({ intersection });
-        }
         if (intersection && intersectLinePosition !== null) {
             const portalTo = this.getPortal(polygonIndex, intersectLinePosition);
             if (portalTo !== undefined && portalTo !== null && portalTo !== -1) {
@@ -347,7 +344,7 @@ export class World {
 
             if (intersection) {
                 const portalTo = this.getPortal(polygonIndex, wallIndex);
-                if ((portalTo || portalTo === 0) && portalTo !== -1) {
+                if (portalTo !== -1) {
                     const neighbor = this.polygons[portalTo];
                     const portalTop = Math.min(polygon.ceilingHeight, neighbor.ceilingHeight);
                     const portalBottom = Math.max(polygon.floorHeight, neighbor.floorHeight);

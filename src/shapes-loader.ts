@@ -1,13 +1,9 @@
-import { RandomAccess } from './files/binary-read'
+import { RandomAccess } from './files/binary-read';
 import { ShapesHeader, Collection, Bitmap, readShapesHeaders, readCollection } from './files/shapes';
 import { makeShadingTables, ColorTable } from './color';
 
 interface CollectionWithShading extends Collection {
     clutShadingTables: ColorTable[][]
-}
-
-interface BitmapWithShading extends Bitmap {
-    shadingTables: ColorTable[]
 }
 
 type CollectionSlot = 'loading' | CollectionWithShading
@@ -57,7 +53,7 @@ export class Shapes {
 
     collectionLoading(index: number): boolean {
         const collection = this.collections[index];
-        return collection === 'loading'
+        return collection === 'loading';
     }
 
     collectionLoaded(index: number): boolean {
@@ -87,7 +83,7 @@ export class Shapes {
         } else if (collection === 'loading') {
             return null;
         } else {
-            return collection.clutShadingTables[clutIndex]
+            return collection.clutShadingTables[clutIndex];
         }
     }
 }
