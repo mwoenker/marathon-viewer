@@ -2,7 +2,7 @@ import { MapGeometry } from './files/map';
 import { Shapes } from './shapes-loader';
 import { Player } from './player';
 import { World } from './world';
-import { v2add, v2direction, v2scale, Vec2 } from './vector2';
+import { v2add, v2direction, v2scale, v2 } from './vector2';
 import { RendererType, RenderFrameData, RenderManager, RenderTargetData } from './render-backend';
 import { keyMap } from './events';
 import { textureClickedSurface } from './texturing';
@@ -235,9 +235,9 @@ export class Environment {
 
     private setupWindowFunctions() {
         window.teleport = (polyIndex) => {
-            const sum: Vec2 = this.map.polygons[polyIndex].endpoints.reduce(
+            const sum = this.map.polygons[polyIndex].endpoints.reduce(
                 (sum, pointIndex) => v2add(sum, this.map.points[pointIndex]),
-                [0, 0],
+                v2(0, 0),
             );
             const average = v2scale(1 / this.map.polygons[polyIndex].endpoints.length / 1024, sum);
             this.player.polygon = polyIndex;

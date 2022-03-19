@@ -1,5 +1,9 @@
 export type Vec2 = [number, number]
 
+export function v2(x: number, y: number): Vec2 {
+    return [x, y];
+}
+
 export function v2length([x, y]: Vec2): number {
     return Math.sqrt(x * x + y * y);
 }

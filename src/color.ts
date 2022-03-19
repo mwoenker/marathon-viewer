@@ -1,3 +1,5 @@
+import { clamp } from './utils';
+
 export interface ColorComponents {
     red: number;
     green: number;
@@ -9,10 +11,10 @@ const color32 = new Uint32Array(1);
 const color8 = new Uint8Array(color32.buffer);
 
 export function packColor(r: number, g: number, b: number, a = 255): number {
-    color8[0] = Math.floor(Math.max(0, Math.min(r, 255)));
-    color8[1] = Math.floor(Math.max(0, Math.min(g, 255)));
-    color8[2] = Math.floor(Math.max(0, Math.min(b, 255)));
-    color8[3] = Math.floor(Math.max(0, Math.min(a, 255)));
+    color8[0] = clamp(r, 0, 255);
+    color8[1] = clamp(g, 0, 255);
+    color8[2] = clamp(b, 0, 255);
+    color8[3] = clamp(a, 0, 255);
     return color32[0];
 }
 

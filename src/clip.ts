@@ -1,4 +1,4 @@
-import { Vec2, v2scale, v2dot, v2lerp } from './vector2';
+import { Vec2, v2scale, v2dot, v2lerp, v2 } from './vector2';
 import { Vec3, v3scale, v3dot, v3lerp } from './vector3';
 
 export class ClipArea {
@@ -9,7 +9,7 @@ export class ClipArea {
     // this.leftPlane and this.rightPlane define the bounding half spaces
     // v2dot(this.leftPlane, p) > 0 and v2dot(this.rightPlane, p) > 0
     constructor(p1: Vec2, p2: Vec2) {
-        const p1Plane: Vec2 = [-p1[1], p1[0]];
+        const p1Plane = v2(-p1[1], p1[0]);
         if (v2dot(p1Plane, p2) > 0) {
             // line from origin to p2 defines the left edge of the area
             this.leftPlane = [p2[1], -p2[0]];
@@ -74,7 +74,7 @@ export class ClipArea3d {
         let left = polygon[0][0] / polygon[0][2];
         let right = left;
         let top = polygon[0][1] / polygon[0][2];
-        let bottom = top
+        let bottom = top;
         for (let i = 1; i < polygon.length; ++i) {
             const position = polygon[i];
             const projectedX = position[0] / position[2];
@@ -167,7 +167,7 @@ export class ClipArea3d {
     }
 
     clipPolygon(polygon: Vec3[]): Vec3[] {
-        let allIn = true
+        let allIn = true;
         for (let planeIndex = 0; planeIndex < this.planes.length; ++planeIndex) {
             let allOut = true;
             for (let polyIndex = 0; polyIndex < polygon.length; ++polyIndex) {
@@ -184,7 +184,7 @@ export class ClipArea3d {
         }
 
         if (allIn) {
-            return polygon
+            return polygon;
         }
 
         // for (let planeIndex = 0; planeIndex < this.planes.length; ++planeIndex) {

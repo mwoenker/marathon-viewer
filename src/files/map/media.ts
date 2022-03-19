@@ -84,7 +84,7 @@ export class Media {
 
     originAtTime(elapsedSeconds: number): Vec2 {
         const dirRadians = fromFixedAngle(this.currentDirection);
-        const dirVec: Vec2 = v2scale(this.currentMagnitude, v2direction(dirRadians));
+        const dirVec = v2scale(this.currentMagnitude, v2direction(dirRadians));
         const ticksElapsed = 30 * elapsedSeconds;
         return v2add(this.origin, v2scale(ticksElapsed, dirVec));
     }

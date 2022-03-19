@@ -4,8 +4,9 @@ import {
     v2sub,
     v2dot,
     isClockwise,
+    v2
 } from './vector2';
-import { Vec3 } from './vector3';
+import { Vec3, v3 } from './vector3';
 import { Player } from './player';
 import { ClipArea3d } from './clip';
 import { sideType, TransferMode } from './files/wad';
@@ -111,11 +112,11 @@ class Renderer {
             const fracX = (projX - this.left) / (this.right - this.left);
             const fracY = (projY - this.bottom + this.landscapeTiltCorrection) / (this.top - this.bottom);
             const rotationFrac = floorMod(this.player.facingAngle / Math.PI / 2, 1);
-            const projected: Vec3 = [projX, projY, 1];
-            const texCoord: Vec2 = [
+            const projected = v3(projX, projY, 1);
+            const texCoord = v2(
                 fracY * this.landscapeHeight + this.landscapeYOffset,
                 fracX * this.landscapeWidth + rotationFrac,
-            ];
+            );
 
             return { position: projected, texCoord };
         });
@@ -148,10 +149,10 @@ class Renderer {
             const xStart = v2dot(xDirection, p1View);
             const yStart = texTop - this.player.height;
             return clippedPositions.map(position => {
-                const texCoord: Vec2 = [
+                const texCoord = v2(
                     v2dot(xDirection, [position[0], position[2]]) - xStart + textureOffset[0],
                     textureOffset[1] - (position[1] - yStart),
-                ];
+                );
                 return {
                     position,
                     texCoord,
@@ -197,8 +198,7 @@ class Renderer {
 
                 textured = polygon.map(position => {
                     const worldVertex = this.viewTransform.unTransform([position[0], position[2]]);
-                    const texCoord: Vec2 =
-                        [worldVertex[0] + textureOffset[0], worldVertex[1] + textureOffset[1]];
+                    const texCoord = v2(worldVertex[0] + textureOffset[0], worldVertex[1] + textureOffset[1]);
                     return { position, texCoord };
                 });
             }

@@ -3,6 +3,7 @@ import {
     v2sub,
     v2dot,
     Vec2,
+    v2
 } from './vector2';
 
 export class Transformation {
@@ -27,7 +28,7 @@ export class Transformation {
     }
 
     unTransform(v: Vec2): Vec2 {
-        const translated: Vec2 = [v2dot(v, this.oldXAxis), v2dot(v, this.oldYAxis)];
+        const translated = v2(v2dot(v, this.oldXAxis), v2dot(v, this.oldYAxis));
         return v2add(translated, this.newOrigin);
     }
 }

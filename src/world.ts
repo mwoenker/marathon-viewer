@@ -1,6 +1,6 @@
 import { Collision2d, closerCollision, collideLineSegments, lineSegmentIntersectsHorizontalPolygon } from './collision';
 import { lerp, floorMod } from './utils';
-import { v2scale, Vec2 } from './vector2';
+import { v2scale, Vec2, v2 } from './vector2';
 import { Vec3 } from './vector3';
 import { Line } from './files/map/line';
 import { Side, SideTex } from './files/map/side';
@@ -269,7 +269,7 @@ export class World {
             if (mapObject.type === ObjectType.player) {
                 const polygon = mapObject.polygon;
                 const pos3d = fromMapCoords3d(mapObject.position);
-                const position: Vec2 = [pos3d[0], pos3d[1]];
+                const position = v2(pos3d[0], pos3d[1]);
                 let height: number;
                 if (mapObject.flags & ObjectFlags.hangingFromCeiling) {
                     height = this.polygons[polygon].ceilingHeight
@@ -338,8 +338,8 @@ export class World {
             };
         }
 
-        const startPosition2d: Vec2 = [startPosition[0], startPosition[1]];
-        const endPosition2d: Vec2 = [endPosition[0], endPosition[1]];
+        const startPosition2d = v2(startPosition[0], startPosition[1]);
+        const endPosition2d = v2(endPosition[0], endPosition[1]);
 
         for (let wallIndex = 0; wallIndex < polygon.lines.length; ++wallIndex) {
             const line = this.getLineVertices(polygonIndex, wallIndex);

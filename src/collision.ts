@@ -1,4 +1,4 @@
-import { Vec2, v2add, v2sub, v2dot, v2scale, v2length } from './vector2';
+import { Vec2, v2add, v2sub, v2dot, v2scale, v2length, v2 } from './vector2';
 import { Vec3, v3add, v3scale, v3lerp } from './vector3';
 
 type Line2d = [Vec2, Vec2];
@@ -19,7 +19,7 @@ export interface Collision3d {
 
 export function collideLineSegments(collidingLine: Line2d, targetLine: Line2d): Collision2d | null {
     const targetDiff = v2sub(targetLine[1], targetLine[0]);
-    const tangent: Vec2 = [-targetDiff[1], targetDiff[0]];
+    const tangent = v2(-targetDiff[1], targetDiff[0]);
     const lineDist = v2dot(tangent, targetLine[0]);
     const distFromLine = (v: Vec2) => v2dot(v, tangent) - lineDist;
     const dist1 = distFromLine(collidingLine[0]);
@@ -83,7 +83,7 @@ export function lineSegmentIntersectsHorizontalPolygon(
     if ((lineStart[2] < height) !== (lineEnd[2] < height)) {
         const t = (height - lineStart[2]) / (lineEnd[2] - lineStart[2]);
         const planeIntercept = v3lerp(t, lineStart, lineEnd);
-        const intercept2d: Vec2 = [planeIntercept[0], planeIntercept[1]];
+        const intercept2d = v2(planeIntercept[0], planeIntercept[1]);
         if (pointInPolygon2d(intercept2d, positions2d)) {
             return {
                 t,
@@ -118,7 +118,7 @@ export function rayIntersectsLineSegment2d(
     [lineStart, lineEnd]: [Vec2, Vec2]
 ): Collision2d | null {
     const lineDirection = v2sub(lineEnd, lineStart);
-    const normal: Vec2 = [-lineDirection[1], lineDirection[0]];
+    const normal = v2(-lineDirection[1], lineDirection[0]);
     const distZero = v2dot(normal, lineStart);
     const rayProjected = v2dot(direction, normal);
 
