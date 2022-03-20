@@ -111,7 +111,16 @@ export class Environment {
     }
 
     setBackendType(backend: RendererType, newCanvas: HTMLCanvasElement): void {
+        if (this.clicked) {
+            this.canvas.removeEventListener('mousedown', this.clicked);
+        }
+
         this.canvas = newCanvas;
+
+        if (this.clicked) {
+            this.canvas.addEventListener('mousedown', this.clicked);
+        }
+
         this.backendType = backend;
     }
 
@@ -294,7 +303,7 @@ export class Environment {
         }
 
         if (this.clicked) {
-            window.removeEventListener('click', this.clicked);
+            this.canvas.removeEventListener('mousedown', this.clicked);
             this.clicked = null;
         }
     }

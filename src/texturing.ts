@@ -5,11 +5,12 @@ import { World } from './world';
 import { Transformation } from './transform2d';
 import { makeShapeDescriptor } from './files/shapes';
 import { v3scale, Vec3 } from './vector3';
+import { worldUnitSize } from './constants';
 
 export function textureClickedSurface(canvas: HTMLCanvasElement, player: Player, world: World, map: MapGeometry, x: number, y: number): MapGeometry {
     const screenTransform = new ScreenTransform(
         canvas.width, canvas.height, player.hFov, player.vFov, player.verticalAngle);
-    const viewRay = v3scale(100, screenTransform.screenToRay(x, y));
+    const viewRay = v3scale(100 * worldUnitSize, screenTransform.screenToRay(x, y));
     const viewTransform = new Transformation(player.position, player.facingAngle);
     const worldEnd2d = viewTransform.unTransform([viewRay[0], viewRay[2]]);
     const ray: Vec3 = [worldEnd2d[0], worldEnd2d[1], player.height + viewRay[1]];
