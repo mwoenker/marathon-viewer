@@ -12,7 +12,7 @@ const vertexShaderText = `
     gl_Position = position[2] * vec4(
       (2.0 * position[0]) - 1.0,
       1.0 - (2.0 * position[1]),
-      -1.0 + (2.0 * position[2] / 100.0),
+      -1.0 + (2.0 * position[2] / 100.0 / 1024.0),
       1.0
     );
     tex_coord = tex_coord_attr;

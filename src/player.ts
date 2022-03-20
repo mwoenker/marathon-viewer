@@ -1,4 +1,7 @@
 import { Vec2 } from './vector2';
+import { worldUnitSize } from './constants';
+
+export const playerHeight = Math.floor(worldUnitSize * 0.66);
 
 export interface Player {
     position: Vec2;

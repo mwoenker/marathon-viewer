@@ -6,6 +6,7 @@ import { v2add, v2direction, v2scale, v2 } from './vector2';
 import { RendererType, RenderFrameData, RenderManager, RenderTargetData } from './render-backend';
 import { keyMap } from './events';
 import { textureClickedSurface } from './texturing';
+import { worldUnitSize } from './constants';
 
 const hFov = 90 / 180 * Math.PI;
 
@@ -131,11 +132,11 @@ export class Environment {
         this.world.advanceTimeSlice(timeSlice);
 
         if (this.actions.has('forward')) {
-            position = v2add(position, v2scale(timeSlice * 4, forward));
+            position = v2add(position, v2scale(timeSlice * 4 * worldUnitSize, forward));
         }
 
         if (this.actions.has('backward')) {
-            position = v2add(position, v2scale(-timeSlice * 4, forward));
+            position = v2add(position, v2scale(-timeSlice * 4 * worldUnitSize, forward));
         }
 
         if (this.actions.has('turn-left')) {
@@ -147,19 +148,19 @@ export class Environment {
         }
 
         if (this.actions.has('strafe-left')) {
-            position = v2add(position, v2scale(timeSlice * 2, left));
+            position = v2add(position, v2scale(timeSlice * 2 * worldUnitSize, left));
         }
 
         if (this.actions.has('strafe-right')) {
-            position = v2add(position, v2scale(-timeSlice * 2, left));
+            position = v2add(position, v2scale(-timeSlice * 2 * worldUnitSize, left));
         }
 
         if (this.actions.has('up')) {
-            height += timeSlice * 4;
+            height += timeSlice * 4 * worldUnitSize;
         }
 
         if (this.actions.has('down')) {
-            height -= timeSlice * 4;
+            height -= timeSlice * 4 * worldUnitSize;
         }
 
         if (this.actions.has('tilt-up')) {
@@ -236,10 +237,10 @@ export class Environment {
                 (sum, pointIndex) => v2add(sum, this.map.points[pointIndex]),
                 v2(0, 0),
             );
-            const average = v2scale(1 / this.map.polygons[polyIndex].endpoints.length / 1024, sum);
+            const average = v2scale(1 / this.map.polygons[polyIndex].endpoints.length, sum);
             this.player.polygon = polyIndex;
             this.player.position = average;
-            this.player.height = this.map.polygons[polyIndex].floorHeight / 1024 + 0.66;
+            this.player.height = this.map.polygons[polyIndex].floorHeight + 0.66;
         };
     }
 

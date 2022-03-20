@@ -1,3 +1,4 @@
+import { worldUnitSize } from './constants';
 import { clamp } from './utils';
 
 export interface ColorComponents {
@@ -63,7 +64,7 @@ export const yellow = packColor(255, 255, 0);
 export function shadingTableForDistance(
     tables: ColorTable[], dist: number, surfaceBrightness = 1
 ): ColorTable {
-    const minerLightDist = 8;
+    const minerLightDist = 8 * worldUnitSize;
     const minerLightFrac = clamp(dist, 0, minerLightDist) / minerLightDist;
     const minerLightBrightness = 0.3 * (1 - minerLightFrac);
     const brightness = clamp(minerLightBrightness + surfaceBrightness, 0, 1);

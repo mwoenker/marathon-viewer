@@ -4,7 +4,8 @@ import {
     v2sub,
     v2dot,
     isClockwise,
-    v2
+    v2,
+    v2scale
 } from './vector2';
 import { Vec3, v3 } from './vector3';
 import { Player } from './player';
@@ -13,7 +14,8 @@ import { sideType, TransferMode } from './files/wad';
 import { Transformation } from './transform2d';
 import { floorMod } from './utils';
 import { ScreenTransform } from './screen-transform';
-import { ticksPerSecond, World, worldUnitSize } from './world';
+import { World } from './world';
+import { worldUnitSize, ticksPerSecond } from './constants';
 import { Rasterizer } from './rasterize';
 
 interface RendererConstructor {
@@ -132,7 +134,7 @@ class Renderer {
         if (polyTransferMode === TransferMode.landscape) {
             return this.textureLandscapePolygon(clippedPositions);
         } else {
-            const xDirection = v2normalize(v2sub(p2View, p1View));
+            const xDirection = v2scale(1 / worldUnitSize, v2normalize(v2sub(p2View, p1View)));
             if (polyTransferMode === TransferMode.horizontalSlide) {
                 const phase = this.world.timeElapsed * ticksPerSecond;
                 textureOffset[0] -= floorMod(phase * 4 / worldUnitSize, 1);
@@ -151,7 +153,7 @@ class Renderer {
             return clippedPositions.map(position => {
                 const texCoord = v2(
                     v2dot(xDirection, [position[0], position[2]]) - xStart + textureOffset[0],
-                    textureOffset[1] - (position[1] - yStart),
+                    textureOffset[1] - (position[1] - yStart) / worldUnitSize,
                 );
                 return {
                     position,
@@ -198,7 +200,10 @@ class Renderer {
 
                 textured = polygon.map(position => {
                     const worldVertex = this.viewTransform.unTransform([position[0], position[2]]);
-                    const texCoord = v2(worldVertex[0] + textureOffset[0], worldVertex[1] + textureOffset[1]);
+                    const texCoord = v2(
+                        (worldVertex[0] + textureOffset[0]) / worldUnitSize,
+                        (worldVertex[1] + textureOffset[1]) / worldUnitSize
+                    );
                     return { position, texCoord };
                 });
             }
