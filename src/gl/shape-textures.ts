@@ -4,10 +4,6 @@ import { shapeToRGBA } from './rgba-bitmap';
 import { fullBrightShadingTable } from '../color';
 import { errorName } from './error-name';
 
-function isPowerOf2(n: number) {
-    return (n & (n - 1)) === 0;
-}
-
 function createTexture(bitmap: RGBABitmap, gl: WebGL2RenderingContext) {
     const texture = gl.createTexture();
     if (!texture) {

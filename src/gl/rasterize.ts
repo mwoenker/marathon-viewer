@@ -11,26 +11,6 @@ interface PlayerProps {
     verticalAngle: number
 }
 
-interface VerticalPolyLineParams {
-    y: number;
-    oneOverZ: number;
-    textureXOverZ: number;
-    textureYOverZ: number;
-}
-
-interface HorizontalPolyLineParams {
-    x: number;
-    oneOverZ: number;
-    textureXOverZ: number;
-    textureYOverZ: number;
-}
-
-export interface RenderTexture {
-    data: Uint8Array;
-    width: number;
-    height: number;
-}
-
 export class Rasterizer {
     screenTransform: ScreenTransform;
     width: number;
