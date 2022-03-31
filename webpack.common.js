@@ -23,8 +23,6 @@ module.exports = {
     resolve: {
         extensions: ['.tsx', '.ts', '.js', 'jsx'],
     },
-    mode: 'development',
-    devtool: 'eval-source-map',
     plugins: [
         new HtmlWebpackPlugin({
             template: 'src/index.html',
@@ -32,7 +30,4 @@ module.exports = {
             chunks: ['main'],
         }),
     ],
-    watchOptions: {
-        ignored: /node_modules/,
-    },
 };
