@@ -349,7 +349,7 @@ export async function readShapesHeaders(file: RandomAccess): Promise<ShapesHeade
     return headers;
 }
 
-interface AllShapes {
+export interface AllShapes {
     [idx: number]: Collection
 }
 
