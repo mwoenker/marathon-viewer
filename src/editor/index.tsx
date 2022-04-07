@@ -169,8 +169,22 @@ function MapView({ pixelSize, map, setMap }: MapViewProps) {
             case 'Backspace':
             case 'Delete':
                 if ('point' === selection.objType) {
-                    setMap(map.deletePoint(selection.index));
-                    updateSelection({ type: 'cancel' });
+                    const connectedPoints = map.getConnectedPoints(selection.index);
+                    const newMap = map.deletePoint(selection.index);
+                    setMap(newMap);
+                    if (connectedPoints.length > 0) {
+                        const oldIndex = connectedPoints[0];
+                        const newIndex = newMap.points.findIndex(pt => pt === map.points[oldIndex]);
+                        if (newIndex !== -1) {
+                            updateSelection({
+                                type: 'selectObject',
+                                objType: 'point',
+                                index: newIndex
+                            });
+                        }
+                    } else {
+                        updateSelection({ type: 'cancel' });
+                    }
                 } else if ('polygon' === selection.objType) {
                     setMap(map.deletePolygon(selection.index));
                     updateSelection({ type: 'cancel' });

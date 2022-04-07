@@ -45,8 +45,14 @@ export interface MouseCancelAction {
     type: 'cancel'
 }
 
+export interface SelectObjectAction {
+    type: 'selectObject',
+    objType: 'point' | 'line' | 'polygon' | null,
+    index: number
+}
+
 export type MouseAction =
-    MouseDownAction | MouseUpAction | MouseMoveAction | MouseCancelAction
+    MouseDownAction | MouseUpAction | MouseMoveAction | MouseCancelAction | SelectObjectAction
 
 function dragDist(state: Selection) {
     if (!state.startCoords || !state.currentCoords) {
@@ -77,6 +83,16 @@ function reduceSelection(state: Selection, action: MouseAction): Selection {
                 isMouseDown: false,
                 isDragging: false,
                 currentCoords: null,
+            };
+        case 'selectObject':
+            return {
+                objType: action.objType,
+                index: action.index,
+                relativePos: [0, 0],
+                isMouseDown: false,
+                isDragging: false,
+                currentCoords: null,
+                startCoords: [0, 0],
             };
         case 'move': {
             if (!state.isMouseDown) {
