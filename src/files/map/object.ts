@@ -3,7 +3,7 @@ import { Vec3 } from '../../vector3';
 
 export enum ObjectType {
     monster = 0,
-    oject,
+    object,
     item,
     player,
     goal,

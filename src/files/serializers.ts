@@ -231,8 +231,6 @@ export async function readMap(
         throw Error('No POLY chunk');
     }
 
-    console.log('CHUNKS!!!!!!!!!!!!!!!!!!!!', chunks)
-
     return {
         header: wadHeader,
         index,

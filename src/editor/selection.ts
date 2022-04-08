@@ -1,10 +1,10 @@
 import { Dispatch, useReducer } from 'react';
 import { Vec2 } from '../vector2';
 
-export type ObjectType = 'point' | 'line' | 'polygon';
+export type SelectionObjectType = 'point' | 'line' | 'polygon' | 'object';
 
 export interface Selection {
-    objType: 'point' | 'line' | 'polygon' | null,
+    objType: SelectionObjectType | null,
     index: number,
     relativePos: Vec2,
     isMouseDown: boolean,
@@ -25,7 +25,7 @@ const blankSelection: Selection = {
 
 export interface MouseDownAction {
     type: 'down',
-    objType: ObjectType,
+    objType: SelectionObjectType,
     index: number,
     relativePos: Vec2,
     coords: Vec2,
@@ -47,7 +47,7 @@ export interface MouseCancelAction {
 
 export interface SelectObjectAction {
     type: 'selectObject',
-    objType: 'point' | 'line' | 'polygon' | null,
+    objType: SelectionObjectType | null,
     index: number
 }
 

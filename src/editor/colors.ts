@@ -12,4 +12,10 @@ export default {
     lineSelected: '#ffa',
     point: 'red',
     selectedPoint: 'black',
+    monster: 'red',
+    player: 'blue',
+    scenery: 'green',
+    item: 'purple',
+    goal: 'orange',
+    soundSource: 'magenta'
 };

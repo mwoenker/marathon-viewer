@@ -1,5 +1,5 @@
 import { MapGeometry } from '../files/map';
-import { Vec2, v2sub, v2lengthSquared, v2distSquared, v2dist, v2dot, v2add, v2scale } from './vector2';
+import { Vec2, v2, v2sub, v2lengthSquared, v2distSquared, v2dist, v2dot, v2add, v2scale } from '../vector2';
 
 // return list of polygon indices at a x,y coordinate
 export function polygonsAt([x, y]: Vec2, map: MapGeometry): number[] {
@@ -36,6 +36,23 @@ export function closestPoint(pos: Vec2, map: MapGeometry): number {
 
     for (let i = 0; i < map.points.length; ++i) {
         const epDist = v2distSquared(pos, map.points[i]);
+        if (-1 === closest || epDist < closestDist) {
+            closest = i;
+            closestDist = epDist;
+        }
+    }
+
+    return closest;
+}
+
+// return index of closest object
+export function closestObject(pos: Vec2, map: MapGeometry): number {
+    let closest = -1;
+    let closestDist = 0;
+
+    for (let i = 0; i < map.objects.length; ++i) {
+        const objPos = map.objects[i].position;
+        const epDist = v2distSquared(pos, [objPos[0], objPos[1]]);
         if (-1 === closest || epDist < closestDist) {
             closest = i;
             closestDist = epDist;

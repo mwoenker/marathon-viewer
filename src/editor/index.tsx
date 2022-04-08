@@ -5,15 +5,16 @@ import './index.css';
 import {
     readMapSummaries, readMapFromSummary, MapSummary
 } from '../files/wad';
-import { Viewport, CanvasMap } from './draw/canvas';
-import { polygonsAt, closestPoint, closestLine } from './geometry';
+import { CanvasMap } from './draw/canvas';
+import { Viewport } from './draw/viewport';
+import { polygonsAt, closestPoint, closestObject, closestLine } from './geometry';
 import { Vec2, v2dist, v2sub } from './vector2';
 
-import './index.css';
 import { HtmlInputFile } from '../files/binary-read';
 import { JSXInternal } from 'preact/src/jsx';
 import { MapGeometry } from '../files/map';
 import { useSelectionState } from './selection';
+import { v3tov2 } from '../vector2';
 
 function MapSummary({ map }: { map: MapGeometry }) {
     if (map && map.polygons && map.lines && map.points) {
@@ -37,7 +38,6 @@ interface MapListProps {
 }
 
 function MapList({ maps, selectedMap, onMapSelected }: MapListProps) {
-    console.log({ maps });
     const change = (e: JSXInternal.TargetedEvent<HTMLSelectElement>) => {
         const index = parseInt(e.currentTarget.value);
         const map = maps.find((m) => m.index === index);
@@ -49,7 +49,6 @@ function MapList({ maps, selectedMap, onMapSelected }: MapListProps) {
     return (
         <select value={selectedMap ? selectedMap.index : ''} onChange={change}>
             {maps.map((m) => {
-                console.log('onChange');
                 return (
                     <option key={m.index}
                         value={m.index}
@@ -109,6 +108,20 @@ function MapView({ pixelSize, map, setMap }: MapViewProps) {
                 coords: clickPos,
             });
         }
+
+        // Did we click on an object?
+        const objectIndex = closestObject(clickPos, map);
+        const objectPosition = v3tov2(map.objects[objectIndex].position);
+        if (v2dist(objectPosition, clickPos) < distThreshold) {
+            return updateSelection({
+                type: 'down',
+                objType: 'object',
+                index: objectIndex,
+                relativePos: v2sub(clickPos, objectPosition),
+                coords: clickPos,
+            });
+        }
+
 
         // Did we click on a line?
         const closest = closestLine(clickPos, map);
@@ -193,8 +206,6 @@ function MapView({ pixelSize, map, setMap }: MapViewProps) {
                     updateSelection({ type: 'cancel' });
                 }
                 break;
-            default:
-                console.log('key', e.key);
         }
     }
 
@@ -245,8 +256,14 @@ function MapView({ pixelSize, map, setMap }: MapViewProps) {
                             Math.floor(selection.currentCoords[1])
                         ]
                     ));
-                } if ('polygon' === selection.objType && selection.currentCoords) {
+                } else if ('polygon' === selection.objType && selection.currentCoords) {
                     setMap(map.movePolygon(
+                        selection.index,
+                        v2sub(
+                            selection.currentCoords,
+                            selection.relativePos)));
+                } else if ('object' === selection.objType && selection.currentCoords) {
+                    setMap(map.moveObject(
                         selection.index,
                         v2sub(
                             selection.currentCoords,
@@ -297,7 +314,6 @@ function Editor() {
     };
 
     async function setSelectedMap(summary: MapSummary) {
-        console.log('setSelected');
         setMap(await readMapFromSummary(summary));
     }
 
@@ -313,8 +329,6 @@ function Editor() {
                 e.preventDefault();
                 zoomOut();
                 break;
-            default:
-                console.log('key', e.key);
         }
     }
 
@@ -328,7 +342,6 @@ function Editor() {
         setPixelSize(pixelSize * zoomIncrement);
     }
 
-    console.log({ map });
     return (
         <div className="editor">
             <div className="leftPanel">

@@ -101,6 +101,22 @@ export class MapGeometry {
         }
     }
 
+    moveObject(i: number, [x, y]: Vec2): MapGeometry {
+        // FIXME user can move object outside of containing polygon
+        const newObjects = [...this.objects];
+        const xy: Vec2 = [Math.floor(x), Math.floor(y)];
+        const z = this.objects[i].position[2];
+        if (outOfRange(xy)) {
+            return this;
+        } else {
+            newObjects[i] = new MapObject({
+                ...this.objects[i],
+                position: [xy[0], xy[1], z]
+            });
+            return new MapGeometry({ ...this, objects: newObjects });
+        }
+    }
+
     movePolygon(polyIdx: number, position: Vec2): MapGeometry {
         const polygon = this.polygons[polyIdx];
         const referencePos = this.points[polygon.endpoints[0]];
