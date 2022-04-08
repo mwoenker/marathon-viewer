@@ -317,7 +317,8 @@ function Editor() {
         setMap(await readMapFromSummary(summary));
     }
 
-    function keyDown(e: JSXInternal.TargetedKeyboardEvent<HTMLElement>) {
+    function keyDown(e: KeyboardEvent) {
+        console.log('down', e);
         switch (e.key) {
             case '+':
             case '=':
@@ -354,7 +355,7 @@ function Editor() {
             </div>
             <div className="rightPanel"
                 tabIndex={0}
-                onKeyDown={() => keyDown} >
+                onKeyDown={keyDown} >
                 <div className="topBar">
                     <div className="zoomIcons">
                         <button onClick={zoomOut}>
