@@ -90,15 +90,6 @@ export class Dependencies {
             if (-1 !== side.polygonIndex) {
                 this.addPolygon(map, side.polygonIndex);
             }
-            if (-1 !== side.primaryLightsourceIndex) {
-                this.addLight(map, side.primaryLightsourceIndex);
-            }
-            if (-1 !== side.secondaryLightsourceIndex) {
-                this.addLight(map, side.secondaryLightsourceIndex);
-            }
-            if (-1 !== side.transparentLightsourceIndex) {
-                this.addLight(map, side.transparentLightsourceIndex);
-            }
         }
     }
     addPolygon(map: MapGeometry, polygonIndex: number): void {
@@ -123,12 +114,6 @@ export class Dependencies {
                 if (map.platforms[i].polygonIndex === polygonIndex) {
                     this.addPlatform(map, i);
                 }
-            }
-            if (polygon.floorLightsource !== -1) {
-                this.addLight(map, polygon.floorLightsource);
-            }
-            if (polygon.ceilingLightsource !== -1) {
-                this.addLight(map, polygon.ceilingLightsource);
             }
         }
     }
