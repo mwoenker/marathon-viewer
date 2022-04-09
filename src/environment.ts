@@ -110,6 +110,11 @@ export class Environment {
         this.player = makePlayer(this.world, this.canvas);
     }
 
+    setMap(map: MapGeometry): void {
+        this.map = map;
+        this.world.updateMap(map);
+    }
+
     setBackendType(backend: RendererType, newCanvas: HTMLCanvasElement): void {
         if (this.clicked) {
             this.canvas.removeEventListener('mousedown', this.clicked);
@@ -187,8 +192,13 @@ export class Environment {
             position = oldPosition;
         }
 
+        const vFov = 2 * Math.atan(Math.tan(hFov / 2)
+            * this.canvas.height / this.canvas.width);
+
         this.player = {
             ...this.player,
+            hFov,
+            vFov,
             position,
             height,
             polygon,
