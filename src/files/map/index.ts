@@ -14,6 +14,7 @@ import { MapInfo } from './map-info';
 import { TransferMode, WadHeader } from '../wad';
 import { Dependencies } from './dependencies';
 import { Remapping } from './index-remap';
+import { polygonsAt } from '../../geometry';
 
 interface FloorCeilingRequest {
     polygonIndex: number,
@@ -101,17 +102,75 @@ export class MapGeometry {
         }
     }
 
+    neighboringPolygons(lineIndex: number) {
+        const polygon = this.polygons[lineIndex];
+        if (!polygon) {
+            throw new Error(`invalid polygon ${lineIndex}`);
+        }
+        const neighbors = [];
+        for (const lineIndex of polygon.lines) {
+            if (lineIndex !== -1) {
+                const line = this.lines[lineIndex];
+                if (!line) {
+                    throw new Error(`invalid line ${lineIndex}`);
+                }
+                if (line.frontPoly === lineIndex && line.backPoly !== -1) {
+                    neighbors.push(line.backPoly);
+                } else if (line.backPoly === lineIndex && line.frontPoly !== -1) {
+                    neighbors.push(line.frontPoly);
+                }
+            }
+        }
+        return neighbors;
+    }
+
+    *floodBreadthFirst(startingPolyIndex: number): Generator<number> {
+        const visitedIndexes = new Set<number>();
+        const queue = [startingPolyIndex];
+        while (queue.length !== 0) {
+            const idx = queue.shift();
+            if (typeof idx === 'number' && !visitedIndexes.has(idx)) {
+                visitedIndexes.add(idx);
+                for (const neighborIdx of this.neighboringPolygons(idx)) {
+                    queue.push(neighborIdx);
+                }
+                yield idx;
+            }
+        }
+    }
+
+    findNewContainingPolygon(point: Vec2, oldPolygonIndex: number): number {
+        const containingPolygons = polygonsAt(point, this);
+        if (containingPolygons.length === 0) {
+            return -1;
+        }
+
+        for (const polyIndex of this.floodBreadthFirst(oldPolygonIndex)) {
+            if (containingPolygons.includes(polyIndex)) {
+                return polyIndex;
+            }
+        }
+
+        // not found in flood, must not be connected to us at all. just pick one
+        return containingPolygons[0];
+    }
+
     moveObject(i: number, [x, y]: Vec2): MapGeometry {
         // FIXME user can move object outside of containing polygon
         const newObjects = [...this.objects];
-        const xy: Vec2 = [Math.floor(x), Math.floor(y)];
+        const newPosition: Vec2 = [Math.floor(x), Math.floor(y)];
         const z = this.objects[i].position[2];
-        if (outOfRange(xy)) {
+        if (outOfRange(newPosition)) {
             return this;
         } else {
+            const oldObject = this.objects[i];
+            const oldPolygon = oldObject.polygon;
+            const containingPolygon = this.findNewContainingPolygon(newPosition, oldPolygon);
+            const polygon = containingPolygon === -1 ? oldPolygon : containingPolygon;
             newObjects[i] = new MapObject({
-                ...this.objects[i],
-                position: [xy[0], xy[1], z]
+                ...oldObject,
+                position: [newPosition[0], newPosition[1], z],
+                polygon
             });
             return new MapGeometry({ ...this, objects: newObjects });
         }
@@ -261,6 +320,12 @@ export class MapGeometry {
     deletePoint(pointIdx: number): MapGeometry {
         const deletions = new Dependencies();
         deletions.addPoint(this, pointIdx);
+        return this.removeObjectsAndRenumber(deletions);
+    }
+
+    deleteObject(objectIdx: number): MapGeometry {
+        const deletions = new Dependencies();
+        deletions.addObject(this, objectIdx);
         return this.removeObjectsAndRenumber(deletions);
     }
 

@@ -7,7 +7,7 @@ import {
 } from '../files/wad';
 import { CanvasMap } from './draw/canvas';
 import { Viewport } from './draw/viewport';
-import { polygonsAt, closestPoint, closestObject, closestLine } from './geometry';
+import { polygonsAt, closestPoint, closestObject, closestLine } from '../geometry';
 import { Vec2, v2dist, v2sub } from './vector2';
 
 import { HtmlInputFile } from '../files/binary-read';
@@ -204,6 +204,9 @@ function MapView({ pixelSize, map, setMap }: MapViewProps) {
                 } else if ('line' === selection.objType) {
                     setMap(map.deleteLine(selection.index));
                     updateSelection({ type: 'cancel' });
+                } else if ('object' === selection.objType) {
+                    setMap(map.deleteObject(selection.index));
+                    updateSelection({ type: 'cancel' });
                 }
                 break;
         }
@@ -318,7 +321,6 @@ function Editor() {
     }
 
     function keyDown(e: KeyboardEvent) {
-        console.log('down', e);
         switch (e.key) {
             case '+':
             case '=':

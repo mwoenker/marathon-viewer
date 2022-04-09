@@ -179,7 +179,10 @@ export async function readEntryChunks(
 
         if (validChunkType(chunkType)) {
             readChunk(chunkType, chunkData, chunks);
+        } else {
+            console.log('Skipping chunk type', chunkType);
         }
+
 
         if (chunkHeader.nextOffset <= chunkStart) {
             break;

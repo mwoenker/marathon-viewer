@@ -1,5 +1,5 @@
-import { MapGeometry } from '../files/map';
-import { Vec2, v2, v2sub, v2lengthSquared, v2distSquared, v2dist, v2dot, v2add, v2scale } from '../vector2';
+import { MapGeometry } from './files/map';
+import { Vec2, v2sub, v2lengthSquared, v2distSquared, v2dist, v2dot, v2add, v2scale } from './vector2';
 
 // return list of polygon indices at a x,y coordinate
 export function polygonsAt([x, y]: Vec2, map: MapGeometry): number[] {
