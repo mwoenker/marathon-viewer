@@ -10,6 +10,7 @@ import { HtmlInputFile } from '../files/binary-read';
 import { MapGeometry } from '../files/map';
 import { Sidebar } from './Sidebar';
 import { RightPanel } from './RightPanel';
+import { useSelectionState } from './selection';
 
 interface MapFileSetting {
     file: File | null,
@@ -21,6 +22,7 @@ function Editor() {
     const [map, setMap] = useState<MapGeometry>();
     // size of screen pixel in map units
     const [pixelSize, setPixelSize] = useState(64);
+    const [selection, updateSelection] = useSelectionState();
 
     const uploadMap = async (file: File) => {
         const summaries = await readMapSummaries(new HtmlInputFile(file));
@@ -48,6 +50,7 @@ function Editor() {
                 map={map}
                 mapSummaries={mapFile.summaries}
                 onMapSelected={setSelectedMap}
+                selection={selection}
             />
             <RightPanel
                 pixelSize={pixelSize}
@@ -55,6 +58,8 @@ function Editor() {
                 onMapChange={setMap}
                 onZoomIn={zoomIn}
                 onZoomOut={zoomOut}
+                selection={selection}
+                updateSelection={updateSelection}
             />
         </div>
     );

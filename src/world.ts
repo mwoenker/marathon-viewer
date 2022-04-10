@@ -158,7 +158,6 @@ export class World {
     }
 
     getLightIntensity(lightIndex: number): number {
-        console.log({ lightIndex });
         const intensity = this.lightState[lightIndex].intensity / 0x10000;
         if (intensity !== 0 && !intensity) {
             console.log(lightIndex, this.lightState);

@@ -37,18 +37,8 @@ export function CanvasMap(allProps: CanvasMapProps): JSX.Element {
         }
     );
 
-    // We set translation of canvas to chase the scroll region around
-    const containerCenter = [
-        (viewport.viewCenter[0] + 0x8000) / viewport.pixelSize,
-        (viewport.viewCenter[1] + 0x8000) / viewport.pixelSize,
-    ];
-
-    const left = Math.max(0, containerCenter[0] - (viewport.width / 2));
-    const top = Math.max(0, containerCenter[1] - (viewport.height / 2));
-
     return (
         <div style={{
-            //position: 'relative',
             width: 0xffff / viewport.pixelSize,
             height: 0xffff / viewport.pixelSize,
         }}
@@ -56,13 +46,10 @@ export function CanvasMap(allProps: CanvasMapProps): JSX.Element {
             <canvas width={viewport.width}
                 height={viewport.height}
                 style={{
-                    //transform: `translate(${left}px, ${top}px)`,
                     position: 'sticky',
                     top: 0,
                     left: 0,
                 }}
-                data-left={left}
-                data-top={top}
                 ref={ref}>
             </canvas>
         </div>

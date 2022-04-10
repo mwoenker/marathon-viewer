@@ -4,20 +4,27 @@ import { closestLine, closestObject, closestPoint, polygonsAt } from '../../geom
 import { v2dist, v2sub, v3tov2, Vec2 } from "../../vector2";
 import { CanvasMap } from "../draw/canvas";
 import { Viewport } from '../draw/viewport';
-import { useSelectionState } from '../selection';
+import { MouseAction, Selection } from '../selection';
 
 import type { JSXInternal } from 'preact/src/jsx';
 
 interface MapViewProps {
     pixelSize: number,
     map: MapGeometry | undefined,
-    onMapChange: (map: MapGeometry) => void
+    onMapChange: (map: MapGeometry) => void,
+    selection: Selection,
+    updateSelection: (action: MouseAction) => void
 }
 
-export function MapView({ pixelSize, map, onMapChange }: MapViewProps): JSX.Element {
+export function MapView({
+    pixelSize,
+    map,
+    onMapChange,
+    selection,
+    updateSelection
+}: MapViewProps): JSX.Element {
     const [viewportSize, setViewportSize] = useState([0, 0]);
     const [viewCenter, setViewCenter] = useState([0, 0] as Vec2);
-    const [selection, updateSelection] = useSelectionState();
     const ref = useRef<HTMLDivElement>(null);
     const viewport = new Viewport(
         viewportSize[0], viewportSize[1], pixelSize, viewCenter);
@@ -216,7 +223,7 @@ export function MapView({ pixelSize, map, onMapChange }: MapViewProps): JSX.Elem
                 }
             }
         },
-        [selection.isDragging, selection.currentCoords]
+        [selection]
     );
 
     return (

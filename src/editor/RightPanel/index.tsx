@@ -1,6 +1,7 @@
 import { JSXInternal } from 'preact/src/jsx';
 import { useState } from 'react';
 import { MapGeometry } from '../../files/map';
+import { MouseAction, Selection } from '../selection';
 import { VisualMode } from '../VisualMode';
 import { MapView } from './MapView';
 
@@ -24,7 +25,9 @@ interface RightPanelProps {
     map: MapGeometry | undefined
     onMapChange(map: MapGeometry): void
     onZoomIn(): void
-    onZoomOut(): void
+    onZoomOut(): void,
+    selection: Selection,
+    updateSelection: (action: MouseAction) => void
 }
 
 export type EditMode =
@@ -65,6 +68,8 @@ export function RightPanel({
     onMapChange,
     onZoomIn,
     onZoomOut,
+    selection,
+    updateSelection
 }: RightPanelProps): JSX.Element {
     const [mode, setMode] = useState<EditMode>('geometry');
 
@@ -106,9 +111,12 @@ export function RightPanel({
                 )}
             </div>
             {mode === 'geometry' && (
-                <MapView map={map}
+                <MapView
+                    map={map}
                     onMapChange={onMapChange}
                     pixelSize={pixelSize}
+                    selection={selection}
+                    updateSelection={updateSelection}
                 />
             )}
 

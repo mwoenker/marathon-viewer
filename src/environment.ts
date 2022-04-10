@@ -9,6 +9,8 @@ import { textureClickedSurface } from './texturing';
 import { worldUnitSize } from './constants';
 
 const hFov = 90 / 180 * Math.PI;
+const minimumVFov = 60 / 180 * Math.PI;
+const alternateVFov = 60 / 180 * Math.PI;
 
 interface ExtendedWindow extends Window {
     teleport?(poly: number): void
@@ -19,11 +21,22 @@ declare const window: ExtendedWindow;
 type KeyboardHandler = (e: KeyboardEvent) => void
 type MouseHandler = (e: MouseEvent) => void
 
+function calculateFov(width: number, height: number) {
+    const vFov = 2 * Math.atan(Math.tan(hFov / 2) * height / width);
+    if (vFov >= minimumVFov) {
+        return { hFov, vFov };
+    } else {
+        return {
+            hFov: 2 * Math.atan(Math.tan(alternateVFov / 2) * width / height),
+            vFov: alternateVFov
+        };
+    }
+}
+
 function makePlayer(world: World, canvas: HTMLCanvasElement) {
     const { polygon, position, height, facing } =
         world.playerStartPosition();
-    const vFov = 2 * Math.atan(Math.tan(hFov / 2)
-        * canvas.height / canvas.width);
+    const { hFov, vFov } = calculateFov(canvas.width, canvas.height);
     return {
         position,
         polygon,
@@ -192,8 +205,7 @@ export class Environment {
             position = oldPosition;
         }
 
-        const vFov = 2 * Math.atan(Math.tan(hFov / 2)
-            * this.canvas.height / this.canvas.width);
+        const { hFov, vFov } = calculateFov(this.canvas.width, this.canvas.height);
 
         this.player = {
             ...this.player,
