@@ -48,6 +48,7 @@ function Editor() {
             <Sidebar
                 onMapUpload={uploadMap}
                 map={map}
+                onMapChange={setMap}
                 mapSummaries={mapFile.summaries}
                 onMapSelected={setSelectedMap}
                 selection={selection}

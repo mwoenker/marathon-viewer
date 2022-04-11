@@ -2,6 +2,7 @@ import type { JSXInternal } from 'preact/src/jsx';
 import type { MapSummary } from '../../files/wad';
 import type { MapGeometry } from '../../files/map';
 import { Selection } from '../selection';
+import { SelectionOptions } from './SelectionOptions';
 
 interface MapListProps {
     maps: MapSummary[],
@@ -38,6 +39,7 @@ function MapList({ maps, selectedMap, onMapSelected }: MapListProps) {
 interface SidebarProps {
     onMapUpload: (file: File) => void
     map: MapGeometry | undefined
+    onMapChange(map: MapGeometry): void
     mapSummaries: MapSummary[]
     onMapSelected(map: MapSummary): void
     selection: Selection
@@ -47,8 +49,9 @@ export function Sidebar({
     onMapUpload,
     mapSummaries,
     map,
+    onMapChange,
     onMapSelected,
-    selection
+    selection,
 }: SidebarProps): JSX.Element {
     const fileSelected = async (e: JSXInternal.TargetedEvent<HTMLInputElement>) => {
         if (e && e.target && e.currentTarget.files && e.currentTarget.files[0]) {
@@ -65,7 +68,9 @@ export function Sidebar({
                 maps={mapSummaries}
                 selectedMap={map}
                 onMapSelected={onMapSelected} />
-            {selection.objType}
+            {map && (
+                <SelectionOptions selection={selection} map={map} onMapChange={onMapChange} />
+            )}
         </div>
     );
 }

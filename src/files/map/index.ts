@@ -344,4 +344,13 @@ export class MapGeometry {
             return points;
         }
     }
+
+    updateObject(objectIdx: number, newObject: MapObject): MapGeometry {
+        if (objectIdx < 0 || objectIdx >= this.objects.length) {
+            throw new Error(`Invalid object index ${objectIdx}`);
+        }
+        const newObjects = [...this.objects];
+        newObjects[objectIdx] = newObject;
+        return new MapGeometry({ ...this, objects: newObjects });
+    }
 }
