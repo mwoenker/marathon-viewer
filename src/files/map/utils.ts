@@ -1,5 +1,6 @@
-import { Reader, Writer } from '../binary-read'
-import { Vec2 } from '../../vector2.js'
+import { Reader } from '../binary-read';
+import { Writer } from '../binary-write';
+import { Vec2 } from '../../vector2.js';
 
 export const readPoint = (r: Reader): Vec2 => [r.int16(), r.int16()];
 

@@ -1,7 +1,8 @@
 import { RandomAccess, Reader, readRange, getDataFork } from './binary-read';
 import { MapGeometry } from './map';
 import { Collections } from './shapes';
-import { readMap } from './serializers';
+import { readMap, serializeMap } from './serializers';
+import { ArrayBufferWriter, Writer } from './binary-write';
 
 export interface WadDirectoryEntry {
     offset: number,
@@ -33,6 +34,9 @@ export interface MapSummary {
     directoryEntry: WadDirectoryEntry;
     header: WadHeader;
 }
+
+const wadHeaderSize = 128;
+const wadHeaderDataSize = 88;
 
 function readDirectoryEntry(bytes: ArrayBuffer, fullEntrySize: number, wadVersion: number): WadDirectoryEntry {
     const r = new Reader(bytes);
@@ -124,6 +128,66 @@ async function readMapSummaries(file: RandomAccess): Promise<MapSummary[]> {
             header: wadHeader,
         }));
     return summaries;
+}
+
+
+export function serializeWad(entries: MapGeometry[], filename: string): ArrayBuffer {
+    const writer = new ArrayBufferWriter();
+
+    const version = 4;
+    const dataVersion = 1;
+    const appDataBytes = 74;
+    const chunkSize = 16;
+    const entrySize = 10;
+    const parentCrc = 0;
+
+    const serializedMaps = entries.map(serializeMap);
+    const mapsLength = serializedMaps.reduce((size, buf) => size + buf.byteLength, 0);
+    const dirOffset = wadHeaderSize + mapsLength;
+
+    writer.uint16(version); // version
+    writer.uint16(dataVersion); // data version
+    writer.cString(64, filename);
+    writer.uint32(0); // crc; must be corrected later
+    writer.uint32(dirOffset);
+    writer.uint16(entries.length);
+    writer.uint16(appDataBytes);
+    writer.uint16(chunkSize);
+    writer.uint16(entrySize);
+    writer.uint32(parentCrc);
+    writer.zeros(wadHeaderSize - wadHeaderDataSize);
+
+    if (writer.position() !== wadHeaderSize) {
+        throw new Error(
+            `Wrote incorrect wad header size ${writer.position()}, should be ${wadHeaderSize}`);
+    }
+
+    serializedMaps.forEach(map => writer.bytes(map));
+
+    if (writer.position() !== dirOffset) {
+        throw new Error(
+            `Wrote incorrect directory offset ${dirOffset}, should be ${writer.position()}`);
+    }
+
+    let mapDataOffset = wadHeaderSize;
+    entries.forEach((map, i) => {
+        const start = writer.position();
+        writer.uint32(mapDataOffset);
+        writer.uint32(serializedMaps[i].byteLength);
+        writer.uint16(i);
+        writer.uint16(map.info.missionFlags);
+        writer.uint16(map.info.environmentFlags);
+        writer.uint32(map.info.entryFlags);
+        writer.cString(66, map.info.name);
+        const end = writer.position();
+        if (end - start !== entrySize + appDataBytes) {
+            throw new Error(
+                `Wrote incorrect sized dir entry ${end - start}, should be ${entrySize + appDataBytes}`);
+        }
+        mapDataOffset += serializedMaps[i].byteLength;
+    });
+
+    return writer.getBuffer();
 }
 
 enum sideType {

@@ -1,6 +1,7 @@
-import { Reader, Writer } from '../binary-read'
-import { Vec2 } from '../../vector2'
-import { readPoint, writePoint } from './utils'
+import { Reader } from '../binary-read';
+import { Writer } from '../binary-write';
+import { Vec2 } from '../../vector2';
+import { readPoint, writePoint } from './utils';
 
 interface EndpointConstructor {
     flags: number;
@@ -36,7 +37,7 @@ export class Endpoint {
             position: readPoint(reader),
             transformed: readPoint(reader),
             supportingPolyIdx: reader.int16(),
-        })
+        });
 
     }
 

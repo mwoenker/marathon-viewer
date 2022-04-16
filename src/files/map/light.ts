@@ -1,4 +1,5 @@
-import { Reader, Writer } from '../binary-read';
+import { Reader } from '../binary-read';
+import { Writer } from '../binary-write';
 
 export enum LightFunctionType {
     constant,
@@ -98,9 +99,13 @@ export class Light {
         writer.int16(this.flags);
         writer.int16(this.phase);
 
-        for (let i = 0; i < nStateTypes; ++i) {
-            writeLightFunction(this.states[i]);
-        }
+        writeLightFunction(this.states[LightStateType.primaryActive]);
+        writeLightFunction(this.states[LightStateType.secondaryActive]);
+        writeLightFunction(this.states[LightStateType.becomingActive]);
+        writeLightFunction(this.states[LightStateType.primaryInactive]);
+        writeLightFunction(this.states[LightStateType.secondaryInactive]);
+        writeLightFunction(this.states[LightStateType.becomingInactive]);
+
         writer.int16(this.tag);
         writer.zeros(8);
     }

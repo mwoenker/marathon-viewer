@@ -1,4 +1,5 @@
-import { Reader, Writer } from '../binary-read'
+import { Reader } from '../binary-read';
+import { Writer } from '../binary-write';
 
 interface AmbientSoundConstructor {
     flags: number;
@@ -31,6 +32,6 @@ export class AmbientSound {
         writer.uint16(this.flags);
         writer.int16(this.soundIndex);
         writer.int16(this.volume);
-        writer.zeros(10)
+        writer.zeros(10);
     }
 }

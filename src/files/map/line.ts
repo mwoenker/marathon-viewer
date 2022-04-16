@@ -1,4 +1,5 @@
-import { Reader, Writer } from '../binary-read';
+import { Reader } from '../binary-read';
+import { Writer } from '../binary-write';
 
 interface LineConstructor {
     begin: number;
@@ -51,20 +52,21 @@ export class Line implements LineConstructor {
             frontPoly: reader.int16(),
             backPoly: reader.int16()
         });
-        reader.skip(12)
+        reader.skip(12);
         return line;
     }
 
     write(writer: Writer): void {
-        writer.uint16(this.begin);
-        writer.uint16(this.end);
+        writer.int16(this.begin);
+        writer.int16(this.end);
         writer.uint16(this.flags);
-        writer.uint16(this.highestFloor);
-        writer.uint16(this.highestCeiling);
-        writer.uint16(this.frontSide);
-        writer.uint16(this.backSide);
-        writer.uint16(this.frontPoly);
-        writer.uint16(this.backPoly);
+        writer.uint16(this.length);
+        writer.int16(this.highestFloor);
+        writer.int16(this.highestCeiling);
+        writer.int16(this.frontSide);
+        writer.int16(this.backSide);
+        writer.int16(this.frontPoly);
+        writer.int16(this.backPoly);
         writer.zeros(12);
     }
 }

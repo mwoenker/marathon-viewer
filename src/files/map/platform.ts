@@ -1,4 +1,5 @@
-import { Reader, Writer } from '../binary-read';
+import { Reader } from '../binary-read';
+import { Writer } from '../binary-write';
 import { readList } from './utils';
 
 interface EndpointOwner {
@@ -116,6 +117,9 @@ export class Platform {
             writer.int16(owner.firstLineIndex);
             writer.int16(owner.lineIndexCount);
         });
+
+        writer.int16(this.parentPlatformIndex);
+        writer.int16(this.tag);
 
         writer.zeros(44);
     }

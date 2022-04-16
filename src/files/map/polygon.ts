@@ -1,6 +1,7 @@
 import { readList, readPoint, writePoint } from './utils';
 import { Vec2 } from '../../vector2';
-import { Reader, Writer } from '../binary-read';
+import { Reader } from '../binary-read';
+import { Writer } from '../binary-write';
 
 export const maxVertices = 8;
 
@@ -110,9 +111,9 @@ export class Polygon {
         const readPolyIndices = (nVertices: number) =>
             readList(maxVertices, () => r.int16()).slice(0, nVertices);
 
-        const type = r.uint16();
-        const flags = r.uint16();
-        const permutation = r.uint16();
+        const type = r.int16();
+        const flags = r.int16();
+        const permutation = r.int16();
         const vertexCount = r.uint16();
 
         const polygon = new Polygon({
@@ -129,7 +130,7 @@ export class Polygon {
             floorLightsource: r.int16(),
             ceilingLightsource: r.int16(),
             area: r.int32(),
-            firstObject: r.uint16(),
+            firstObject: r.int16(),
             firstExclusionZone: r.int16(),
             nLineExclusionZones: r.int16(),
             nPointExclusionZones: r.int16(),
@@ -143,10 +144,10 @@ export class Polygon {
             floorOrigin: readPoint(r),
             ceilingOrigin: readPoint(r),
             media: r.int16(),
-            mediaLightsource: r.uint16(),
-            firstSoundSource: r.uint16(),
-            ambientSound: r.uint16(),
-            randomSound: r.uint16(),
+            mediaLightsource: r.int16(),
+            firstSoundSource: r.int16(),
+            ambientSound: r.int16(),
+            randomSound: r.int16(),
         });
 
         r.skip(2);
@@ -158,16 +159,16 @@ export class Polygon {
         const writePolyIndices = (indices: number[]): void => {
             for (let i = 0; i < maxVertices; ++i) {
                 if (i >= indices.length) {
-                    writer.int16(-1);
+                    writer.int16(0);
                 } else {
                     writer.int16(indices[i]);
                 }
             }
         };
 
-        writer.uint16(this.type);
-        writer.uint16(this.flags);
-        writer.uint16(this.permutation);
+        writer.int16(this.type);
+        writer.int16(this.flags);
+        writer.int16(this.permutation);
         writer.uint16(this.vertexCount);
         writePolyIndices(this.endpoints);
         writePolyIndices(this.lines);
@@ -178,7 +179,7 @@ export class Polygon {
         writer.int16(this.floorLightsource);
         writer.int16(this.ceilingLightsource);
         writer.int32(this.area);
-        writer.uint16(this.firstObject);
+        writer.int16(this.firstObject);
         writer.int16(this.firstExclusionZone);
         writer.int16(this.nLineExclusionZones);
         writer.int16(this.nPointExclusionZones);
@@ -192,10 +193,10 @@ export class Polygon {
         writePoint(writer, this.floorOrigin);
         writePoint(writer, this.ceilingOrigin);
         writer.int16(this.media);
-        writer.uint16(this.mediaLightsource);
-        writer.uint16(this.firstSoundSource);
-        writer.uint16(this.ambientSound);
-        writer.uint16(this.randomSound);
+        writer.int16(this.mediaLightsource);
+        writer.int16(this.firstSoundSource);
+        writer.int16(this.ambientSound);
+        writer.int16(this.randomSound);
 
         writer.zeros(2);
     }

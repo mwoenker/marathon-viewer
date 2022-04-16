@@ -1,4 +1,5 @@
-import { RandomAccess, Reader, readRange, Writer } from './binary-read';
+import { RandomAccess, Reader, readRange } from './binary-read';
+import { ArrayBufferWriter, Writer } from './binary-write';
 
 import { readPoint, writePoint } from './map/utils';
 import { Side } from './map/side';
@@ -16,6 +17,7 @@ import { Platform } from './map/platform';
 import { MapInfo } from './map/map-info';
 import { Vec2 } from '../vector2';
 import { WadHeader } from './wad';
+import { MapGeometry } from './map';
 
 interface SerializerInstance {
     write(writer: Writer): void
@@ -25,21 +27,22 @@ interface SerializerClass<InstanceType extends SerializerInstance> {
     read(reader: Reader): InstanceType
 }
 
-const pointsSerializer = {
-    read(reader: Reader, chunkSize: number) {
-        const points: Vec2[] = [];
-        const startPos = reader.pos;
-        while (reader.pos - startPos < chunkSize) {
-            points.push(readPoint(reader));
-        }
-        return points;
-    },
-    write(writer: Writer, points: Vec2[]) {
-        for (const point of points) {
-            writePoint(writer, point);
-        }
+function readPoints(reader: Reader, chunkSize: number) {
+    const points: Vec2[] = [];
+    const startPos = reader.pos;
+    while (reader.pos - startPos < chunkSize) {
+        points.push(readPoint(reader));
     }
-};
+    return points;
+}
+
+function serializePoints(points: Vec2[]) {
+    const writer = new ArrayBufferWriter();
+    for (const point of points) {
+        writePoint(writer, point);
+    }
+    return writer.getBuffer();
+}
 
 enum ChunkType {
     'Minf',
@@ -100,12 +103,13 @@ function readArray<T extends SerializerInstance>(
 
 function readChunk(chunkType: ChunkTypeName, data: ArrayBuffer, chunks: Partial<Chunks>): void {
     const chunkReader = new Reader(data);
+
     switch (chunkType) {
         case 'Minf':
             chunks.info = MapInfo.read(chunkReader);
             break;
         case 'PNTS':
-            chunks.points = pointsSerializer.read(chunkReader, data.byteLength);
+            chunks.points = readPoints(chunkReader, data.byteLength);
             break;
         case 'EPNT':
             chunks.endpoints = readArray(Endpoint, chunkReader, data.byteLength);
@@ -172,6 +176,8 @@ export async function readEntryChunks(
             nextOffset: r.uint32(),
             size: r.uint32(),
         };
+
+        console.log({ chunkHeader });
 
         const dataStart = chunkStart + headerSize;
         const chunkData = data.slice(dataStart, dataStart + chunkHeader.size);
@@ -252,5 +258,60 @@ export async function readMap(
         platforms: chunks.platforms || [],
         notes: chunks.notes || []
     };
+}
+
+function serializeArray<T extends SerializerInstance>(objects: T[]): ArrayBuffer {
+    const writer = new ArrayBufferWriter();
+    for (const obj of objects) {
+        obj.write(writer);
+    }
+    return writer.getBuffer();
+}
+
+const writeChunkHeaderSize = 16;
+
+function serializeChunk(writer: Writer, type: string, data: ArrayBuffer, isLastChunk = false) {
+    const chunkStart = writer.position();
+    const nextChunkOffset = chunkStart + writeChunkHeaderSize + data.byteLength;
+    writer.fixString(4, type);
+    writer.uint32(isLastChunk ? 0 : nextChunkOffset);
+    writer.uint32(data.byteLength);
+    writer.zeros(4);
+    writer.bytes(data);
+}
+
+export function serializeMap(map: MapGeometry): ArrayBuffer {
+    const infoChunkWriter = new ArrayBufferWriter();
+    map.info.write(infoChunkWriter);
+    const infoChunk = infoChunkWriter.getBuffer();
+    const pointsChunk = serializePoints(map.points);
+    const linesChunk = serializeArray(map.lines);
+    const polygonsChunk = serializeArray(map.polygons);
+    const sidesChunk = serializeArray(map.sides);
+    const lightsChunk = serializeArray(map.lights);
+    const mediaChunk = serializeArray(map.media);
+    const objectsChunk = serializeArray(map.objects);
+    const itemPlacementChunk = serializeArray(map.itemPlacement);
+    const ambientSoundsChunk = serializeArray(map.ambientSounds);
+    const randomSoundsChunk = serializeArray(map.randomSounds);
+    const platformsChunk = serializeArray(map.platforms);
+    const notesChunk = serializeArray(map.notes);
+
+    const writer = new ArrayBufferWriter();
+    serializeChunk(writer, 'Minf', infoChunk);
+    serializeChunk(writer, 'PNTS', pointsChunk);
+    serializeChunk(writer, 'LINS', linesChunk);
+    serializeChunk(writer, 'POLY', polygonsChunk);
+    serializeChunk(writer, 'SIDS', sidesChunk);
+    serializeChunk(writer, 'LITE', lightsChunk);
+    serializeChunk(writer, 'medi', mediaChunk);
+    serializeChunk(writer, 'OBJS', objectsChunk);
+    serializeChunk(writer, 'plac', itemPlacementChunk);
+    serializeChunk(writer, 'ambi', ambientSoundsChunk);
+    serializeChunk(writer, 'bonk', randomSoundsChunk);
+    serializeChunk(writer, 'PLAT', platformsChunk);
+    serializeChunk(writer, 'NOTE', notesChunk, true);
+
+    return writer.getBuffer();
 }
 

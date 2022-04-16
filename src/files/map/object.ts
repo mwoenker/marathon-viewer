@@ -1,4 +1,5 @@
-import { Reader, Writer } from '../binary-read';
+import { Reader } from '../binary-read';
+import { Writer } from '../binary-write';
 import { Vec3 } from '../../vector3';
 
 export enum ObjectType {
@@ -23,7 +24,7 @@ export enum ObjectFlags {
 interface MapObjectConstructor {
     type: ObjectType;
     index: number;
-    facing: number;
+    facing: number; // is sound volume for savedSoundSource
     polygon: number;
     position: Vec3;
     flags: number;

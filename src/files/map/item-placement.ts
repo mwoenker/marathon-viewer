@@ -1,4 +1,5 @@
-import { Reader, Writer } from '../binary-read'
+import { Reader } from '../binary-read';
+import { Writer } from '../binary-write';
 
 interface ItemPlacementConstructor {
     flags: number;
@@ -34,7 +35,7 @@ export class ItemPlacement {
             maximumCount: reader.int16(),
             randomCount: reader.int16(),
             randomChance: reader.uint16(),
-        })
+        });
     }
 
     write(writer: Writer): void {

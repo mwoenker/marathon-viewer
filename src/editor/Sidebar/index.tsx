@@ -1,8 +1,9 @@
 import type { JSXInternal } from 'preact/src/jsx';
-import type { MapSummary } from '../../files/wad';
+import { MapSummary, readMapFromSummary, readMapSummaries, serializeWad } from '../../files/wad';
 import type { MapGeometry } from '../../files/map';
 import { Selection } from '../selection';
 import { SelectionOptions } from './SelectionOptions';
+import { ArrayBufferFile } from '../../files/binary-read';
 
 interface MapListProps {
     maps: MapSummary[],
@@ -59,11 +60,26 @@ export function Sidebar({
         }
     };
 
+    const save = async () => {
+        if (map) {
+            const data = serializeWad([map], 'map.sceA');
+            const url = URL.createObjectURL(new Blob([data]));
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = 'map.sceA';
+            link.target = '_blank';
+            document.body.appendChild(link);
+            link.click();
+            URL.revokeObjectURL(url);
+        }
+    };
+
     return (
         <div className="leftPanel">
             <div>
                 <input type="file" onChange={fileSelected} />
             </div>
+            <button onClick={save}>Save!</button>
             <MapList
                 maps={mapSummaries}
                 selectedMap={map}

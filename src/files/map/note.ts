@@ -1,4 +1,5 @@
-import { Reader, Writer } from '../binary-read';
+import { Reader } from '../binary-read';
+import { Writer } from '../binary-write';
 import { readPoint, writePoint } from './utils';
 import { Vec2 } from '../../vector2';
 

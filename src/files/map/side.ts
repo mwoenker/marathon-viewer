@@ -1,7 +1,8 @@
 import { TransferMode } from '../wad';
 import { readPoint, writePoint } from './utils';
 import { Vec2 } from '../../vector2';
-import { Reader, Writer } from '../binary-read'
+import { Reader } from '../binary-read';
+import { Writer } from '../binary-write';
 
 export interface SideTexConstructor {
     offset?: Vec2,
@@ -145,7 +146,7 @@ export class Side {
         writePoint(writer, this.collisionTopLeft);
         writePoint(writer, this.collisionTopRight);
         writePoint(writer, this.collisionBottomLeft);
-        writePoint(writer, this.collisionTopRight);
+        writePoint(writer, this.collisionBottomRight);
         writer.int16(this.controlPanelType);
         writer.int16(this.controlPanelPermutation);
         writer.int16(this.primaryTransferMode);
@@ -157,6 +158,7 @@ export class Side {
         writer.int16(this.secondaryLightsourceIndex);
         writer.int16(this.transparentLightsourceIndex);
         writer.int32(this.ambientDelta);
+        writer.zeros(2);
     }
 }
 

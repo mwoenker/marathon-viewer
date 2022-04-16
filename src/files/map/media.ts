@@ -1,4 +1,5 @@
-import { Reader, Writer } from '../binary-read';
+import { Reader } from '../binary-read';
+import { Writer } from '../binary-write';
 import { Vec2, v2direction, v2scale, v2add } from '../../vector2';
 import { readPoint, writePoint } from './utils';
 import { fromFixedAngle } from '../../world';

@@ -59,17 +59,16 @@ export class HttpFile {
     }
 }
 
-export interface Writer {
-    uint8(val: number): void;
-    uint16(val: number): void;
-    uint32(val: number): void;
-    int8(val: number): void;
-    int16(val: number): void;
-    int32(val: number): void;
-    fixString(length: number, s: string): void;
-    cString(maxlen: number, s: string): void;
-    pascalString(nBytes: number, s: string): void;
-    zeros(nBytes: number): void
+export class ArrayBufferFile {
+    buffer: ArrayBuffer
+
+    constructor(buffer: ArrayBuffer) {
+        this.buffer = buffer;
+    }
+
+    async readRange(start: number, stop: number): Promise<ArrayBuffer> {
+        return this.buffer.slice(start, stop);
+    }
 }
 
 export class Reader {
@@ -187,8 +186,7 @@ export async function getDataFork(file: RandomAccess): Promise<RandomAccess> {
         macbinChunk[86];
     const fileCrc = macbinChunk[124] << 8 | macbinChunk[125];
     const crc = macbinCrc(macbinChunk, 0, 124);
-
-    if (0 !== version || nameLength > 63 || 0 !== zeroFill ||
+    if (0 !== version || nameLength > 63 || nameLength < 1 || 0 !== zeroFill ||
         minMacbinVersion > 123 || crc != fileCrc) {
         // Not a macbin file, just return entire file
         return file;
