@@ -102,7 +102,7 @@ export class MapGeometry {
         }
     }
 
-    neighboringPolygons(lineIndex: number) {
+    neighboringPolygons(lineIndex: number): number[] {
         const polygon = this.polygons[lineIndex];
         if (!polygon) {
             throw new Error(`invalid polygon ${lineIndex}`);
@@ -352,5 +352,21 @@ export class MapGeometry {
         const newObjects = [...this.objects];
         newObjects[objectIdx] = newObject;
         return new MapGeometry({ ...this, objects: newObjects });
+    }
+
+    removePrecalculatedInfo(): MapGeometry {
+        return new MapGeometry({
+            ...this,
+            polygons: this.polygons.map(p => new Polygon({
+                ...p,
+                firstObject: -1,
+                firstNeighbor: -1,
+                nNeighbors: -1,
+                firstExclusionZone: -1,
+                nPointExclusionZones: -1,
+                nLineExclusionZones: -1,
+                firstSoundSource: -1,
+            })),
+        });
     }
 }

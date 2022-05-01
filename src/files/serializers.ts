@@ -6,7 +6,7 @@ import { Side } from './map/side';
 import { Polygon } from './map/polygon';
 import { Light } from './map/light';
 import { MapObject } from './map/object';
-import { Line } from './map/line';
+import { Line, LineFlag } from './map/line';
 import { ItemPlacement } from './map/item-placement';
 import { Endpoint } from './map/endpoint';
 import { Media } from './map/media';
@@ -14,6 +14,7 @@ import { AmbientSound } from './map/ambient-sound';
 import { RandomSound } from './map/random-sound';
 import { Note } from './map/note';
 import { Platform } from './map/platform';
+import { DynamicPlatform } from './map/dynamicPlatform';
 import { MapInfo } from './map/map-info';
 import { Vec2 } from '../vector2';
 import { WadHeader } from './wad';
@@ -58,6 +59,7 @@ enum ChunkType {
     'ambi',
     'bonk',
     'PLAT',
+    'plat',
     'NOTE'
 }
 
@@ -77,6 +79,7 @@ interface Chunks {
     ambientSounds: AmbientSound[],
     randomSounds: RandomSound[],
     platforms: Platform[],
+    dynamicPlatforms: DynamicPlatform[],
     notes: Note[],
 }
 
@@ -142,6 +145,9 @@ function readChunk(chunkType: ChunkTypeName, data: ArrayBuffer, chunks: Partial<
             chunks.randomSounds = readArray(RandomSound, chunkReader, data.byteLength);
             break;
         case 'PLAT':
+            chunks.dynamicPlatforms = readArray(DynamicPlatform, chunkReader, data.byteLength);
+            break;
+        case 'plat':
             chunks.platforms = readArray(Platform, chunkReader, data.byteLength);
             break;
         case 'NOTE':
@@ -177,8 +183,6 @@ export async function readEntryChunks(
             size: r.uint32(),
         };
 
-        console.log({ chunkHeader });
-
         const dataStart = chunkStart + headerSize;
         const chunkData = data.slice(dataStart, dataStart + chunkHeader.size);
         const chunkType = chunkHeader.name;
@@ -200,7 +204,54 @@ export async function readEntryChunks(
     return chunks;
 }
 
-interface Map extends Chunks {
+export interface RawChunk {
+    name: string
+    nextOffset: number
+    size: number
+    data: ArrayBuffer
+}
+
+export async function readRawChunks(
+    file: RandomAccess,
+    wadHeader: WadHeader,
+    index: number
+): Promise<RawChunk[]> {
+    const entry = wadHeader.directory.find(entry => entry.index === index);
+    if (!entry) {
+        throw new Error(`entry ${index} not found`);
+    }
+
+    const data = await readRange(
+        file, entry.offset, entry.offset + entry.length);
+
+    const chunks: RawChunk[] = [];
+    let chunkStart = 0;
+    while (chunkStart < data.byteLength) {
+        const headerSize = 0 === wadHeader.wadVersion ? 12 : wadHeader.chunkSize;
+        const r = new Reader(
+            data.slice(chunkStart, chunkStart + headerSize));
+        const chunkHeader = {
+            name: r.fixString(4),
+            nextOffset: r.uint32(),
+            size: r.uint32(),
+        };
+
+        const dataStart = chunkStart + headerSize;
+        const chunkData = data.slice(dataStart, dataStart + chunkHeader.size);
+
+        chunks.push({ ...chunkHeader, data: chunkData });
+
+        if (chunkHeader.nextOffset <= chunkStart) {
+            break;
+        }
+
+        chunkStart = chunkHeader.nextOffset;
+    }
+
+    return chunks;
+}
+
+interface Map extends Omit<Chunks, 'dynamicPlatforms' | 'endpoints'> {
     header: WadHeader,
     index: number,
 }
@@ -240,6 +291,61 @@ export async function readMap(
         throw Error('No POLY chunk');
     }
 
+    let platforms: Platform[];
+    if (chunks.dynamicPlatforms) {
+        platforms = chunks.dynamicPlatforms.map(dynamicPlatform => {
+            return dynamicPlatform.toStatic();
+        });
+        platforms.forEach(platform => {
+            const { polygonIndex } = platform;
+            if (polygonIndex >= 0 && polygonIndex < polygons.length) {
+                const polygon = polygons[polygonIndex];
+                if (platform.comesFromFloor()) {
+                    polygon.floorHeight = platform.minimumHeight;
+                }
+                if (platform.comesFromCeiling()) {
+                    polygon.ceilingHeight = platform.maximumHeight;
+                }
+            } else {
+                console.warn(`Can't fixup platform polygon: ${polygonIndex} out of range`);
+            }
+        });
+    } else {
+        platforms = chunks.platforms || [];
+    }
+
+    for (const line of lines) {
+        const polygonIndexes = [line.backPoly, line.frontPoly].filter(idx => idx !== -1);
+        const linePolygons = polygonIndexes.map(idx => polygons[idx]);
+
+        if (linePolygons.length === 0) {
+            line.lowestCeiling = line.highestFloor = 0;
+        } else {
+            line.lowestCeiling = linePolygons.reduce(
+                (ceiling, polygon) => Math.min(ceiling, polygon.ceilingHeight),
+                0x7fff);
+            line.highestFloor = linePolygons.reduce(
+                (floor, polygon) => Math.max(floor, polygon.floorHeight),
+                -0x8000);
+        }
+
+        if (line.hasFlag(LineFlag.variableElevation)) {
+            line.setFlag(LineFlag.solid, line.highestFloor >= line.lowestCeiling);
+        }
+    }
+
+    for (const side of sides) {
+        side.collisionBottomLeft = [0, 0];
+        side.collisionBottomRight = [0, 0];
+        side.collisionTopLeft = [0, 0];
+        side.collisionTopRight = [0, 0];
+    }
+
+    for (const polygon of polygons) {
+        polygon.center = [0, 0];
+        polygon.area = 0;
+    }
+
     return {
         header: wadHeader,
         index,
@@ -247,7 +353,6 @@ export async function readMap(
         points,
         lines,
         polygons,
-        endpoints: chunks.endpoints || [],
         sides: chunks.sides || [],
         lights: chunks.lights || [],
         media: chunks.media || [],
@@ -255,7 +360,7 @@ export async function readMap(
         itemPlacement: chunks.itemPlacement || [],
         ambientSounds: chunks.ambientSounds || [],
         randomSounds: chunks.randomSounds || [],
-        platforms: chunks.platforms || [],
+        platforms,
         notes: chunks.notes || []
     };
 }
@@ -309,7 +414,7 @@ export function serializeMap(map: MapGeometry): ArrayBuffer {
     serializeChunk(writer, 'plac', itemPlacementChunk);
     serializeChunk(writer, 'ambi', ambientSoundsChunk);
     serializeChunk(writer, 'bonk', randomSoundsChunk);
-    serializeChunk(writer, 'PLAT', platformsChunk);
+    serializeChunk(writer, 'plat', platformsChunk);
     serializeChunk(writer, 'NOTE', notesChunk, true);
 
     return writer.getBuffer();

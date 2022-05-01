@@ -4,7 +4,7 @@ var HtmlWebpackPlugin = require('html-webpack-plugin');
 module.exports = {
     entry: {
         main: './src/index.ts',
-        editor: './src/editor/index.tsx'
+        editor: './src/editor/index.tsx',
     },
     output: {
         path: path.resolve(__dirname, 'dist'),

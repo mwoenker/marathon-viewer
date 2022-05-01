@@ -1,16 +1,17 @@
 {
     "compilerOptions": {
-        "outDir": "./dist/",
         "noImplicitAny": true,
         "module": "es6",
         "target": "es6",
-        "jsx": "react-jsx",
-        "jsxImportSource": "preact",
         "allowJs": true,
         "moduleResolution": "node",
-        "strictNullChecks": true,
-        "strictPropertyInitialization": true
+        "strict": true,
+        "downlevelIteration": true,
+        "typeRoots": [
+            "src/customTypes",
+            "node_modules/@types"
+        ]
     },
-    "include": ["src/**/*"],
-    "exclude": ["node_modules", "**/*.spec.ts"]
+    "include": ["src/**/*", "tools/**/*"],
+    "exclude": ["node_modules", "**/*.spec.ts", "webpack.*.js"]
 }

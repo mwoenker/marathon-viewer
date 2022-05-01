@@ -62,11 +62,11 @@ export function Sidebar({
 
     const save = async () => {
         if (map) {
-            const data = serializeWad([map], 'map.sceA');
+            const data = serializeWad([map.removePrecalculatedInfo()], 'map.sceA');
             const url = URL.createObjectURL(new Blob([data]));
             const link = document.createElement('a');
             link.href = url;
-            link.download = 'map.sceA';
+            link.download = `${map.info.name}.sceA`;
             link.target = '_blank';
             document.body.appendChild(link);
             link.click();
@@ -79,7 +79,9 @@ export function Sidebar({
             <div>
                 <input type="file" onChange={fileSelected} />
             </div>
-            <button onClick={save}>Save!</button>
+            <div>
+                <button onClick={save}>Save!</button>
+            </div>
             <MapList
                 maps={mapSummaries}
                 selectedMap={map}

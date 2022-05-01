@@ -2,7 +2,7 @@ import { RandomAccess, Reader, readRange, getDataFork } from './binary-read';
 import { MapGeometry } from './map';
 import { Collections } from './shapes';
 import { readMap, serializeMap } from './serializers';
-import { ArrayBufferWriter, Writer } from './binary-write';
+import { ArrayBufferWriter } from './binary-write';
 
 export interface WadDirectoryEntry {
     offset: number,
@@ -134,9 +134,11 @@ async function readMapSummaries(file: RandomAccess): Promise<MapSummary[]> {
 export function serializeWad(entries: MapGeometry[], filename: string): ArrayBuffer {
     const writer = new ArrayBufferWriter();
 
-    const version = 4;
+    //const version = 4;
+    const version = 2;
     const dataVersion = 1;
     const appDataBytes = 74;
+    // const appDataBytes = 0;
     const chunkSize = 16;
     const entrySize = 10;
     const parentCrc = 0;
