@@ -1,63 +1,9 @@
 import type { MapGeometry } from '../../../files/map';
 import { Selection } from '../../selection';
-import { MapObject, ObjectFlags, ObjectType } from '../../../files/map/object';
-import { ObjectTypeDropdown } from './ObjectTypeDropdown';
-import { ObjectFlagCheckbox, objectFlagDescriptions } from './ObjectFlagCheckbox';
-
-interface ObjectOptionsProps {
-    index: number
-    map: MapGeometry,
-    onMapChange(map: MapGeometry): void
-}
-
-function ObjectOptions({ map, onMapChange, index }: ObjectOptionsProps): JSX.Element {
-    const object = map.objects[index];
-    if (!object) {
-        return <div>Object not found</div>;
-    } else {
-        const changeObjectType = (newType: ObjectType) => {
-            if (newType !== object.type) {
-                onMapChange(map.updateObject(index, new MapObject({
-                    ...object,
-                    type: newType,
-                    flags: 0
-                })));
-            }
-        };
-
-        const changeObjectFlags = (flag: ObjectFlags, value: boolean) => {
-            onMapChange(map.updateObject(index, new MapObject({
-                ...object,
-                flags: object.flags & (~flag) | (value ? flag : 0),
-            })));
-        };
-
-        const flags = objectFlagDescriptions(object.type);
-
-        return (
-            <table>
-                <tr>
-                    <th>Type</th>
-                    <td>
-                        <ObjectTypeDropdown value={object.type} onChange={changeObjectType} />
-                    </td>
-                </tr>
-                {flags.map(({ flag, name }) => (
-                    <tr>
-                        <th>{name}</th>
-                        <td>
-                            <ObjectFlagCheckbox
-                                flag={flag}
-                                value={(object.flags & flag) !== 0}
-                                onChange={changeObjectFlags}
-                            />
-                        </td>
-                    </tr>
-                ))}
-            </table>
-        );
-    }
-}
+import { LineOptions } from './LineOptions';
+import { ObjectOptions } from './ObjectOptions';
+import { PointOptions } from './PointOptions';
+import { PolygonOptions } from './PolygonOptions';
 
 interface SelectionOptionsProps {
     map: MapGeometry
@@ -70,6 +16,12 @@ export function SelectionOptions({ map, onMapChange, selection }: SelectionOptio
         return (
             <ObjectOptions map={map} onMapChange={onMapChange} index={selection.index} />
         );
+    } else if (selection.objType === 'polygon') {
+        return <PolygonOptions map={map} onMapChange={onMapChange} index={selection.index} />;
+    } else if (selection.objType === 'line') {
+        return <LineOptions map={map} onMapChange={onMapChange} index={selection.index} />;
+    } else if (selection.objType === 'point') {
+        return <PointOptions map={map} onMapChange={onMapChange} index={selection.index} />;
     } else {
         return null;
     }
