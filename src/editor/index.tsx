@@ -25,6 +25,9 @@ function Editor() {
     const uploadMap = async (file: File) => {
         const summaries = await readMapSummaries(new HtmlInputFile(file));
         setMapFile({ file, summaries });
+        if (summaries.length > 0) {
+            updateState({ type: 'setMap', map: await readMapFromSummary(summaries[0]) });
+        }
     };
 
     function setMap(map: MapGeometry) {
