@@ -4,6 +4,10 @@ import { MapGeometry } from '../files/map';
 
 export type SelectionObjectType = 'point' | 'line' | 'polygon' | 'object';
 
+export type EditMode =
+    'geometry' |
+    'visual';
+
 export interface Selection {
     objType: SelectionObjectType | null,
     index: number,
@@ -27,7 +31,8 @@ const blankSelection: Selection = {
 const initialState: EditorState = {
     selection: blankSelection,
     pixelSize: 64,
-    map: undefined
+    map: undefined,
+    editMode: 'geometry'
 };
 
 export interface MouseDownAction {
@@ -59,9 +64,10 @@ export interface SelectObjectAction {
 }
 
 export interface EditorState {
-    selection: Selection,
-    map: MapGeometry | undefined,
+    selection: Selection
+    map: MapGeometry | undefined
     pixelSize: number
+    editMode: EditMode
 }
 
 export type MouseAction =
@@ -70,8 +76,12 @@ export type MouseAction =
 export interface ZoomInAction { type: 'zoomIn' }
 export interface ZoomOutAction { type: 'zoomOut' }
 export interface SetMapAction { type: 'setMap', map: MapGeometry }
+export interface SetEditMode {
+    type: 'setEditMode',
+    editMode: EditMode
+}
 
-export type Action = MouseAction | ZoomInAction | ZoomOutAction | SetMapAction;
+export type Action = MouseAction | ZoomInAction | ZoomOutAction | SetMapAction | SetEditMode;
 
 const zoomIncrement = 1.5;
 
@@ -147,6 +157,8 @@ function reduce(state: EditorState, action: Action): EditorState {
             };
         case 'setMap':
             return { ...state, map: action.map };
+        case 'setEditMode':
+            return { ...state, editMode: action.editMode };
         default:
             throw new Error(`invalid action`);
     }

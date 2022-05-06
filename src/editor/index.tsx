@@ -38,14 +38,6 @@ function Editor() {
         setMap(await readMapFromSummary(summary));
     }
 
-    function zoomIn() {
-        updateState({ type: 'zoomIn' });
-    }
-
-    function zoomOut() {
-        updateState({ type: 'zoomOut' });
-    }
-
     return (
         <div className="editor">
             <Sidebar
@@ -57,13 +49,8 @@ function Editor() {
                 selection={state.selection}
             />
             <RightPanel
-                pixelSize={state.pixelSize}
-                map={state.map}
-                onMapChange={setMap}
-                onZoomIn={zoomIn}
-                onZoomOut={zoomOut}
-                selection={state.selection}
-                updateSelection={updateState}
+                state={state}
+                updateState={updateState}
             />
         </div>
     );

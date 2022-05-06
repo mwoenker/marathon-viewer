@@ -3,7 +3,7 @@ import { MapGeometry } from "../../files/map";
 import { v2sub, Vec2 } from "../../vector2";
 import { CanvasMap } from "../draw/canvas";
 import { Viewport } from '../draw/viewport';
-import { MouseAction, Selection } from '../state';
+import { Action, Selection } from '../state';
 
 import type { JSXInternal } from 'preact/src/jsx';
 import { findClickedObject } from './click';
@@ -11,17 +11,15 @@ import { findClickedObject } from './click';
 interface MapViewProps {
     pixelSize: number,
     map: MapGeometry | undefined,
-    onMapChange: (map: MapGeometry) => void,
     selection: Selection,
-    updateSelection: (action: MouseAction) => void
+    updateState: (action: Action) => void
 }
 
 export function MapView({
     pixelSize,
     map,
-    onMapChange,
     selection,
-    updateSelection
+    updateState
 }: MapViewProps): JSX.Element {
     const [viewportSize, setViewportSize] = useState([0, 0]);
     const [viewCenter, setViewCenter] = useState([0, 0] as Vec2);
@@ -45,7 +43,7 @@ export function MapView({
 
         const clickedObject = findClickedObject(map, clickPos, pixelSize);
         if (clickedObject) {
-            return updateSelection({
+            return updateState({
                 type: 'down',
                 objType: clickedObject.type,
                 index: clickedObject.index,
@@ -53,7 +51,7 @@ export function MapView({
                 coords: clickPos
             });
         } else {
-            updateSelection({ type: 'cancel' });
+            updateState({ type: 'cancel' });
         }
     }
 
@@ -61,7 +59,7 @@ export function MapView({
         const viewX = e.offsetX;
         const viewY = e.offsetY;
 
-        updateSelection({
+        updateState({
             type: 'move',
             coords: viewport.toWorld([viewX, viewY]),
             pixelSize: pixelSize,
@@ -69,11 +67,15 @@ export function MapView({
     }
 
     function mouseUp() {
-        updateSelection({ type: 'up' });
+        updateState({ type: 'up' });
     }
 
     function mouseLeave() {
-        updateSelection({ type: 'up' });
+        updateState({ type: 'up' });
+    }
+
+    function changeMap(map: MapGeometry) {
+        updateState({ type: 'setMap', map });
     }
 
     function keyDown(e: JSXInternal.TargetedKeyboardEvent<HTMLElement>) {
@@ -86,29 +88,29 @@ export function MapView({
                 if ('point' === selection.objType) {
                     const connectedPoints = map.getConnectedPoints(selection.index);
                     const newMap = map.deletePoint(selection.index);
-                    onMapChange(newMap);
+                    changeMap(newMap);
                     if (connectedPoints.length > 0) {
                         const oldIndex = connectedPoints[0];
                         const newIndex = newMap.points.findIndex(pt => pt === map.points[oldIndex]);
                         if (newIndex !== -1) {
-                            updateSelection({
+                            updateState({
                                 type: 'selectObject',
                                 objType: 'point',
                                 index: newIndex
                             });
                         }
                     } else {
-                        updateSelection({ type: 'cancel' });
+                        updateState({ type: 'cancel' });
                     }
                 } else if ('polygon' === selection.objType) {
-                    onMapChange(map.deletePolygon(selection.index));
-                    updateSelection({ type: 'cancel' });
+                    changeMap(map.deletePolygon(selection.index));
+                    updateState({ type: 'cancel' });
                 } else if ('line' === selection.objType) {
-                    onMapChange(map.deleteLine(selection.index));
-                    updateSelection({ type: 'cancel' });
+                    changeMap(map.deleteLine(selection.index));
+                    updateState({ type: 'cancel' });
                 } else if ('object' === selection.objType) {
-                    onMapChange(map.deleteObject(selection.index));
-                    updateSelection({ type: 'cancel' });
+                    changeMap(map.deleteObject(selection.index));
+                    updateState({ type: 'cancel' });
                 }
                 break;
         }
@@ -154,7 +156,7 @@ export function MapView({
         () => {
             if (selection.isDragging && map) {
                 if ('point' === selection.objType && selection.currentCoords) {
-                    onMapChange(map.movePoint(
+                    changeMap(map.movePoint(
                         selection.index,
                         [
                             Math.floor(selection.currentCoords[0]),
@@ -162,13 +164,13 @@ export function MapView({
                         ]
                     ));
                 } else if ('polygon' === selection.objType && selection.currentCoords) {
-                    onMapChange(map.movePolygon(
+                    changeMap(map.movePolygon(
                         selection.index,
                         v2sub(
                             selection.currentCoords,
                             selection.relativePos)));
                 } else if ('object' === selection.objType && selection.currentCoords) {
-                    onMapChange(map.moveObject(
+                    changeMap(map.moveObject(
                         selection.index,
                         v2sub(
                             selection.currentCoords,

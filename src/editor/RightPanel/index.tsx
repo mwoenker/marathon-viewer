@@ -1,7 +1,7 @@
 import { JSXInternal } from 'preact/src/jsx';
 import { useState } from 'react';
 import { MapGeometry } from '../../files/map';
-import { MouseAction, Selection } from '../state';
+import { Action, EditMode, EditorState } from '../state';
 import { VisualMode } from '../VisualMode';
 import { MapView } from './MapView';
 
@@ -21,18 +21,9 @@ function MapSummary({ map }: { map: MapGeometry }) {
 }
 
 interface RightPanelProps {
-    pixelSize: number
-    map: MapGeometry | undefined
-    onMapChange(map: MapGeometry): void
-    onZoomIn(): void
-    onZoomOut(): void,
-    selection: Selection,
-    updateSelection: (action: MouseAction) => void
+    state: EditorState
+    updateState: (action: Action) => void
 }
-
-export type EditMode =
-    'geometry' |
-    'visual';
 
 interface ModeSelectorProps {
     value: EditMode
@@ -63,33 +54,26 @@ function ModeSelector({ value, onChange }: ModeSelectorProps) {
 }
 
 export function RightPanel({
-    pixelSize,
-    map,
-    onMapChange,
-    onZoomIn,
-    onZoomOut,
-    selection,
-    updateSelection
+    state,
+    updateState
 }: RightPanelProps): JSX.Element {
-    const [mode, setMode] = useState<EditMode>('geometry');
-
     function keyDown(e: KeyboardEvent) {
         switch (e.key) {
             case '+':
             case '=':
                 e.preventDefault();
-                onZoomIn();
+                updateState({ type: 'zoomIn' });
                 break;
             case '_':
             case '-':
                 e.preventDefault();
-                onZoomOut();
+                updateState({ type: 'zoomOut' });
                 break;
         }
     }
 
-    function changeMode(mode: EditMode) {
-        setMode(mode);
+    function changeMode(editMode: EditMode) {
+        updateState({ type: 'setEditMode', editMode });
     }
 
     return (
@@ -98,30 +82,29 @@ export function RightPanel({
             onKeyDown={keyDown} >
             <div className="topBar">
                 <div className="zoomIcons">
-                    <button onClick={onZoomOut}>
+                    <button onClick={() => updateState({ type: 'zoomOut' })}>
                         -
                     </button>
-                    <button onClick={onZoomIn}>
+                    <button onClick={() => updateState({ type: 'zoomIn' })}>
                         +
                     </button>
-                    <ModeSelector value={mode} onChange={changeMode} />
+                    <ModeSelector value={state.editMode} onChange={changeMode} />
                 </div>
-                {map && (
-                    <MapSummary map={map} />
+                {state.map && (
+                    <MapSummary map={state.map} />
                 )}
             </div>
-            {mode === 'geometry' && (
+            {state.editMode === 'geometry' && (
                 <MapView
-                    map={map}
-                    onMapChange={onMapChange}
-                    pixelSize={pixelSize}
-                    selection={selection}
-                    updateSelection={updateSelection}
+                    map={state.map}
+                    pixelSize={state.pixelSize}
+                    selection={state.selection}
+                    updateState={updateState}
                 />
             )}
 
-            {mode === 'visual' && map && (
-                <VisualMode map={map} />
+            {state.editMode === 'visual' && state.map && (
+                <VisualMode map={state.map} />
             )}
         </div>
     );
