@@ -1,6 +1,6 @@
 import type { JSXInternal } from 'preact/src/jsx';
-import { ObjectFlags, ObjectType } from '../../../files/map/object';
-import { impossibleValue } from '../../../utils';
+import { ObjectFlags, ObjectType } from '../../../../files/map/object';
+import { impossibleValue } from '../../../../utils';
 
 interface ObjectFlagDescription {
     name: string,

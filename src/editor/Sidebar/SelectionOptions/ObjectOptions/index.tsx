@@ -1,6 +1,6 @@
 import { MapObject, ObjectFlags, ObjectType } from '../../../../files/map/object';
-import { ObjectTypeDropdown } from '../ObjectTypeDropdown';
-import { ObjectFlagCheckbox, objectFlagDescriptions } from '../ObjectFlagCheckbox';
+import { ObjectTypeDropdown } from './ObjectTypeDropdown';
+import { ObjectFlagCheckbox, objectFlagDescriptions } from './ObjectFlagCheckbox';
 import { OptionsProps } from '../OptionsProps';
 
 export function ObjectOptions({ map, onMapChange, index }: OptionsProps): JSX.Element {

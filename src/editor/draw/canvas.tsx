@@ -1,6 +1,6 @@
 import { useRef, useLayoutEffect } from 'react';
 import { MapGeometry } from '../../files/map';
-import { Selection } from '../selection';
+import { Selection } from '../state';
 import { Viewport } from './viewport';
 import { MapDraw } from './map-draw';
 

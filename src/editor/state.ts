@@ -1,5 +1,6 @@
 import { Dispatch, useReducer } from 'react';
 import { Vec2 } from '../vector2';
+import { MapGeometry } from '../files/map';
 
 export type SelectionObjectType = 'point' | 'line' | 'polygon' | 'object';
 
@@ -21,6 +22,12 @@ const blankSelection: Selection = {
     isDragging: false,
     startCoords: [0, 0],
     currentCoords: [0, 0],
+};
+
+const initialState: EditorState = {
+    selection: blankSelection,
+    pixelSize: 64,
+    map: undefined
 };
 
 export interface MouseDownAction {
@@ -51,8 +58,22 @@ export interface SelectObjectAction {
     index: number
 }
 
+export interface EditorState {
+    selection: Selection,
+    map: MapGeometry | undefined,
+    pixelSize: number
+}
+
 export type MouseAction =
     MouseDownAction | MouseUpAction | MouseMoveAction | MouseCancelAction | SelectObjectAction
+
+export interface ZoomInAction { type: 'zoomIn' }
+export interface ZoomOutAction { type: 'zoomOut' }
+export interface SetMapAction { type: 'setMap', map: MapGeometry }
+
+export type Action = MouseAction | ZoomInAction | ZoomOutAction | SetMapAction;
+
+const zoomIncrement = 1.5;
 
 function dragDist(state: Selection) {
     if (!state.startCoords || !state.currentCoords) {
@@ -64,10 +85,18 @@ function dragDist(state: Selection) {
     }
 }
 
-function reduceSelection(state: Selection, action: MouseAction): Selection {
+function setSelection(state: EditorState, selection: Selection) {
+    if (selection === state.selection) {
+        return state;
+    } else {
+        return { ...state, selection };
+    }
+}
+
+function reduce(state: EditorState, action: Action): EditorState {
     switch (action.type) {
         case 'down':
-            return {
+            return setSelection(state, {
                 ...blankSelection,
                 objType: action.objType,
                 index: action.index,
@@ -75,17 +104,17 @@ function reduceSelection(state: Selection, action: MouseAction): Selection {
                 isMouseDown: true,
                 startCoords: action.coords,
                 currentCoords: action.coords,
-            };
+            });
         case 'up':
             // Not dragging any more
-            return {
-                ...state,
+            return setSelection(state, {
+                ...state.selection,
                 isMouseDown: false,
                 isDragging: false,
                 currentCoords: null,
-            };
+            });
         case 'selectObject':
-            return {
+            return setSelection(state, {
                 objType: action.objType,
                 index: action.index,
                 relativePos: [0, 0],
@@ -93,26 +122,38 @@ function reduceSelection(state: Selection, action: MouseAction): Selection {
                 isDragging: false,
                 currentCoords: null,
                 startCoords: [0, 0],
-            };
+            });
         case 'move': {
-            if (!state.isMouseDown) {
+            if (!state.selection.isMouseDown) {
                 return state;
             }
-            const newState = { ...state, currentCoords: action.coords };
-            if (dragDist(newState) >= 8 * action.pixelSize) {
-                newState.isDragging = true;
+            const newSelection = { ...state.selection, currentCoords: action.coords };
+            if (dragDist(newSelection) >= 8 * action.pixelSize) {
+                newSelection.isDragging = true;
             }
-            return newState;
+            return setSelection(state, newSelection);
         }
         case 'cancel':
-            return blankSelection;
+            return setSelection(state, blankSelection);
+        case 'zoomIn':
+            return {
+                ...state,
+                pixelSize: state.pixelSize / zoomIncrement
+            };
+        case 'zoomOut':
+            return {
+                ...state,
+                pixelSize: state.pixelSize * zoomIncrement
+            };
+        case 'setMap':
+            return { ...state, map: action.map };
         default:
-            throw new Error(`invalid selection action`);
+            throw new Error(`invalid action`);
     }
 }
 
-type SelectionState = [Selection, Dispatch<MouseAction>];
+type EditorStateResult = [EditorState, Dispatch<Action>];
 
-export function useSelectionState(): SelectionState {
-    return useReducer(reduceSelection, blankSelection);
+export function useEditorState(): EditorStateResult {
+    return useReducer(reduce, initialState);
 }

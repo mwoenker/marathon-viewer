@@ -1,5 +1,5 @@
 import type { JSXInternal } from 'preact/src/jsx';
-import { ObjectType } from '../../../files/map/object';
+import { ObjectType } from '../../../../files/map/object';
 
 interface ObjectTypeDropdownProps {
     value: ObjectType

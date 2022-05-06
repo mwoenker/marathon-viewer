@@ -1,13 +1,15 @@
 import { mapdiff } from './mapdiff';
 import { rawdiff } from './rawdiff';
 import { exportMap } from './exportMap';
+import { analyzeSourcemap } from './analyzeSourcemap';
 
 type Command = (args: string[]) => Promise<void>
 
 const commands: Record<string, Command> = {
     mapdiff,
     rawdiff,
-    exportMap
+    exportMap,
+    analyzeSourcemap
 };
 
 function usage(): never {

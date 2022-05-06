@@ -1,9 +1,8 @@
 import type { JSXInternal } from 'preact/src/jsx';
-import { MapSummary, readMapFromSummary, readMapSummaries, serializeWad } from '../../files/wad';
+import { MapSummary, serializeWad } from '../../files/wad';
 import type { MapGeometry } from '../../files/map';
-import { Selection } from '../selection';
+import { Selection } from '../state';
 import { SelectionOptions } from './SelectionOptions';
-import { ArrayBufferFile } from '../../files/binary-read';
 
 interface MapListProps {
     maps: MapSummary[],

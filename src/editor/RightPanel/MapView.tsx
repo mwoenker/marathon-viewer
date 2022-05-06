@@ -1,12 +1,12 @@
 import { useState, useRef, useEffect, useLayoutEffect } from 'react';
 import { MapGeometry } from "../../files/map";
-import { closestLine, closestObject, closestPoint, polygonsAt } from '../../geometry';
-import { v2dist, v2sub, v3tov2, Vec2 } from "../../vector2";
+import { v2sub, Vec2 } from "../../vector2";
 import { CanvasMap } from "../draw/canvas";
 import { Viewport } from '../draw/viewport';
-import { MouseAction, Selection } from '../selection';
+import { MouseAction, Selection } from '../state';
 
 import type { JSXInternal } from 'preact/src/jsx';
+import { findClickedObject } from './click';
 
 interface MapViewProps {
     pixelSize: number,
@@ -43,65 +43,18 @@ export function MapView({
             e.offsetY
         ]);
 
-        const distThreshold = pixelSize * 8;
-
-        // Did we click on a point?
-        const pointIndex = closestPoint(clickPos, map);
-        const position = map.points[pointIndex];
-        if (v2dist(position, clickPos) < distThreshold) {
+        const clickedObject = findClickedObject(map, clickPos, pixelSize);
+        if (clickedObject) {
             return updateSelection({
                 type: 'down',
-                objType: 'point',
-                index: pointIndex,
-                relativePos: v2sub(clickPos, position),
-                coords: clickPos,
+                objType: clickedObject.type,
+                index: clickedObject.index,
+                relativePos: v2sub(clickPos, clickedObject.position),
+                coords: clickPos
             });
+        } else {
+            updateSelection({ type: 'cancel' });
         }
-
-        // Did we click on an object?
-        const objectIndex = closestObject(clickPos, map);
-        const objectPosition = v3tov2(map.objects[objectIndex].position);
-        if (v2dist(objectPosition, clickPos) < distThreshold) {
-            return updateSelection({
-                type: 'down',
-                objType: 'object',
-                index: objectIndex,
-                relativePos: v2sub(clickPos, objectPosition),
-                coords: clickPos,
-            });
-        }
-
-
-        // Did we click on a line?
-        const closest = closestLine(clickPos, map);
-        if (closest && closest.distance < distThreshold) {
-            const linePos = map.points[map.lines[closest.index].begin];
-            return updateSelection({
-                type: 'down',
-                objType: 'line',
-                index: closest.index,
-                relativePos: v2sub(clickPos, linePos),
-                coords: clickPos,
-            });
-        }
-
-        // Did we click on a polygon?
-        const polygons = polygonsAt(clickPos, map);
-        if (polygons.length > 0) {
-            const idx = polygons[polygons.length - 1];
-            const poly = map.polygons[idx];
-            // polygon "position" is position of first endpoint
-            const polyPos = map.points[poly.endpoints[0]];
-            return updateSelection({
-                type: 'down',
-                objType: 'polygon',
-                index: idx,
-                relativePos: v2sub(clickPos, polyPos),
-                coords: clickPos,
-            });
-        }
-
-        updateSelection({ type: 'cancel' });
     }
 
     function mouseMove(e: JSXInternal.TargetedMouseEvent<HTMLElement>) {

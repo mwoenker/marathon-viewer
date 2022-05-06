@@ -1,7 +1,7 @@
 import { JSXInternal } from 'preact/src/jsx';
 import { useState } from 'react';
 import { MapGeometry } from '../../files/map';
-import { MouseAction, Selection } from '../selection';
+import { MouseAction, Selection } from '../state';
 import { VisualMode } from '../VisualMode';
 import { MapView } from './MapView';
 

@@ -3,10 +3,9 @@ import { Viewport } from './viewport';
 import { MapGeometry } from '../../files/map';
 import colors from '../colors';
 import { getNonConvexPattern, objectColor } from './util';
-import { Selection } from '../selection';
+import { Selection } from '../state';
 import { isConvex } from '../../geometry';
-import { MapObject, ObjectType } from '../../files/map/object';
-import { Polygon } from '../../files/map/polygon';
+import { ObjectType } from '../../files/map/object';
 import { numFixedAngles } from '../../constants';
 
 const pointWidth = 3;

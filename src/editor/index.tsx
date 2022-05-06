@@ -10,7 +10,7 @@ import { HtmlInputFile } from '../files/binary-read';
 import { MapGeometry } from '../files/map';
 import { Sidebar } from './Sidebar';
 import { RightPanel } from './RightPanel';
-import { useSelectionState } from './selection';
+import { useEditorState } from './state';
 
 interface MapFileSetting {
     file: File | null,
@@ -19,48 +19,48 @@ interface MapFileSetting {
 
 function Editor() {
     const [mapFile, setMapFile] = useState<MapFileSetting>({ file: null, summaries: [] });
-    const [map, setMap] = useState<MapGeometry>();
     // size of screen pixel in map units
-    const [pixelSize, setPixelSize] = useState(64);
-    const [selection, updateSelection] = useSelectionState();
+    const [state, updateState] = useEditorState();
 
     const uploadMap = async (file: File) => {
         const summaries = await readMapSummaries(new HtmlInputFile(file));
         setMapFile({ file, summaries });
     };
 
+    function setMap(map: MapGeometry) {
+        updateState({ type: 'setMap', map });
+    }
+
     async function setSelectedMap(summary: MapSummary) {
         setMap(await readMapFromSummary(summary));
     }
 
-    const zoomIncrement = 1.5;
-
     function zoomIn() {
-        setPixelSize(pixelSize / zoomIncrement);
+        updateState({ type: 'zoomIn' });
     }
 
     function zoomOut() {
-        setPixelSize(pixelSize * zoomIncrement);
+        updateState({ type: 'zoomOut' });
     }
 
     return (
         <div className="editor">
             <Sidebar
                 onMapUpload={uploadMap}
-                map={map}
+                map={state.map}
                 onMapChange={setMap}
                 mapSummaries={mapFile.summaries}
                 onMapSelected={setSelectedMap}
-                selection={selection}
+                selection={state.selection}
             />
             <RightPanel
-                pixelSize={pixelSize}
-                map={map}
+                pixelSize={state.pixelSize}
+                map={state.map}
                 onMapChange={setMap}
                 onZoomIn={zoomIn}
                 onZoomOut={zoomOut}
-                selection={selection}
-                updateSelection={updateSelection}
+                selection={state.selection}
+                updateSelection={updateState}
             />
         </div>
     );

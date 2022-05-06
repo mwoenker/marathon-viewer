@@ -1,5 +1,5 @@
 import type { MapGeometry } from '../../../files/map';
-import { Selection } from '../../selection';
+import { Selection } from '../../state';
 import { LineOptions } from './LineOptions';
 import { ObjectOptions } from './ObjectOptions';
 import { PointOptions } from './PointOptions';
