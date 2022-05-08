@@ -1,6 +1,7 @@
 import { JSXInternal } from 'preact/src/jsx';
 import { useState } from 'react';
 import { MapGeometry } from '../../files/map';
+import { Shapes } from '../../shapes-loader';
 import { Action, EditMode, EditorState } from '../state';
 import { VisualMode } from '../VisualMode';
 import { MapView } from './MapView';
@@ -23,6 +24,7 @@ function MapSummary({ map }: { map: MapGeometry }) {
 interface RightPanelProps {
     state: EditorState
     updateState: (action: Action) => void
+    shapes: Shapes | null
 }
 
 interface ModeSelectorProps {
@@ -55,7 +57,8 @@ function ModeSelector({ value, onChange }: ModeSelectorProps) {
 
 export function RightPanel({
     state,
-    updateState
+    updateState,
+    shapes
 }: RightPanelProps): JSX.Element {
     function keyDown(e: KeyboardEvent) {
         switch (e.key) {
@@ -104,7 +107,7 @@ export function RightPanel({
             )}
 
             {state.editMode === 'visual' && state.map && (
-                <VisualMode map={state.map} />
+                <VisualMode map={state.map} shapes={shapes} />
             )}
         </div>
     );

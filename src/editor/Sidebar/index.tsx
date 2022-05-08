@@ -37,7 +37,8 @@ function MapList({ maps, selectedMap, onMapSelected }: MapListProps) {
 }
 
 interface SidebarProps {
-    onMapUpload: (file: File) => void
+    onMapFileSelected: (file: File) => void
+    onShapesFileSelected(file: File): void
     map: MapGeometry | undefined
     onMapChange(map: MapGeometry): void
     mapSummaries: MapSummary[]
@@ -46,7 +47,8 @@ interface SidebarProps {
 }
 
 export function Sidebar({
-    onMapUpload,
+    onMapFileSelected,
+    onShapesFileSelected,
     mapSummaries,
     map,
     onMapChange,
@@ -55,7 +57,13 @@ export function Sidebar({
 }: SidebarProps): JSX.Element {
     const fileSelected = async (e: JSXInternal.TargetedEvent<HTMLInputElement>) => {
         if (e && e.target && e.currentTarget.files && e.currentTarget.files[0]) {
-            onMapUpload(e.currentTarget.files[0]);
+            onMapFileSelected(e.currentTarget.files[0]);
+        }
+    };
+
+    const shapesFileSelected = async (e: JSXInternal.TargetedEvent<HTMLInputElement>) => {
+        if (e && e.target && e.currentTarget.files && e.currentTarget.files[0]) {
+            onShapesFileSelected(e.currentTarget.files[0]);
         }
     };
 
@@ -76,7 +84,12 @@ export function Sidebar({
     return (
         <div className="leftPanel">
             <div>
+                {'Map '}
                 <input type="file" onChange={fileSelected} />
+            </div>
+            <div>
+                {'Shapes '}
+                <input type="file" onChange={shapesFileSelected} />
             </div>
             <div>
                 <button onClick={save}>Save!</button>

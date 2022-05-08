@@ -128,6 +128,10 @@ export class Environment {
         this.world.updateMap(map);
     }
 
+    setShapes(shapes: Shapes): void {
+        this.shapes = shapes;
+    }
+
     setBackendType(backend: RendererType, newCanvas: HTMLCanvasElement): void {
         if (this.clicked) {
             this.canvas.removeEventListener('mousedown', this.clicked);

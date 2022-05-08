@@ -11,6 +11,7 @@ import { MapGeometry } from '../files/map';
 import { Sidebar } from './Sidebar';
 import { RightPanel } from './RightPanel';
 import { useEditorState } from './state';
+import { Shapes } from '../shapes-loader';
 
 interface MapFileSetting {
     file: File | null,
@@ -21,13 +22,18 @@ function Editor() {
     const [mapFile, setMapFile] = useState<MapFileSetting>({ file: null, summaries: [] });
     // size of screen pixel in map units
     const [state, updateState] = useEditorState();
+    const [shapes, setShapes] = useState<Shapes | null>(null);
 
-    const uploadMap = async (file: File) => {
+    const selectMap = async (file: File) => {
         const summaries = await readMapSummaries(new HtmlInputFile(file));
         setMapFile({ file, summaries });
         if (summaries.length > 0) {
             updateState({ type: 'setMap', map: await readMapFromSummary(summaries[0]) });
         }
+    };
+
+    const selectShapes = async (file: File) => {
+        setShapes(new Shapes(new HtmlInputFile(file)));
     };
 
     function setMap(map: MapGeometry) {
@@ -41,7 +47,8 @@ function Editor() {
     return (
         <div className="editor">
             <Sidebar
-                onMapUpload={uploadMap}
+                onMapFileSelected={selectMap}
+                onShapesFileSelected={selectShapes}
                 map={state.map}
                 onMapChange={setMap}
                 mapSummaries={mapFile.summaries}
@@ -51,6 +58,7 @@ function Editor() {
             <RightPanel
                 state={state}
                 updateState={updateState}
+                shapes={shapes}
             />
         </div>
     );
