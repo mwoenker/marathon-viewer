@@ -8,6 +8,17 @@ export type EditMode =
     'geometry' |
     'visual';
 
+export interface GeometryModeState {
+    type: 'geometry'
+}
+
+export interface VisualModeState {
+    type: 'visual'
+    selectedTexture?: number | undefined
+}
+
+export type ModeState = GeometryModeState | VisualModeState
+
 export interface Selection {
     objType: SelectionObjectType | null,
     index: number,
@@ -32,7 +43,9 @@ const initialState: EditorState = {
     selection: blankSelection,
     pixelSize: 64,
     map: undefined,
-    editMode: 'geometry'
+    mode: {
+        type: 'geometry'
+    }
 };
 
 export interface MouseDownAction {
@@ -67,7 +80,7 @@ export interface EditorState {
     selection: Selection
     map: MapGeometry | undefined
     pixelSize: number
-    editMode: EditMode
+    mode: ModeState
 }
 
 export type MouseAction =
@@ -81,9 +94,22 @@ export interface SetEditMode {
     editMode: EditMode
 }
 
-export type Action = MouseAction | ZoomInAction | ZoomOutAction | SetMapAction | SetEditMode;
+export interface SelectTextureAction {
+    type: 'selectTexture',
+    texture: number | undefined
+}
+
+export type Action =
+    MouseAction |
+    ZoomInAction |
+    ZoomOutAction |
+    SetMapAction |
+    SetEditMode |
+    SelectTextureAction;
 
 const zoomIncrement = 1.5;
+
+export type UpdateState = (action: Action) => void
 
 function dragDist(state: Selection) {
     if (!state.startCoords || !state.currentCoords) {
@@ -158,7 +184,24 @@ function reduce(state: EditorState, action: Action): EditorState {
         case 'setMap':
             return { ...state, map: action.map };
         case 'setEditMode':
-            return { ...state, editMode: action.editMode };
+            return {
+                ...state,
+                mode: {
+                    type: action.editMode
+                }
+            };
+        case 'selectTexture':
+            if (state.mode.type !== 'visual') {
+                return state;
+            } else {
+                return {
+                    ...state,
+                    mode: {
+                        ...state.mode,
+                        selectedTexture: action.texture
+                    }
+                };
+            }
         default:
             throw new Error(`invalid action`);
     }

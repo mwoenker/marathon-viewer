@@ -7,6 +7,7 @@ import { RendererType, RenderFrameData, RenderManager, RenderTargetData } from '
 import { keyMap } from './events';
 import { textureClickedSurface } from './texturing';
 import { worldUnitSize } from './constants';
+import { parseShapeDescriptor } from './files/shapes';
 
 const hFov = 90 / 180 * Math.PI;
 const minimumVFov = 60 / 180 * Math.PI;
@@ -66,6 +67,7 @@ export class Environment {
     lastFrameTime: number
     lastPoly: number
     backendType: RendererType = 'software'
+    selectedShapeDescriptor: number | undefined
 
     keydown: KeyboardHandler | null = null
     keyup: KeyboardHandler | null = null
@@ -130,6 +132,11 @@ export class Environment {
 
     setShapes(shapes: Shapes): void {
         this.shapes = shapes;
+    }
+
+    setSelectedShape(shapeDescriptor: number | undefined): void {
+        console.log('SHAPE', shapeDescriptor, parseShapeDescriptor(shapeDescriptor || 0));
+        this.selectedShapeDescriptor = shapeDescriptor;
     }
 
     setBackendType(backend: RendererType, newCanvas: HTMLCanvasElement): void {
@@ -302,13 +309,16 @@ export class Environment {
         };
 
         this.clicked = (e) => {
-            this.map = textureClickedSurface(
-                this.canvas,
-                this.player,
-                this.world,
-                this.map,
-                e.offsetX,
-                e.offsetY);
+            if (this.selectedShapeDescriptor) {
+                this.map = textureClickedSurface(
+                    this.canvas,
+                    this.player,
+                    this.world,
+                    this.map,
+                    e.offsetX,
+                    e.offsetY,
+                    this.selectedShapeDescriptor);
+            }
         };
 
         window.addEventListener('keydown', this.keydown);

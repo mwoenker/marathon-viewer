@@ -1,8 +1,10 @@
 import type { JSXInternal } from 'preact/src/jsx';
 import { MapSummary, serializeWad } from '../../files/wad';
 import type { MapGeometry } from '../../files/map';
-import { Selection } from '../state';
+import { EditorState, UpdateState } from '../state';
 import { SelectionOptions } from './SelectionOptions';
+import { Shapes } from '../../shapes-loader';
+import { VisualOptions } from '../VisualMode/VisualOptions';
 
 interface MapListProps {
     maps: MapSummary[],
@@ -39,21 +41,23 @@ function MapList({ maps, selectedMap, onMapSelected }: MapListProps) {
 interface SidebarProps {
     onMapFileSelected: (file: File) => void
     onShapesFileSelected(file: File): void
-    map: MapGeometry | undefined
+    shapes: Shapes
     onMapChange(map: MapGeometry): void
     mapSummaries: MapSummary[]
     onMapSelected(map: MapSummary): void
-    selection: Selection
+    state: EditorState
+    updateState: UpdateState
 }
 
 export function Sidebar({
     onMapFileSelected,
     onShapesFileSelected,
     mapSummaries,
-    map,
+    shapes,
+    state,
+    updateState,
     onMapChange,
     onMapSelected,
-    selection,
 }: SidebarProps): JSX.Element {
     const fileSelected = async (e: JSXInternal.TargetedEvent<HTMLInputElement>) => {
         if (e && e.target && e.currentTarget.files && e.currentTarget.files[0]) {
@@ -68,12 +72,12 @@ export function Sidebar({
     };
 
     const save = async () => {
-        if (map) {
-            const data = serializeWad([map.removePrecalculatedInfo()], 'map.sceA');
+        if (state.map) {
+            const data = serializeWad([state.map.removePrecalculatedInfo()], 'map.sceA');
             const url = URL.createObjectURL(new Blob([data]));
             const link = document.createElement('a');
             link.href = url;
-            link.download = `${map.info.name}.sceA`;
+            link.download = `${state.map.info.name}.sceA`;
             link.target = '_blank';
             document.body.appendChild(link);
             link.click();
@@ -96,10 +100,21 @@ export function Sidebar({
             </div>
             <MapList
                 maps={mapSummaries}
-                selectedMap={map}
+                selectedMap={state.map}
                 onMapSelected={onMapSelected} />
-            {map && (
-                <SelectionOptions selection={selection} map={map} onMapChange={onMapChange} />
+            {state.mode.type === 'geometry' && state.map && (
+                <SelectionOptions
+                    selection={state.selection}
+                    map={state.map}
+                    onMapChange={onMapChange} />
+            )}
+            {state.mode.type === 'visual' && state.map && shapes && (
+                <VisualOptions
+                    visualModeState={state.mode}
+                    updateState={updateState}
+                    shapes={shapes}
+                    map={state.map}
+                />
             )}
         </div>
     );

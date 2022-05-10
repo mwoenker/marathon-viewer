@@ -5,7 +5,24 @@ const collectionHeaderSize = 32;
 
 // See shape_descriptors.h in aleph one
 export enum Collections {
-    wallsWater = 17,
+    interface,
+    weaponsInHand,
+    juggernaut,
+    tick,
+    rocket,
+    hunter,
+    player,
+    items,
+    trooper,
+    fighter,
+    defender,
+    yeti,
+    civilian,
+    civilianFusion,
+    enforcer,
+    hummer,
+    compiler,
+    wallsWater,
     wallsLava,
     wallsSewage,
     wallsJjaro,
@@ -19,12 +36,62 @@ export enum Collections {
     landscapeNight,
     landscapeMoon,
     landscapeSpace,
+    cyborg,
 }
 
-export function makeShapeDescriptor(clut: number, collection: number, shape: number): number {
+export const CollectionNames: Record<Collections, string> = {
+    [Collections.interface]: 'Interface',
+    [Collections.weaponsInHand]: 'Weapons in Hand',
+    [Collections.juggernaut]: 'Juggernaut',
+    [Collections.tick]: 'Tick',
+    [Collections.rocket]: 'Rocket',
+    [Collections.hunter]: 'Hunter',
+    [Collections.player]: 'Player',
+    [Collections.items]: 'Items',
+    [Collections.trooper]: 'Trooper',
+    [Collections.fighter]: 'Fighter',
+    [Collections.defender]: 'Defender',
+    [Collections.yeti]: 'Yeti',
+    [Collections.civilian]: 'Civilian',
+    [Collections.civilianFusion]: 'Civilian Fusion',
+    [Collections.enforcer]: 'Enforcer',
+    [Collections.hummer]: 'Hummer',
+    [Collections.compiler]: 'Compiler',
+    [Collections.wallsWater]: 'Walls (Water)',
+    [Collections.wallsLava]: 'Walls (Lava)',
+    [Collections.wallsSewage]: 'Walls (Sewage)',
+    [Collections.wallsJjaro]: 'Walls (Jjaro)',
+    [Collections.wallsPfhor]: 'Walls (Pfhor)',
+    [Collections.sceneryWater]: 'Scenery (Water)',
+    [Collections.sceneryLava]: 'Scenery (Lava)',
+    [Collections.scenerySewage]: 'Scenery (Sewage)',
+    [Collections.sceneryJjaro]: 'Scenery (Jjaro)',
+    [Collections.sceneryPfhor]: 'Scenery (Pfhor)',
+    [Collections.landscapeDay]: 'Landscape Day',
+    [Collections.landscapeNight]: 'Landscape Night',
+    [Collections.landscapeMoon]: 'Landscape Moon',
+    [Collections.landscapeSpace]: 'Landscape Space',
+    [Collections.cyborg]: 'Cyborg',
+};
+
+export function makeShapeDescriptor(collection: number, clut: number, shape: number): number {
     return ((clut & 0x03) << 13) |
         ((collection & 0x01f) << 8) |
         (shape & 0x0ff);
+}
+
+export interface ParsedDescriptor {
+    bitmapIndex: number;
+    collectionIndex: number;
+    clutIndex: number;
+}
+
+export function parseShapeDescriptor(descriptor: number): ParsedDescriptor {
+    return {
+        bitmapIndex: descriptor & 0xff,
+        collectionIndex: (descriptor >> 8) & 0x1f,
+        clutIndex: (descriptor >> 13) & 0x07,
+    };
 }
 
 export interface ShapesColor {
@@ -198,7 +265,7 @@ function readBitmap(bytes: ArrayBuffer, offset: number): Bitmap {
         offset,
         columnOrder,
         data,
-    }
+    };
 }
 
 function readBitmaps(bytes: ArrayBuffer, collection: CollectionHeaders): Bitmap[] {
@@ -293,7 +360,7 @@ export async function readCollection(file: RandomAccess, header: ShapesHeader): 
         length = header.offset16;
     }
     if (offset <= 0 || length <= 0) {
-        throw new Error('empty collection')
+        throw new Error('empty collection');
     }
 
     const collectionBytes = await readRange(file, offset, offset + length);
@@ -323,7 +390,7 @@ export async function readCollection(file: RandomAccess, header: ShapesHeader): 
         frames: readFrames(collectionBytes, collectionHeaders),
         bitmaps: readBitmaps(collectionBytes, collectionHeaders),
         colorTables: readColorTables(collectionBytes, collectionHeaders),
-    }
+    };
 
     return collection;
 }

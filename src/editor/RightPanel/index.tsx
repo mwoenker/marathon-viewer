@@ -1,5 +1,4 @@
 import { JSXInternal } from 'preact/src/jsx';
-import { useState } from 'react';
 import { MapGeometry } from '../../files/map';
 import { Shapes } from '../../shapes-loader';
 import { Action, EditMode, EditorState } from '../state';
@@ -24,7 +23,7 @@ function MapSummary({ map }: { map: MapGeometry }) {
 interface RightPanelProps {
     state: EditorState
     updateState: (action: Action) => void
-    shapes: Shapes | null
+    shapes: Shapes
 }
 
 interface ModeSelectorProps {
@@ -91,13 +90,13 @@ export function RightPanel({
                     <button onClick={() => updateState({ type: 'zoomIn' })}>
                         +
                     </button>
-                    <ModeSelector value={state.editMode} onChange={changeMode} />
+                    <ModeSelector value={state.mode.type} onChange={changeMode} />
                 </div>
                 {state.map && (
                     <MapSummary map={state.map} />
                 )}
             </div>
-            {state.editMode === 'geometry' && (
+            {state.mode.type === 'geometry' && (
                 <MapView
                     map={state.map}
                     pixelSize={state.pixelSize}
@@ -106,8 +105,8 @@ export function RightPanel({
                 />
             )}
 
-            {state.editMode === 'visual' && state.map && (
-                <VisualMode map={state.map} shapes={shapes} />
+            {state.mode.type === 'visual' && state.map && (
+                <VisualMode map={state.map} shapes={shapes} visualModeState={state.mode} />
             )}
         </div>
     );

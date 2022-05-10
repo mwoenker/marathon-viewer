@@ -7,7 +7,15 @@ import { makeShapeDescriptor } from './files/shapes';
 import { v3scale, Vec3 } from './vector3';
 import { worldUnitSize } from './constants';
 
-export function textureClickedSurface(canvas: HTMLCanvasElement, player: Player, world: World, map: MapGeometry, x: number, y: number): MapGeometry {
+export function textureClickedSurface(
+    canvas: HTMLCanvasElement,
+    player: Player,
+    world: World,
+    map: MapGeometry,
+    x: number,
+    y: number,
+    shape: number
+): MapGeometry {
     const screenTransform = new ScreenTransform(
         canvas.width, canvas.height, player.hFov, player.vFov, player.verticalAngle);
     const viewRay = v3scale(100 * worldUnitSize, screenTransform.screenToRay(x, y));
@@ -22,7 +30,6 @@ export function textureClickedSurface(canvas: HTMLCanvasElement, player: Player,
 
     if (intercept) {
         const { polygonIndex } = intercept;
-        const shape = makeShapeDescriptor(0, 18, 5);
         if (intercept.type === 'floor') {
             map = map.setFloorTexture({ polygonIndex, shape, offset: [0, 0] });
         } else if (intercept.type === 'ceiling') {

@@ -44,3 +44,13 @@ body {
     overflow: scroll;
 }
 
+.texture {
+    margin: 3px;
+    padding: 1px;
+}
+
+.texture-selected {
+    margin: 0px;
+    border: 3px solid black;
+    padding: 1px;
+}

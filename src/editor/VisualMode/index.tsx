@@ -1,19 +1,18 @@
-import { useRef, useEffect, useMemo } from "preact/hooks";
+import { useRef, useEffect } from "preact/hooks";
 import { useCallback } from "react";
 import { Environment } from "../../environment";
-import { HttpFile } from "../../files/binary-read";
 import { MapGeometry } from "../../files/map";
 import { MapInfo } from "../../files/map/map-info";
 import { Shapes } from "../../shapes-loader";
+import { VisualModeState } from "../state";
 
 interface VisualModeProps {
-    shapes: Shapes | null
-    map: MapGeometry
+    shapes: Shapes;
+    map: MapGeometry;
+    visualModeState: VisualModeState;
 }
 
-const shapesUrl = 'minf.shpA';
-
-export function VisualMode({ shapes: shapesProp, map }: VisualModeProps): JSX.Element {
+export function VisualMode({ shapes, map, visualModeState }: VisualModeProps): JSX.Element {
     const environmentRef = useRef<Environment>();
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const mapInfoRef = useRef<MapInfo>();
@@ -25,14 +24,6 @@ export function VisualMode({ shapes: shapesProp, map }: VisualModeProps): JSX.El
             canvas.height = canvas.clientHeight;
         }
     }, []);
-
-    const shapes = useMemo(() => {
-        if (!shapesProp) {
-            return new Shapes(new HttpFile(shapesUrl));
-        } else {
-            return shapesProp;
-        }
-    }, [shapesProp]);
 
     useEffect(() => {
         window.addEventListener('resize', resize);
@@ -67,6 +58,11 @@ export function VisualMode({ shapes: shapesProp, map }: VisualModeProps): JSX.El
             environmentRef.current && environmentRef.current.setShapes(shapes);
         }
     }, [map, shapes]);
+
+    useEffect(() => {
+        environmentRef.current &&
+            environmentRef.current.setSelectedShape(visualModeState.selectedTexture);
+    }, [visualModeState]);
 
     return (
         <canvas width={1024} height={768} ref={canvasRef} style={{ width: '100%', height: '100%' }}>

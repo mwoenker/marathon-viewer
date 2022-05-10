@@ -6,12 +6,14 @@ import {
     readMapSummaries, readMapFromSummary, MapSummary
 } from '../files/wad';
 
-import { HtmlInputFile } from '../files/binary-read';
+import { HtmlInputFile, HttpFile } from '../files/binary-read';
 import { MapGeometry } from '../files/map';
 import { Sidebar } from './Sidebar';
 import { RightPanel } from './RightPanel';
 import { useEditorState } from './state';
 import { Shapes } from '../shapes-loader';
+
+const shapesUrl = 'minf.shpA';
 
 interface MapFileSetting {
     file: File | null,
@@ -22,7 +24,7 @@ function Editor() {
     const [mapFile, setMapFile] = useState<MapFileSetting>({ file: null, summaries: [] });
     // size of screen pixel in map units
     const [state, updateState] = useEditorState();
-    const [shapes, setShapes] = useState<Shapes | null>(null);
+    const [shapes, setShapes] = useState<Shapes>(new Shapes(new HttpFile(shapesUrl)));
 
     const selectMap = async (file: File) => {
         const summaries = await readMapSummaries(new HtmlInputFile(file));
@@ -48,12 +50,13 @@ function Editor() {
         <div className="editor">
             <Sidebar
                 onMapFileSelected={selectMap}
+                shapes={shapes}
                 onShapesFileSelected={selectShapes}
-                map={state.map}
                 onMapChange={setMap}
                 mapSummaries={mapFile.summaries}
                 onMapSelected={setSelectedMap}
-                selection={state.selection}
+                state={state}
+                updateState={updateState}
             />
             <RightPanel
                 state={state}

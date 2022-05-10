@@ -204,7 +204,7 @@ export class World {
         return {
             height,
             textureOffset: v2scale(1 / worldUnitSize, media.originAtTime(this.timeElapsed)), // media.origin,
-            texture: makeShapeDescriptor(0, def.collection, def.shape),
+            texture: makeShapeDescriptor(def.collection, 0, def.shape),
             transferMode: media.transferMode,
             lightIntensity: this.getLightIntensity(polygon.mediaLightsource),
         };

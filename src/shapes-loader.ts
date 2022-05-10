@@ -1,25 +1,23 @@
 import { RandomAccess } from './files/binary-read';
-import { ShapesHeader, Collection, Bitmap, readShapesHeaders, readCollection } from './files/shapes';
+import { ShapesHeader, Collection, Bitmap, readShapesHeaders, readCollection, parseShapeDescriptor } from './files/shapes';
 import { makeShadingTables, ColorTable } from './color';
 
-interface CollectionWithShading extends Collection {
+export interface CollectionWithShading extends Collection {
     clutShadingTables: ColorTable[][]
 }
 
 type CollectionSlot = 'loading' | CollectionWithShading
 
-function parseShapeDescriptor(descriptor: number) {
-    return {
-        bitmapIndex: descriptor & 0xff,
-        collectionIndex: (descriptor >> 8) & 0x1f,
-        clutIndex: (descriptor >> 13) & 0x07,
-    };
-}
+type CollectionLoadListener = (
+    collectionIndex: number,
+    collection: CollectionWithShading
+) => void
 
 export class Shapes {
-    file: RandomAccess;
-    headers: ShapesHeader[] | null;
-    collections: { [idx: number]: CollectionSlot }
+    private file: RandomAccess;
+    private headers: ShapesHeader[] | null;
+    private collections: { [idx: number]: CollectionSlot }
+    private collectionLoadListeners: CollectionLoadListener[] = []
 
     constructor(file: RandomAccess) {
         this.file = file;
@@ -39,16 +37,39 @@ export class Shapes {
                     const clutShadingTables = collection.colorTables.map((table) => {
                         return makeShadingTables(table);
                     });
-                    this.collections[index] = {
+                    const newCollection = this.collections[index] = {
                         ...collection,
                         clutShadingTables,
                     };
+                    this.collectionLoadListeners.forEach(listener =>
+                        listener(index, newCollection));
                     console.log(`loaded collection ${index}`);
                 })
                 .catch((e) => {
                     console.error(e);
                 });
         }
+    }
+
+    getCollection(collectionIndex: number): null | CollectionWithShading {
+        const collection = this.collections[collectionIndex];
+        if (!collection) {
+            this.loadCollection(collectionIndex);
+            return null;
+        } else if (collection === 'loading') {
+            return null;
+        } else {
+            return collection;
+        }
+    }
+
+    addLoadListener(listener: CollectionLoadListener): void {
+        this.collectionLoadListeners.push(listener);
+    }
+
+    removeLoadListener(listener: CollectionLoadListener): void {
+        this.collectionLoadListeners = this.collectionLoadListeners.filter(
+            member => member === listener);
     }
 
     collectionLoading(index: number): boolean {
@@ -63,27 +84,21 @@ export class Shapes {
 
     getBitmap(descriptor: number): Bitmap | null {
         const { collectionIndex, bitmapIndex } = parseShapeDescriptor(descriptor);
-        const collection = this.collections[collectionIndex];
-        if (!collection) {
-            this.loadCollection(collectionIndex);
-            return null;
-        } else if (collection === 'loading') {
-            return null;
+        const collection = this.getCollection(collectionIndex);
+        if (collection) {
+            return collection.bitmaps[bitmapIndex] ?? null;
         } else {
-            return collection?.bitmaps[bitmapIndex] || null;
+            return null;
         }
     }
 
     getShadingTables(descriptor: number): ColorTable[] | null {
         const { collectionIndex, clutIndex } = parseShapeDescriptor(descriptor);
-        const collection = this.collections[collectionIndex];
-        if (!collection) {
-            this.loadCollection(collectionIndex);
-            return null;
-        } else if (collection === 'loading') {
-            return null;
-        } else {
+        const collection = this.getCollection(collectionIndex);
+        if (collection) {
             return collection.clutShadingTables[clutIndex];
+        } else {
+            return null;
         }
     }
 }
