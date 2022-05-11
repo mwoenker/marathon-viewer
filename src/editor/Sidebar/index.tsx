@@ -22,19 +22,24 @@ function MapList({ maps, selectedMap, onMapSelected }: MapListProps) {
     };
 
     return (
-        <select value={selectedMap ? selectedMap.index : ''} onChange={change}>
+        <select
+            class="select"
+            value={selectedMap ? selectedMap.index : ''}
+            onChange={change}
+            disabled={maps.length === 0}
+        >
             {maps.map((m) => {
                 return (
-                    <option key={m.index}
-                        value={m.index}
-                        selected={selectedMap && selectedMap.index === m.index}
-                    >
+                    <option key={m.index} value={m.index}>
                         {m.directoryEntry.levelName}
                     </option>
                 );
             })
             }
-        </select>
+            {maps.length === 0 && (
+                <option value=''>No maps</option>
+            )}
+        </select >
     );
 }
 
@@ -87,21 +92,20 @@ export function Sidebar({
 
     return (
         <div className="leftPanel">
-            <div>
-                {'Map '}
-                <input type="file" onChange={fileSelected} />
-            </div>
-            <div>
-                {'Shapes '}
-                <input type="file" onChange={shapesFileSelected} />
-            </div>
-            <div>
-                <button onClick={save}>Save!</button>
+            <div className='controlGroup'>
+                <label for='sidebarMapFile'>Map</label>
+                <input id='sidebarMapFile' type="file" onChange={fileSelected} />
+                <label for='sidebarShapesFile'>Shapes</label>
+                <input id='sidebarShapesFile' type="file" onChange={shapesFileSelected} />
             </div>
             <MapList
                 maps={mapSummaries}
                 selectedMap={state.map}
                 onMapSelected={onMapSelected} />
+            <div className='buttonRow'>
+                <button className='sidebarSaveButton' onClick={save}>Save Map</button>
+            </div>
+            <hr />
             {state.mode.type === 'geometry' && state.map && (
                 <SelectionOptions
                     selection={state.selection}

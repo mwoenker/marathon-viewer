@@ -17,6 +17,33 @@ body {
     padding: 8px;
 }
 
+.leftPanel .controlGroup {
+    display: grid;
+    grid-template-columns: auto auto;
+}
+
+.leftPanel .controlGroup > * {
+    padding: 0.25em;
+}
+
+.leftPanel .buttonRow {
+    width: 100%;
+    margin-left: auto;
+}
+
+.leftPanel .sidebarSaveButton {
+    margin: 0.25em;
+    margin-left: auto;
+    margin-right: auto;
+    display: block;
+}
+
+.leftPanel .select {
+    margin: 0.25em 0;
+    padding: 0.25em;
+    width: 100%;
+}
+
 .rightPanel {
     flex: 1 1 auto;
     width: 0px;
@@ -27,10 +54,18 @@ body {
 
 .topBar {
     display: flex;
+    height: 40px;
+    flex: 0 0 auto;
 }
 
 .zoomIcons {
     flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+}
+
+.zoomIcons > * {
+    margin: 0.1em;
 }
 
 .mapSummary {
