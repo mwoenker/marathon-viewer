@@ -106,7 +106,12 @@ export function RightPanel({
             )}
 
             {state.mode.type === 'visual' && state.map && (
-                <VisualMode map={state.map} shapes={shapes} visualModeState={state.mode} />
+                <VisualMode
+                    map={state.map}
+                    shapes={shapes}
+                    visualModeState={state.mode}
+                    updateState={updateState}
+                />
             )}
         </div>
     );

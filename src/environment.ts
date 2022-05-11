@@ -68,6 +68,7 @@ export class Environment {
     lastPoly: number
     backendType: RendererType = 'software'
     selectedShapeDescriptor: number | undefined
+    onMapChangedCallback: undefined | ((map: MapGeometry) => void)
 
     keydown: KeyboardHandler | null = null
     keyup: KeyboardHandler | null = null
@@ -137,6 +138,10 @@ export class Environment {
     setSelectedShape(shapeDescriptor: number | undefined): void {
         console.log('SHAPE', shapeDescriptor, parseShapeDescriptor(shapeDescriptor || 0));
         this.selectedShapeDescriptor = shapeDescriptor;
+    }
+
+    onMapChanged(callback: (map: MapGeometry) => void): void {
+        this.onMapChangedCallback = callback;
     }
 
     setBackendType(backend: RendererType, newCanvas: HTMLCanvasElement): void {
@@ -318,6 +323,7 @@ export class Environment {
                     e.offsetX,
                     e.offsetY,
                     this.selectedShapeDescriptor);
+                this.onMapChangedCallback && this.onMapChangedCallback(this.map);
             }
         };
 

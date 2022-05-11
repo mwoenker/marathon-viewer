@@ -4,15 +4,16 @@ import { Environment } from "../../environment";
 import { MapGeometry } from "../../files/map";
 import { MapInfo } from "../../files/map/map-info";
 import { Shapes } from "../../shapes-loader";
-import { VisualModeState } from "../state";
+import { UpdateState, VisualModeState } from "../state";
 
 interface VisualModeProps {
     shapes: Shapes;
     map: MapGeometry;
     visualModeState: VisualModeState;
+    updateState: UpdateState;
 }
 
-export function VisualMode({ shapes, map, visualModeState }: VisualModeProps): JSX.Element {
+export function VisualMode({ shapes, map, visualModeState, updateState }: VisualModeProps): JSX.Element {
     const environmentRef = useRef<Environment>();
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const mapInfoRef = useRef<MapInfo>();
@@ -52,6 +53,11 @@ export function VisualMode({ shapes, map, visualModeState }: VisualModeProps): J
                 null,
                 'software'
             );
+
+            environmentRef.current.onMapChanged((map) => {
+                updateState({ type: 'setMap', map });
+            });
+
             environmentRef.current.start();
         } else {
             environmentRef.current && environmentRef.current.setMap(map);
