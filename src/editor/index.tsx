@@ -12,6 +12,7 @@ import { Sidebar } from './Sidebar';
 import { RightPanel } from './RightPanel';
 import { useEditorState } from './state';
 import { Shapes } from '../shapes-loader';
+import { useKeyboardShortcuts } from './shortcuts';
 
 const shapesUrl = 'minf.shpA';
 
@@ -25,6 +26,7 @@ function Editor() {
     // size of screen pixel in map units
     const [state, updateState] = useEditorState();
     const [shapes, setShapes] = useState<Shapes>(new Shapes(new HttpFile(shapesUrl)));
+    useKeyboardShortcuts(updateState);
 
     const selectMap = async (file: File) => {
         const summaries = await readMapSummaries(new HtmlInputFile(file));

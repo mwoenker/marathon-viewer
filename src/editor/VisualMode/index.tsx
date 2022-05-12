@@ -51,7 +51,7 @@ export function VisualMode({ shapes, map, visualModeState, updateState }: Visual
                 shapes,
                 canvasRef.current,
                 null,
-                'software'
+                'webgl2'
             );
 
             environmentRef.current.onMapChanged((map) => {

@@ -68,14 +68,17 @@ export function MapView({
 
     function mouseUp() {
         updateState({ type: 'up' });
+        console.log('up!', map);
+        map && updateState({ type: 'setMap', map, isEphemeral: false }); // end ephemeral update
     }
 
     function mouseLeave() {
         updateState({ type: 'up' });
+        map && updateState({ type: 'setMap', map, isEphemeral: false }); // end ephemeral update
     }
 
-    function changeMap(map: MapGeometry) {
-        updateState({ type: 'setMap', map });
+    function changeMap(map: MapGeometry, isEphemeral = false) {
+        updateState({ type: 'setMap', map, isEphemeral });
     }
 
     function keyDown(e: JSXInternal.TargetedKeyboardEvent<HTMLElement>) {
@@ -162,19 +165,19 @@ export function MapView({
                             Math.floor(selection.currentCoords[0]),
                             Math.floor(selection.currentCoords[1])
                         ]
-                    ));
+                    ), true);
                 } else if ('polygon' === selection.objType && selection.currentCoords) {
                     changeMap(map.movePolygon(
                         selection.index,
                         v2sub(
                             selection.currentCoords,
-                            selection.relativePos)));
+                            selection.relativePos)), true);
                 } else if ('object' === selection.objType && selection.currentCoords) {
                     changeMap(map.moveObject(
                         selection.index,
                         v2sub(
                             selection.currentCoords,
-                            selection.relativePos)));
+                            selection.relativePos)), true);
                 }
             }
         },

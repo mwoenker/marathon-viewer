@@ -43,6 +43,9 @@ const initialState: EditorState = {
     selection: blankSelection,
     pixelSize: 64,
     map: undefined,
+    isEphemeral: false,
+    undoStack: [],
+    redoStack: [],
     mode: {
         type: 'geometry'
     }
@@ -79,8 +82,11 @@ export interface SelectObjectAction {
 export interface EditorState {
     selection: Selection
     map: MapGeometry | undefined
+    isEphemeral: boolean // current state is ephemeral, next setMap should replace not push onto undo
     pixelSize: number
     mode: ModeState
+    undoStack: MapGeometry[]
+    redoStack: MapGeometry[]
 }
 
 export type MouseAction =
@@ -88,7 +94,9 @@ export type MouseAction =
 
 export interface ZoomInAction { type: 'zoomIn' }
 export interface ZoomOutAction { type: 'zoomOut' }
-export interface SetMapAction { type: 'setMap', map: MapGeometry }
+export interface SetMapAction { type: 'setMap', map: MapGeometry, isEphemeral?: boolean }
+export interface UndoAction { type: 'undo' }
+export interface RedoAction { type: 'redo' }
 export interface SetEditMode {
     type: 'setEditMode',
     editMode: EditMode
@@ -105,6 +113,8 @@ export type Action =
     ZoomOutAction |
     SetMapAction |
     SetEditMode |
+    UndoAction |
+    RedoAction |
     SelectTextureAction;
 
 const zoomIncrement = 1.5;
@@ -181,8 +191,51 @@ function reduce(state: EditorState, action: Action): EditorState {
                 ...state,
                 pixelSize: state.pixelSize * zoomIncrement
             };
-        case 'setMap':
-            return { ...state, map: action.map };
+        case 'setMap': {
+            let undo: MapGeometry[];
+            if (!state.map) {
+                undo = [];
+            } else if (state.isEphemeral) {
+                undo = state.undoStack;
+            } else {
+                undo = [...state.undoStack, state.map];
+            }
+            return {
+                ...state,
+                isEphemeral: action.isEphemeral === true,
+                map: action.map,
+                undoStack: undo,
+                redoStack: []
+            };
+        }
+        case 'undo':
+            if (state.undoStack.length === 0) {
+                return state;
+            } else {
+                if (!state.map) {
+                    throw new Error('current state undefined with non-empty undo stack');
+                }
+                return {
+                    ...state,
+                    undoStack: state.undoStack.slice(0, state.undoStack.length - 1),
+                    map: state.undoStack[state.undoStack.length - 1],
+                    redoStack: [...state.redoStack, state.map],
+                };
+            }
+        case 'redo':
+            if (state.redoStack.length === 0) {
+                return state;
+            } else {
+                if (!state.map) {
+                    throw new Error('current state undefined with non-empty redo stack');
+                }
+                return {
+                    ...state,
+                    undoStack: [...state.undoStack, state.map],
+                    map: state.redoStack[state.redoStack.length - 1],
+                    redoStack: state.redoStack.slice(0, state.redoStack.length - 1)
+                };
+            }
         case 'setEditMode':
             return {
                 ...state,
