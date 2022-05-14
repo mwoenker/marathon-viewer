@@ -68,7 +68,6 @@ export function MapView({
 
     function mouseUp() {
         updateState({ type: 'up' });
-        console.log('up!', map);
         map && updateState({ type: 'setMap', map, isEphemeral: false }); // end ephemeral update
     }
 

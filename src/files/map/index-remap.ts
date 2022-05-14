@@ -48,9 +48,16 @@ export function remappedIndexes<T>(objectType: DependencyType, objects: T[], del
     });
 }
 
+function mappingIsIdentity(indexMapping: number[]) {
+    return indexMapping.every((newIndex, arrIndex) => newIndex === arrIndex);
+}
+
 export function buildNewArray<T>(oldObjects: T[], indexMapping: number[]): T[] {
     if (oldObjects.length !== indexMapping.length) {
         throw new Error('objects and index mapping do not have the same length');
+    }
+    if (mappingIsIdentity(indexMapping)) {
+        return oldObjects;
     }
     const newSize = indexMapping.reduce((maxSoFar, idx) => {
         return Math.max(maxSoFar, idx);
