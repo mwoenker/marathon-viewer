@@ -11,10 +11,12 @@ import { RandomSound } from './random-sound';
 import { Note } from './note';
 import { Platform } from './platform';
 import { MapInfo } from './map-info';
-import { TransferMode, WadHeader } from '../wad';
+import { TransferMode, WadHeader, SideType } from '../wad';
 import { Dependencies } from './dependencies';
 import { Remapping } from './index-remap';
 import { polygonsAt } from '../../geometry';
+import { FloorOrCeilingSurface, Surface, WallSurface } from '../../surface';
+import { impossibleValue } from '../../utils';
 
 interface FloorCeilingRequest {
     polygonIndex: number,
@@ -27,7 +29,6 @@ type TextureSlot = 'primary' | 'secondary' | 'transparent'
 interface WallTextureRequest {
     polygonIndex: number,
     wallIndex: number,
-    sideType: number,
     textureSlot: TextureSlot,
     shape: number,
     offset: Vec2,
@@ -50,6 +51,15 @@ interface MapGeometryConstructor {
     randomSounds: RandomSound[];
     notes: Note[];
     platforms: Platform[];
+}
+
+export type PolygonFilter = (polyIdx: number) => boolean
+
+export interface SurfaceInfo {
+    texCoords: Vec2;
+    shape: number;
+    transferMode: number;
+    light: number;
 }
 
 function outOfRange(pt: Vec2): boolean {
@@ -102,10 +112,10 @@ export class MapGeometry {
         }
     }
 
-    neighboringPolygons(lineIndex: number): number[] {
-        const polygon = this.polygons[lineIndex];
+    neighboringPolygons(polygonIndex: number): number[] {
+        const polygon = this.polygons[polygonIndex];
         if (!polygon) {
-            throw new Error(`invalid polygon ${lineIndex}`);
+            throw new Error(`invalid polygon ${polygonIndex}`);
         }
         const neighbors = [];
         for (const lineIndex of polygon.lines) {
@@ -114,9 +124,9 @@ export class MapGeometry {
                 if (!line) {
                     throw new Error(`invalid line ${lineIndex}`);
                 }
-                if (line.frontPoly === lineIndex && line.backPoly !== -1) {
+                if (line.frontPoly === polygonIndex && line.backPoly !== -1) {
                     neighbors.push(line.backPoly);
-                } else if (line.backPoly === lineIndex && line.frontPoly !== -1) {
+                } else if (line.backPoly === polygonIndex && line.frontPoly !== -1) {
                     neighbors.push(line.frontPoly);
                 }
             }
@@ -124,12 +134,15 @@ export class MapGeometry {
         return neighbors;
     }
 
-    *floodBreadthFirst(startingPolyIndex: number): Generator<number> {
+    *floodBreadthFirst(startingPolyIndex: number, filter?: PolygonFilter): Generator<number> {
         const visitedIndexes = new Set<number>();
         const queue = [startingPolyIndex];
         while (queue.length !== 0) {
             const idx = queue.shift();
-            if (typeof idx === 'number' && !visitedIndexes.has(idx)) {
+            if (typeof idx === 'number' &&
+                !visitedIndexes.has(idx) &&
+                (!filter || filter(idx))
+            ) {
                 visitedIndexes.add(idx);
                 for (const neighborIdx of this.neighboringPolygons(idx)) {
                     queue.push(neighborIdx);
@@ -191,35 +204,269 @@ export class MapGeometry {
         return new MapGeometry({ ...this, points: newPoints });
     }
 
-    getWallTexInfo(
-        polygonIndex: number,
-        wallIndex: number,
-        textureSlot: 'primary' | 'secondary'
-    ): null | { light: Light } {
-        const polygon = this.polygons[polygonIndex];
-        const sideIndex = polygon.sides[wallIndex];
-        if (sideIndex === -1) {
-            return null;
-        } else {
-            const side = this.sides[sideIndex];
-            let lightIndex;
-            if (textureSlot === 'primary') {
+    getVerticalSurfaceInfo(surface: WallSurface): SurfaceInfo {
+        const side = this.getPolygonSide(surface.polygonIndex, surface.wallIndex);
+
+        let sideTex: SideTex;
+        let transferMode: number;
+        let lightIndex: number;
+
+        switch (surface.type) {
+            case 'wallPrimary':
+                sideTex = side.primaryTexture;
+                transferMode = side.primaryTransferMode;
                 lightIndex = side.primaryLightsourceIndex;
-            } else if (textureSlot === 'secondary') {
+                break;
+            case 'wallSecondary':
+                sideTex = side.secondaryTexture;
+                transferMode = side.secondaryTransferMode;
                 lightIndex = side.secondaryLightsourceIndex;
-            } else {
-                throw new Error(`invalid texture slot ${textureSlot}`);
+                break;
+            case 'wallTransparent':
+                sideTex = side.transparentTexture;
+                transferMode = side.transparentTransferMode;
+                lightIndex = side.transparentLightsourceIndex;
+                break;
+            default:
+                impossibleValue(surface.type);
+        }
+
+        return {
+            texCoords: sideTex.offset,
+            shape: sideTex.texture,
+            light: lightIndex,
+            transferMode: transferMode
+        };
+    }
+
+    getHorizontalSurfaceInfo(surface: FloorOrCeilingSurface): SurfaceInfo {
+        const polygon = this.getPolygon(surface.polygonIndex);
+
+        switch (surface.type) {
+            case 'floor':
+                return {
+                    texCoords: polygon.floorOrigin,
+                    shape: polygon.floorTexture,
+                    light: polygon.floorLightsource,
+                    transferMode: polygon.floorTransferMode
+                };
+            case 'ceiling':
+                return {
+                    texCoords: polygon.ceilingOrigin,
+                    shape: polygon.ceilingTexture,
+                    light: polygon.ceilingLightsource,
+                    transferMode: polygon.ceilingTransferMode
+                };
+            default:
+                impossibleValue(surface.type);
+        }
+    }
+
+    getSurfaceInfo(surface: Surface): SurfaceInfo {
+        switch (surface.type) {
+            case 'wallPrimary':
+            case 'wallSecondary':
+            case 'wallTransparent':
+                return this.getVerticalSurfaceInfo(surface);
+            case 'floor':
+            case 'ceiling':
+                return this.getHorizontalSurfaceInfo(surface);
+            default:
+                impossibleValue(surface);
+        }
+    }
+
+    getPolygon(polygonIndex: number): Polygon {
+        if (polygonIndex < 0 || polygonIndex >= this.polygons.length) {
+            throw new Error(`invalid polygon index: ${polygonIndex}`);
+        }
+        return this.polygons[polygonIndex];
+    }
+
+    getLine(lineIndex: number): Line {
+        if (lineIndex < 0 || lineIndex >= this.lines.length) {
+            throw new Error(`invalid line index: ${lineIndex}`);
+        }
+        return this.lines[lineIndex];
+    }
+
+    getSide(sideIndex: number): Side {
+        if (sideIndex < 0 || sideIndex >= this.sides.length) {
+            throw new Error(`invalid side index: ${sideIndex}`);
+        }
+        return this.sides[sideIndex];
+    }
+
+    getPolygonSide(polygonIndex: number, wallIndex: number): Side {
+        const polygon = this.getPolygon(polygonIndex);
+        if (wallIndex < 0 || wallIndex >= polygon.vertexCount) {
+            throw new Error(`invalid wall index: ${wallIndex}`);
+        }
+        return this.getSide(polygon.sides[wallIndex]);
+    }
+
+    getPolygonLine(polygonIndex: number, wallIndex: number): Line {
+        const polygon = this.getPolygon(polygonIndex);
+        if (wallIndex < 0 || wallIndex >= polygon.vertexCount) {
+            throw new Error(`invalid wall index: ${wallIndex}`);
+        }
+        return this.getLine(polygon.lines[wallIndex]);
+    }
+
+    getPoint(pointIndex: number): Vec2 {
+        if (pointIndex < 0 || pointIndex >= this.points.length) {
+            throw new Error(`Invalid point index: ${pointIndex}`);
+        }
+        return this.points[pointIndex];
+    }
+
+    getPortal(polygonIndex: number, linePosition: number): number {
+        const polygon = this.polygons[polygonIndex];
+        const line = this.lines[polygon.lines[linePosition]];
+        if (line.frontPoly === polygonIndex) {
+            return line.backPoly;
+        } else if (line.backPoly === polygonIndex) {
+            return line.frontPoly;
+        } else {
+            throw new Error(`not front or back side poly=${polygonIndex} front=${line.frontPoly} back=${line.backPoly}`);
+        }
+    }
+
+    wallSideType(polygonIndex: number, wallIndex: number): SideType {
+        const polygon = this.polygons[polygonIndex];
+        if (!polygon) {
+            throw new Error(`polygon ${polygonIndex} not found`);
+        }
+
+        const neighborIndex = this.getPortal(polygonIndex, wallIndex);
+        if (!neighborIndex || neighborIndex === -1) {
+            return SideType.full;
+        } else {
+            const neighbor = this.polygons[neighborIndex];
+            if (!neighbor) {
+                throw new Error(`neighbor not found ${polygonIndex}`);
             }
 
-            const light = this.lights[lightIndex];
-            return { light };
+            const portalTop = Math.min(polygon.ceilingHeight, neighbor.ceilingHeight);
+            const portalBottom = Math.max(polygon.floorHeight, neighbor.floorHeight);
+            const hasTop = portalTop !== polygon.ceilingHeight;
+            const hasBottom = portalBottom !== polygon.floorHeight;
+
+            let sideType = SideType.full;
+            if (hasTop && hasBottom) {
+                sideType = SideType.split;
+            } else if (hasTop) {
+                sideType = SideType.high;
+            } else if (hasBottom) {
+                sideType = SideType.low;
+            }
+
+            return sideType;
+        }
+    }
+
+    setVerticalSurfaceTextureInfo(
+        surface: WallSurface, surfaceInfo: SurfaceInfo
+    ): MapGeometry {
+        const polygon = this.getPolygon(surface.polygonIndex);
+        const side = this.getPolygonSide(surface.polygonIndex, surface.wallIndex);
+        const sideIndex = polygon.sides[surface.wallIndex];
+        const newSides = [...this.sides];
+
+        switch (surface.type) {
+            case 'wallPrimary':
+                newSides[sideIndex] = new Side({
+                    ...side,
+                    primaryTexture: new SideTex({
+                        offset: surfaceInfo.texCoords,
+                        texture: surfaceInfo.shape,
+                    }),
+                    primaryLightsourceIndex: surfaceInfo.light,
+                    primaryTransferMode: surfaceInfo.transferMode,
+                });
+                break;
+            case 'wallSecondary':
+                newSides[sideIndex] = new Side({
+                    ...side,
+                    secondaryTexture: new SideTex({
+                        offset: surfaceInfo.texCoords,
+                        texture: surfaceInfo.shape,
+                    }),
+                    secondaryLightsourceIndex: surfaceInfo.light,
+                    secondaryTransferMode: surfaceInfo.transferMode,
+                });
+                break;
+            case 'wallTransparent':
+                newSides[sideIndex] = new Side({
+                    ...side,
+                    transparentTexture: new SideTex({
+                        offset: surfaceInfo.texCoords,
+                        texture: surfaceInfo.shape,
+                    }),
+                    transparentLightsourceIndex: surfaceInfo.light,
+                    transparentTransferMode: surfaceInfo.transferMode,
+                });
+                break;
+            default:
+                impossibleValue(surface.type);
+        }
+
+        return new MapGeometry({
+            ...this,
+            sides: newSides
+        });
+    }
+
+    setHorizontalSurfaceTextureInfo(
+        surface: FloorOrCeilingSurface, surfaceInfo: SurfaceInfo
+    ): MapGeometry {
+        const polygon = this.getPolygon(surface.polygonIndex);
+        const newPolygons = [...this.polygons];
+        switch (surface.type) {
+            case 'floor':
+                newPolygons[surface.polygonIndex] = new Polygon({
+                    ...polygon,
+                    floorOrigin: surfaceInfo.texCoords,
+                    floorTexture: surfaceInfo.shape,
+                    floorLightsource: surfaceInfo.light,
+                    floorTransferMode: surfaceInfo.transferMode
+                });
+                break;
+            case 'ceiling':
+                newPolygons[surface.polygonIndex] = new Polygon({
+                    ...polygon,
+                    ceilingOrigin: surfaceInfo.texCoords,
+                    ceilingTexture: surfaceInfo.shape,
+                    ceilingLightsource: surfaceInfo.light,
+                    ceilingTransferMode: surfaceInfo.transferMode
+                });
+                break;
+            default:
+                impossibleValue(surface.type);
+        }
+        return new MapGeometry({
+            ...this,
+            polygons: newPolygons
+        });
+    }
+
+    setSurfaceTextureInfo(surface: Surface, surfaceInfo: SurfaceInfo): MapGeometry {
+        switch (surface.type) {
+            case 'wallPrimary':
+            case 'wallSecondary':
+            case 'wallTransparent':
+                return this.setVerticalSurfaceTextureInfo(surface, surfaceInfo);
+            case 'floor':
+            case 'ceiling':
+                return this.setHorizontalSurfaceTextureInfo(surface, surfaceInfo);
+            default:
+                impossibleValue(surface);
         }
     }
 
     setWallTexture({
         polygonIndex,
         wallIndex,
-        sideType,
         textureSlot,
         shape,
         offset,
@@ -230,7 +477,7 @@ export class MapGeometry {
         const sideIndex = polygon.sides[wallIndex];
         if (sideIndex == -1) {
             const side = new Side({
-                type: sideType,
+                type: this.wallSideType(polygonIndex, wallIndex),
                 polygonIndex,
                 lineIndex: polygon.lines[wallIndex],
                 primaryTexture: textureSlot === 'primary' ? sideTex : new SideTex(),

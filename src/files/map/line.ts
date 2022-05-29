@@ -31,8 +31,8 @@ export class Line implements LineConstructor {
     length: number;
     highestFloor: number;
     lowestCeiling: number;
-    frontSide: number;
-    backSide: number;
+    frontSide: number; // clockwise side
+    backSide: number; //ccw side
     frontPoly: number;
     backPoly: number;
 

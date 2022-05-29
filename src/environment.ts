@@ -322,7 +322,8 @@ export class Environment {
                     this.map,
                     e.offsetX,
                     e.offsetY,
-                    this.selectedShapeDescriptor);
+                    this.selectedShapeDescriptor,
+                    e.shiftKey);
                 this.onMapChangedCallback && this.onMapChangedCallback(this.map);
             }
         };

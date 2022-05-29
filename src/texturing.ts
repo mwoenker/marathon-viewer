@@ -3,9 +3,10 @@ import { MapGeometry } from './files/map';
 import { ScreenTransform } from './screen-transform';
 import { World } from './world';
 import { Transformation } from './transform2d';
-import { makeShapeDescriptor } from './files/shapes';
 import { v3scale, Vec3 } from './vector3';
 import { worldUnitSize } from './constants';
+import { ConnectedSurface, getConnectedSurfaces } from './surface';
+import { TransferMode } from './files/wad';
 
 export function textureClickedSurface(
     canvas: HTMLCanvasElement,
@@ -14,7 +15,8 @@ export function textureClickedSurface(
     map: MapGeometry,
     x: number,
     y: number,
-    shape: number
+    shape: number,
+    flood = true
 ): MapGeometry {
     const screenTransform = new ScreenTransform(
         canvas.width, canvas.height, player.hFov, player.vFov, player.verticalAngle);
@@ -28,36 +30,35 @@ export function textureClickedSurface(
         ray,
     );
 
-    if (intercept) {
-        const { polygonIndex } = intercept;
-        if (intercept.type === 'floor') {
-            map = map.setFloorTexture({ polygonIndex, shape, offset: [0, 0] });
-        } else if (intercept.type === 'ceiling') {
-            map = map.setCeilingTexture({ polygonIndex, shape, offset: [0, 0] });
-        } else if (intercept.type === 'wallPrimary') {
-            const { polygonIndex, wallIndex, sideType } = intercept;
-            map = map.setWallTexture({
-                polygonIndex,
-                wallIndex,
-                sideType,
-                textureSlot: 'primary',
-                shape,
-                offset: [0, 0],
-            });
-        } else if (intercept.type === 'wallSecondary') {
-            const { polygonIndex, wallIndex, sideType } = intercept;
-            map = map.setWallTexture({
-                polygonIndex,
-                wallIndex,
-                sideType,
-                textureSlot: 'secondary',
-                shape,
-                offset: [0, 0],
-            });
-        }
-
-        world.updateMap(map);
+    if (!intercept) {
+        return map;
     }
 
+    const clickedInfo = map.getSurfaceInfo(intercept);
+
+    let surfaces: ConnectedSurface[];
+
+    if (flood) {
+        surfaces = getConnectedSurfaces(map, intercept, (surface) => {
+            const info = map.getSurfaceInfo(surface);
+            return info.shape === clickedInfo.shape;
+        });
+    } else {
+        surfaces = [{ texOffset: [0, 0], surface: intercept }];
+    }
+
+    console.log({ surfaces });
+
+    for (const connectedSurface of surfaces) {
+        const { surface, texOffset } = connectedSurface;
+        map = map.setSurfaceTextureInfo(surface, {
+            texCoords: texOffset,
+            shape: shape,
+            light: 0,
+            transferMode: TransferMode.normal
+        });
+    }
+
+    world.updateMap(map);
     return map;
 }

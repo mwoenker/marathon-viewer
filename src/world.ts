@@ -5,8 +5,9 @@ import { Vec3 } from './vector3';
 import { Side, SideTex } from './files/map/side';
 import { Polygon } from './files/map/polygon';
 import { ObjectType, ObjectFlags } from './files/map/object';
-import { mediaDefinitions, sideType } from './files/wad';
+import { mediaDefinitions } from './files/wad';
 import { MapGeometry } from './files/map';
+import { Surface } from './surface';
 import { makeShapeDescriptor } from './files/shapes';
 import { LightState } from './light';
 import { playerHeight } from './player';
@@ -63,26 +64,12 @@ interface FloorCeilingInfo {
     ceiling: HorizontalSurfaceInfo;
 }
 
-interface RayCollisionFloorCeiling {
-    type: 'floor' | 'ceiling';
-    polygonIndex: number;
-}
-
-interface RayCollisionWall {
-    type: 'wallPrimary' | 'wallSecondary';
-    polygonIndex: number;
-    wallIndex: number;
-    sideType: sideType;
-}
-
 interface PlayerStartPosition {
     polygon: number
     position: Vec2
     height: number
     facing: number
 }
-
-type RayCollision = RayCollisionFloorCeiling | RayCollisionWall
 
 export class World {
     map: MapGeometry;
@@ -133,18 +120,6 @@ export class World {
             this.map.points[polygon.endpoints[linePosition]],
             this.map.points[polygon.endpoints[(linePosition + 1) % polygon.endpoints.length]]
         ];
-    }
-
-    getPortal(polygonIndex: number, linePosition: number): number {
-        const polygon = this.map.polygons[polygonIndex];
-        const line = this.map.lines[polygon.lines[linePosition]];
-        if (line.frontPoly === polygonIndex) {
-            return line.backPoly;
-        } else if (line.backPoly === polygonIndex) {
-            return line.frontPoly;
-        } else {
-            throw new Error(`not front or back side poly=${polygonIndex} front=${line.frontPoly} back=${line.backPoly}`);
-        }
     }
 
     getTexOffset(sideTexDef: SideTex): Vec2 {
@@ -277,7 +252,7 @@ export class World {
             }
         }
         if (intersection && intersectLinePosition !== null) {
-            const portalTo = this.getPortal(polygonIndex, intersectLinePosition);
+            const portalTo = this.map.getPortal(polygonIndex, intersectLinePosition);
             if (portalTo !== undefined && portalTo !== null && portalTo !== -1) {
                 //return this.movePlayer(intersection.collidePosition, position, portalTo);
                 return this.movePlayer(oldPosition, position, portalTo);
@@ -291,7 +266,7 @@ export class World {
 
     // cast a "ray" (really, find first intersection of world along line segment
     // between two points)
-    intersectLineSegment(polygonIndex: number, startPosition: Vec3, endPosition: Vec3): RayCollision | null {
+    intersectLineSegment(polygonIndex: number, startPosition: Vec3, endPosition: Vec3): Surface | null {
         const polygon = this.map.polygons[polygonIndex];
         const points = this.getPolygonPoints(polygonIndex);
 
@@ -321,23 +296,11 @@ export class World {
             const intersection = collideLineSegments([startPosition2d, endPosition2d], line);
 
             if (intersection) {
-                const portalTo = this.getPortal(polygonIndex, wallIndex);
+                const portalTo = this.map.getPortal(polygonIndex, wallIndex);
                 if (portalTo !== -1) {
                     const neighbor = this.map.polygons[portalTo];
                     const portalTop = Math.min(polygon.ceilingHeight, neighbor.ceilingHeight);
                     const portalBottom = Math.max(polygon.floorHeight, neighbor.floorHeight);
-
-                    const hasTop = portalTop !== polygon.ceilingHeight;
-                    const hasBottom = portalBottom !== polygon.floorHeight;
-
-                    let sideTextureType = sideType.full;
-                    if (hasTop && hasBottom) {
-                        sideTextureType = sideType.split;
-                    } else if (hasTop) {
-                        sideTextureType = sideType.high;
-                    } else if (hasBottom) {
-                        sideTextureType = sideType.low;
-                    }
 
                     const intersectHeight = lerp(intersection.t, startPosition[2], endPosition[2]);
                     if (intersectHeight > portalTop) {
@@ -345,7 +308,6 @@ export class World {
                             polygonIndex,
                             type: 'wallPrimary',
                             wallIndex,
-                            sideType: sideTextureType,
                         };
                     } else if (intersectHeight < portalBottom) {
                         return {
@@ -354,7 +316,6 @@ export class World {
                                 ? 'wallSecondary'
                                 : 'wallPrimary',
                             wallIndex,
-                            sideType: sideTextureType,
                         };
                     } else {
                         return this.intersectLineSegment(portalTo, startPosition, endPosition);
@@ -364,7 +325,6 @@ export class World {
                         polygonIndex,
                         type: 'wallPrimary',
                         wallIndex,
-                        sideType: sideType.full
                     };
                 }
             }

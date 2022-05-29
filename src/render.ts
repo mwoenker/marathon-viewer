@@ -10,7 +10,7 @@ import {
 import { Vec3, v3 } from './vector3';
 import { Player } from './player';
 import { ClipArea3d } from './clip';
-import { sideType, TransferMode } from './files/wad';
+import { SideType, TransferMode } from './files/wad';
 import { Transformation } from './transform2d';
 import { floorMod } from './utils';
 import { ScreenTransform } from './screen-transform';
@@ -222,7 +222,7 @@ class Renderer {
         const sideIndex = polygon.sides[polyLineIndex];
         const side = -1 === sideIndex ? null : this.world.getSide(polygon.sides[polyLineIndex]);
         const [p1, p2] = this.world.getLineVertices(polygonIndex, polyLineIndex);
-        const portalTo = this.world.getPortal(polygonIndex, polyLineIndex);
+        const portalTo = this.world.map.getPortal(polygonIndex, polyLineIndex);
 
         if (!isClockwise(this.player.position, p1, p2)) {
             return;
@@ -272,10 +272,10 @@ class Renderer {
             }
 
             if (neighbor.floorHeight > polygon.floorHeight && side) {
-                const sideTex = side.type === sideType.split
+                const sideTex = side.type === SideType.split
                     ? side.secondaryTexture
                     : side.primaryTexture;
-                const transferMode = side.type === sideType.split
+                const transferMode = side.type === SideType.split
                     ? side.secondaryTransferMode
                     : side.primaryTransferMode;
                 const belowPoly = clipArea.clipPolygon(this.makeWallPolygon({
@@ -298,7 +298,7 @@ class Renderer {
                         polygon: texturedPolygon,
                         textureDescriptor: sideTex.texture,
                         brightness: this.world.getLightIntensity(
-                            (side.type === sideType.split
+                            (side.type === SideType.split
                                 ? side.secondaryLightsourceIndex
                                 : side.primaryLightsourceIndex)),
                         transfer: transferMode || TransferMode.normal,

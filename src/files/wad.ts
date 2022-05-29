@@ -192,7 +192,7 @@ export function serializeWad(entries: MapGeometry[], filename: string): ArrayBuf
     return writer.getBuffer();
 }
 
-enum sideType {
+enum SideType {
     full = 0,
     high,
     low,
@@ -265,6 +265,6 @@ export {
     readMapSummaries,
     readMapFromSummary,
     mediaTypes,
-    sideType,
+    SideType,
     TransferMode,
 };
