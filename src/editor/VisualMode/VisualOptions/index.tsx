@@ -54,7 +54,7 @@ export function VisualOptions({ visualModeState, updateState, shapes, map }: Vis
         fullBrightShadingTable(collection.clutShadingTables[0])
         : null;
 
-    return <div>
+    return <div className="contextPanel">
         <select
             value={collectionId}
             onChange={e => setCollectionId(Number(e.currentTarget.value))}
@@ -63,7 +63,7 @@ export function VisualOptions({ visualModeState, updateState, shapes, map }: Vis
                 <option value={id}>{CollectionNames[id]}</option>
             ))}
         </select>
-        <div>
+        <div class="texturePalette">
             {collection?.bitmaps.map((bitmap, index) => {
                 const descriptor = makeShapeDescriptor(collectionId, 0, index);
                 return (

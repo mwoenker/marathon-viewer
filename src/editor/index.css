@@ -11,10 +11,24 @@ body {
 }
 
 .leftPanel {
-    height: calc(100vh - 16px);
-    overflow-y: auto;
+    height: 100vh;
+    overflow-y: hidden;
     flex: 0 0 300px;
+    display: flex;
+    flex-direction: column;
+}
+
+.leftPanel .filePanel {
     padding: 8px;
+    border-bottom: 1px solid #aaa;
+}
+
+.leftPanel .contextPanel {
+    padding: 8px;
+    flex: 1 1 auto;
+    height: 0;
+    display: flex;
+    flex-direction: column;
 }
 
 .leftPanel .controlGroup {
@@ -42,6 +56,10 @@ body {
     margin: 0.25em 0;
     padding: 0.25em;
     width: 100%;
+}
+
+.texturePalette {
+    overflow: auto;
 }
 
 .rightPanel {

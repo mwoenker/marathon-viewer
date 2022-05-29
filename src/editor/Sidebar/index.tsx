@@ -92,20 +92,21 @@ export function Sidebar({
 
     return (
         <div className="leftPanel">
-            <div className='controlGroup'>
-                <label for='sidebarMapFile'>Map</label>
-                <input id='sidebarMapFile' type="file" onChange={fileSelected} />
-                <label for='sidebarShapesFile'>Shapes</label>
-                <input id='sidebarShapesFile' type="file" onChange={shapesFileSelected} />
+            <div class="filePanel">
+                <div className='controlGroup'>
+                    <label for='sidebarMapFile'>Map</label>
+                    <input id='sidebarMapFile' type="file" onChange={fileSelected} />
+                    <label for='sidebarShapesFile'>Shapes</label>
+                    <input id='sidebarShapesFile' type="file" onChange={shapesFileSelected} />
+                </div>
+                <MapList
+                    maps={mapSummaries}
+                    selectedMap={state.map}
+                    onMapSelected={onMapSelected} />
+                <div className='buttonRow'>
+                    <button className='sidebarSaveButton' onClick={save}>Save Map</button>
+                </div>
             </div>
-            <MapList
-                maps={mapSummaries}
-                selectedMap={state.map}
-                onMapSelected={onMapSelected} />
-            <div className='buttonRow'>
-                <button className='sidebarSaveButton' onClick={save}>Save Map</button>
-            </div>
-            <hr />
             {state.mode.type === 'geometry' && state.map && (
                 <SelectionOptions
                     selection={state.selection}
