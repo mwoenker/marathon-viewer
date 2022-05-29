@@ -5,7 +5,7 @@ import { World } from './world';
 import { Transformation } from './transform2d';
 import { v3scale, Vec3 } from './vector3';
 import { worldUnitSize } from './constants';
-import { ConnectedSurface, getConnectedSurfaces } from './surface';
+import { TexturedSurface, getConnectedSurfaces } from './surface';
 import { TransferMode } from './files/wad';
 
 export function textureClickedSurface(
@@ -36,7 +36,7 @@ export function textureClickedSurface(
 
     const clickedInfo = map.getSurfaceInfo(intercept);
 
-    let surfaces: ConnectedSurface[];
+    let surfaces: TexturedSurface[];
 
     if (flood) {
         surfaces = getConnectedSurfaces(map, intercept, (surface) => {
