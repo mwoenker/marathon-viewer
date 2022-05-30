@@ -1,10 +1,11 @@
 import type { JSXInternal } from 'preact/src/jsx';
 import { MapSummary, serializeWad } from '../../files/wad';
 import type { MapGeometry } from '../../files/map';
-import { EditorState, UpdateState } from '../state';
+import { EditorState, getSelection, UpdateState } from '../state';
 import { SelectionOptions } from './SelectionOptions';
 import { Shapes } from '../../shapes-loader';
 import { VisualOptions } from '../VisualMode/VisualOptions';
+import { ToolPanel } from './ToolPanel';
 
 interface MapListProps {
     maps: MapSummary[],
@@ -108,10 +109,13 @@ export function Sidebar({
                 </div>
             </div>
             {state.mode.type === 'geometry' && state.map && (
-                <SelectionOptions
-                    selection={state.selection}
-                    map={state.map}
-                    onMapChange={onMapChange} />
+                <>
+                    <ToolPanel toolState={state.mode.toolState} updateState={updateState} />
+                    <SelectionOptions
+                        selection={getSelection(state)}
+                        map={state.map}
+                        onMapChange={onMapChange} />
+                </>
             )}
             {state.mode.type === 'visual' && state.map && shapes && (
                 <VisualOptions

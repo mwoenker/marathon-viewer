@@ -1,7 +1,7 @@
 import { JSXInternal } from 'preact/src/jsx';
 import { MapGeometry } from '../../files/map';
 import { Shapes } from '../../shapes-loader';
-import { Action, EditMode, EditorState } from '../state';
+import { Action, EditMode, EditorState, getSelection } from '../state';
 import { VisualMode } from '../VisualMode';
 import { MapView } from './MapView';
 
@@ -100,7 +100,7 @@ export function RightPanel({
                 <MapView
                     map={state.map}
                     pixelSize={state.pixelSize}
-                    selection={state.selection}
+                    selection={getSelection(state)}
                     updateState={updateState}
                 />
             )}

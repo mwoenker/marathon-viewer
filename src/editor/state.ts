@@ -1,6 +1,7 @@
 import { Dispatch, useReducer } from 'react';
 import { Vec2 } from '../vector2';
 import { MapGeometry } from '../files/map';
+import { impossibleValue } from '../utils';
 
 export type SelectionObjectType = 'point' | 'line' | 'polygon' | 'object';
 
@@ -8,8 +9,20 @@ export type EditMode =
     'geometry' |
     'visual';
 
+export interface SelectToolState {
+    tool: 'select';
+    selection?: Selection
+}
+
+export interface DrawToolState {
+    tool: 'draw';
+}
+
+export type ToolState = SelectToolState | DrawToolState;
+
 export interface GeometryModeState {
     type: 'geometry'
+    toolState: ToolState
 }
 
 export interface VisualModeState {
@@ -40,19 +53,22 @@ const blankSelection: Selection = {
 };
 
 const initialState: EditorState = {
-    selection: blankSelection,
     pixelSize: 64,
     map: undefined,
     isEphemeral: false,
     undoStack: [],
     redoStack: [],
     mode: {
-        type: 'geometry'
+        type: 'geometry',
+        toolState: {
+            tool: 'select',
+            selection: blankSelection
+        }
     }
 };
 
 export interface MouseDownAction {
-    type: 'down',
+    type: 'mapMouseDown',
     objType: SelectionObjectType,
     index: number,
     relativePos: Vec2,
@@ -60,11 +76,11 @@ export interface MouseDownAction {
 }
 
 export interface MouseUpAction {
-    type: 'up',
+    type: 'mapMouseUp',
 }
 
 export interface MouseMoveAction {
-    type: 'move',
+    type: 'mapMouseMove',
     coords: Vec2,
     pixelSize: number,
 }
@@ -80,7 +96,6 @@ export interface SelectObjectAction {
 }
 
 export interface EditorState {
-    selection: Selection
     map: MapGeometry | undefined
     isEphemeral: boolean // current state is ephemeral, next setMap should replace not push onto undo
     pixelSize: number
@@ -107,6 +122,11 @@ export interface SelectTextureAction {
     texture: number | undefined
 }
 
+export interface SelectToolAction {
+    type: 'selectTool';
+    tool: ToolState['tool'];
+}
+
 export type Action =
     MouseAction |
     ZoomInAction |
@@ -115,7 +135,8 @@ export type Action =
     SetEditMode |
     UndoAction |
     RedoAction |
-    SelectTextureAction;
+    SelectTextureAction |
+    SelectToolAction;
 
 const zoomIncrement = 1.5;
 
@@ -131,17 +152,39 @@ function dragDist(state: Selection) {
     }
 }
 
-function setSelection(state: EditorState, selection: Selection) {
-    if (selection === state.selection) {
+function setSelection(state: EditorState, selection: Selection): EditorState {
+    if (selection === getSelection(state) ||
+        state.mode.type !== 'geometry' ||
+        state.mode.toolState.tool !== 'select') {
         return state;
     } else {
-        return { ...state, selection };
+        return {
+            ...state,
+            mode: {
+                ...state.mode,
+                toolState: {
+                    ...state.mode.toolState,
+                    selection
+                }
+            }
+        };
+    }
+}
+
+function defaultModeState(mode: EditMode): ModeState {
+    switch (mode) {
+        case 'geometry':
+            return initialState.mode;
+        case 'visual':
+            return { type: 'visual' };
+        default:
+            impossibleValue(mode);
     }
 }
 
 function reduce(state: EditorState, action: Action): EditorState {
     switch (action.type) {
-        case 'down':
+        case 'mapMouseDown':
             return setSelection(state, {
                 ...blankSelection,
                 objType: action.objType,
@@ -151,10 +194,10 @@ function reduce(state: EditorState, action: Action): EditorState {
                 startCoords: action.coords,
                 currentCoords: action.coords,
             });
-        case 'up':
+        case 'mapMouseUp':
             // Not dragging any more
             return setSelection(state, {
-                ...state.selection,
+                ...getSelection(state),
                 isMouseDown: false,
                 isDragging: false,
                 currentCoords: null,
@@ -169,11 +212,12 @@ function reduce(state: EditorState, action: Action): EditorState {
                 currentCoords: null,
                 startCoords: [0, 0],
             });
-        case 'move': {
-            if (!state.selection.isMouseDown) {
+        case 'mapMouseMove': {
+            const selection = getSelection(state);
+            if (!selection.isMouseDown) {
                 return state;
             }
-            const newSelection = { ...state.selection, currentCoords: action.coords };
+            const newSelection = { ...selection, currentCoords: action.coords };
             if (dragDist(newSelection) >= 8 * action.pixelSize) {
                 newSelection.isDragging = true;
             }
@@ -239,9 +283,7 @@ function reduce(state: EditorState, action: Action): EditorState {
         case 'setEditMode':
             return {
                 ...state,
-                mode: {
-                    type: action.editMode
-                }
+                mode: defaultModeState(action.editMode)
             };
         case 'selectTexture':
             if (state.mode.type !== 'visual') {
@@ -255,12 +297,32 @@ function reduce(state: EditorState, action: Action): EditorState {
                     }
                 };
             }
+        case 'selectTool':
+            if (state.mode.type !== 'geometry') {
+                return state;
+            } else {
+                return {
+                    ...state,
+                    mode: {
+                        ...state.mode,
+                        toolState: { tool: action.tool }
+                    }
+                };
+            }
         default:
             throw new Error(`invalid action`);
     }
 }
 
 type EditorStateResult = [EditorState, Dispatch<Action>];
+
+export function getSelection(state: EditorState): Selection {
+    if (state.mode.type === 'geometry' && state.mode.toolState.tool === 'select') {
+        return state.mode.toolState.selection ?? blankSelection;
+    } else {
+        return blankSelection;
+    }
+}
 
 export function useEditorState(): EditorStateResult {
     return useReducer(reduce, initialState);

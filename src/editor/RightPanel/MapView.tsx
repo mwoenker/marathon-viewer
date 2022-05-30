@@ -44,7 +44,7 @@ export function MapView({
         const clickedObject = findClickedObject(map, clickPos, pixelSize);
         if (clickedObject) {
             return updateState({
-                type: 'down',
+                type: 'mapMouseDown',
                 objType: clickedObject.type,
                 index: clickedObject.index,
                 relativePos: v2sub(clickPos, clickedObject.position),
@@ -60,19 +60,19 @@ export function MapView({
         const viewY = e.offsetY;
 
         updateState({
-            type: 'move',
+            type: 'mapMouseMove',
             coords: viewport.toWorld([viewX, viewY]),
             pixelSize: pixelSize,
         });
     }
 
     function mouseUp() {
-        updateState({ type: 'up' });
+        updateState({ type: 'mapMouseUp' });
         map && updateState({ type: 'setMap', map, isEphemeral: false }); // end ephemeral update
     }
 
     function mouseLeave() {
-        updateState({ type: 'up' });
+        updateState({ type: 'mapMouseUp' });
         map && updateState({ type: 'setMap', map, isEphemeral: false }); // end ephemeral update
     }
 

@@ -20,7 +20,7 @@ body {
 
 .leftPanel .filePanel {
     padding: 8px;
-    border-bottom: 1px solid #aaa;
+    /* border-bottom: 1px solid #aaa; */
 }
 
 .leftPanel .contextPanel {
@@ -106,4 +106,24 @@ body {
     margin: 0px;
     border: 3px solid black;
     padding: 1px;
+}
+
+.toolPanel {
+    margin: 8px auto 8px auto;
+    border: 1px solid #555;
+    /* border-bottom: 1px solid #AAA; */
+    display: flex;
+}
+
+.toolPanel .tool {
+    border-right: 1px solid #555;
+    padding: 4px;
+}
+
+.toolPanel .tool:last-of-type {
+    border-right: none;
+}
+
+.toolPanel .tool.selected {
+    background: #AAA;
 }
