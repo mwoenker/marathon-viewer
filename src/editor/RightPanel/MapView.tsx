@@ -68,12 +68,10 @@ export function MapView({
 
     function mouseUp() {
         updateState({ type: 'mapMouseUp' });
-        map && updateState({ type: 'setMap', map, isEphemeral: false }); // end ephemeral update
     }
 
     function mouseLeave() {
         updateState({ type: 'mapMouseUp' });
-        map && updateState({ type: 'setMap', map, isEphemeral: false }); // end ephemeral update
     }
 
     function changeMap(map: MapGeometry, isEphemeral = false) {
@@ -152,35 +150,6 @@ export function MapView({
             window.addEventListener('resize', recenterView);
             return () => window.removeEventListener('resize', recenterView);
         },
-    );
-
-    useEffect(
-        () => {
-            if (selection.isDragging && map) {
-                if ('point' === selection.objType && selection.currentCoords) {
-                    changeMap(map.movePoint(
-                        selection.index,
-                        [
-                            Math.floor(selection.currentCoords[0]),
-                            Math.floor(selection.currentCoords[1])
-                        ]
-                    ), true);
-                } else if ('polygon' === selection.objType && selection.currentCoords) {
-                    changeMap(map.movePolygon(
-                        selection.index,
-                        v2sub(
-                            selection.currentCoords,
-                            selection.relativePos)), true);
-                } else if ('object' === selection.objType && selection.currentCoords) {
-                    changeMap(map.moveObject(
-                        selection.index,
-                        v2sub(
-                            selection.currentCoords,
-                            selection.relativePos)), true);
-                }
-            }
-        },
-        [selection]
     );
 
     return (
