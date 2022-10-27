@@ -1,7 +1,10 @@
 import { EditorState, setSelection, getSelection } from '.';
 import { MapGeometry } from '../../files/map';
 import { v2sub } from '../../vector2';
+import { findClickedObject } from '../RightPanel/click';
 import { MouseDownAction, MouseMoveAction, MouseUpAction } from './actions';
+import { DrawOperation, setDrawOperation, StartPoint } from './drawOperation';
+import { toolSelected } from './modes';
 import { blankSelection, Selection } from './selection';
 import { setMap } from './setMap';
 
@@ -54,16 +57,47 @@ function dragMapObject(
 }
 
 export function mouseDown(state: EditorState, action: MouseDownAction): EditorState {
-    const mode = state.mode;
-    if (mode.type === 'geometry' && mode.toolState.tool === 'select') {
-        return setSelection(state, {
-            ...blankSelection,
-            objType: action.objType,
-            index: action.index,
-            relativePos: action.relativePos,
-            isMouseDown: true,
-            startCoords: action.coords,
-            currentCoords: action.coords,
+    if (!state.map) {
+        return state;
+    }
+
+    if (toolSelected(state, 'select')) {
+        const clickedObject = findClickedObject(
+            state.map, action.coords, state.pixelSize);
+        if (!clickedObject) {
+            return setSelection(state, blankSelection);
+        } else {
+            return setSelection(state, {
+                ...blankSelection,
+                objType: clickedObject.type,
+                index: clickedObject.index,
+                relativePos: v2sub(action.coords, clickedObject.position),
+                isMouseDown: true,
+                startCoords: action.coords,
+                currentCoords: action.coords,
+            });
+        }
+    } else if (toolSelected(state, 'draw')) {
+        const clickedObject = findClickedObject(
+            state.map,
+            action.coords,
+            state.pixelSize
+        );
+        let startPoint: StartPoint;
+        if (clickedObject?.type === 'point') {
+            startPoint = {
+                type: 'existing',
+                pointIndex: clickedObject.index
+            };
+        } else {
+            startPoint = {
+                type: 'new',
+                position: action.coords
+            };
+        }
+        return setDrawOperation(state, {
+            startPoint,
+            endPoint: action.coords
         });
     } else {
         return state;
@@ -76,8 +110,7 @@ export function mouseMove(state: EditorState, action: MouseMoveAction): EditorSt
         return state;
     }
 
-    if (state.mode.type === 'geometry' &&
-        state.mode.toolState.tool === 'select') {
+    if (toolSelected(state, 'select')) {
         const newSelection = { ...selection, currentCoords: action.coords };
         if (dragDist(newSelection) >= 8 * action.pixelSize) {
             newSelection.isDragging = true;
@@ -87,15 +120,15 @@ export function mouseMove(state: EditorState, action: MouseMoveAction): EditorSt
         } else {
             return dragMapObject(state, newSelection, state.map);
         }
+    } else if (toolSelected(state, 'draw')) {
+
     } else {
         return state;
     }
 }
 
 export function mouseUp(state: EditorState, action: MouseUpAction): EditorState {
-    if (state.mode.type === 'geometry' &&
-        state.mode.toolState.tool === 'select' &&
-        state.map) {
+    if (state.map && toolSelected(state, 'select')) {
         // Not dragging any more
         return setMap(
             setSelection(state, {
@@ -107,6 +140,8 @@ export function mouseUp(state: EditorState, action: MouseUpAction): EditorState 
             state.map,
             false
         );
+    } else if (toolSelected(state, 'draw')) {
+
     } else {
         return state;
     }

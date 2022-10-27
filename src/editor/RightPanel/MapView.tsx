@@ -1,12 +1,11 @@
-import { useState, useRef, useEffect, useLayoutEffect } from 'react';
+import { useState, useRef, useLayoutEffect } from 'react';
 import { MapGeometry } from "../../files/map";
-import { v2sub, Vec2 } from "../../vector2";
+import { Vec2 } from "../../vector2";
 import { CanvasMap } from "../draw/canvas";
 import { Viewport } from '../draw/viewport';
 import { Action, Selection } from '../state';
 
 import type { JSXInternal } from 'preact/src/jsx';
-import { findClickedObject } from './click';
 
 interface MapViewProps {
     pixelSize: number,
@@ -41,18 +40,10 @@ export function MapView({
             e.offsetY
         ]);
 
-        const clickedObject = findClickedObject(map, clickPos, pixelSize);
-        if (clickedObject) {
-            return updateState({
-                type: 'mapMouseDown',
-                objType: clickedObject.type,
-                index: clickedObject.index,
-                relativePos: v2sub(clickPos, clickedObject.position),
-                coords: clickPos
-            });
-        } else {
-            updateState({ type: 'cancel' });
-        }
+        return updateState({
+            type: 'mapMouseDown',
+            coords: clickPos
+        });
     }
 
     function mouseMove(e: JSXInternal.TargetedMouseEvent<HTMLElement>) {

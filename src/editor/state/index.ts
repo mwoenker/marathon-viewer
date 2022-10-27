@@ -2,39 +2,19 @@ import { Dispatch, useReducer } from 'react';
 import { MapGeometry } from '../../files/map';
 import { impossibleValue } from '../../utils';
 import { Action } from './actions';
-import { DrawOperation } from './drawOperation';
 import { mouseDown, mouseMove, mouseUp } from './mapMouseActions';
+import { EditMode, ModeState, VisualModeState, ToolState } from './modes';
 import { blankSelection, Selection } from './selection';
 import { setMap } from './setMap';
 
-export { Action };
-export { Selection };
-
-export interface DrawToolState {
-    tool: 'draw';
-    drawOperation?: DrawOperation | undefined;
-}
-
-export interface SelectToolState {
-    tool: 'select';
-    selection?: Selection
-}
-
-export type ToolState = SelectToolState | DrawToolState;
-
-export interface GeometryModeState {
-    type: 'geometry'
-    toolState: ToolState
-}
-
-export interface VisualModeState {
-    type: 'visual'
-    selectedTexture?: number | undefined
-}
-
-export type ModeState = GeometryModeState | VisualModeState
-
-export type EditMode = ModeState['type']
+export {
+    Action,
+    Selection,
+    EditMode,
+    ModeState,
+    VisualModeState,
+    ToolState
+};
 
 export interface EditorState {
     map: MapGeometry | undefined

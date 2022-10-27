@@ -5,9 +5,6 @@ import { SelectionObjectType } from "./selection";
 
 export interface MouseDownAction {
     type: 'mapMouseDown',
-    objType: SelectionObjectType,
-    index: number,
-    relativePos: Vec2,
     coords: Vec2,
 }
 

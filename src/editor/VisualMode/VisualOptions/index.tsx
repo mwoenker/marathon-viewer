@@ -4,7 +4,7 @@ import { Collections, CollectionNames, makeShapeDescriptor, parseShapeDescriptor
 import { fullBrightShadingTable } from '../../../color';
 import { useEffect, useState } from "preact/hooks";
 import { Shape } from "./Shape";
-import { Action, EditorState, VisualModeState } from "../../state";
+import { Action, VisualModeState } from "../../state";
 
 export interface VisualOptionsProps {
     visualModeState: VisualModeState;
