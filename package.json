@@ -8,6 +8,7 @@
     "build": "webpack --config webpack.prod.js",
     "watch-tools": "tsc --watch --project tools/tsconfig.json",
     "build-tools": "tsc --project tools/tsconfig.json",
+    "serve": "http-server dist --port 8888",
     "test": "npm run test"
   },
   "repository": {
