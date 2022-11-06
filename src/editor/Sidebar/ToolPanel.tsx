@@ -17,6 +17,7 @@ const tools = [
 ] as const;
 
 export function ToolPanel({ toolState, updateState }: ToolPanelProps): JSX.Element {
+    console.log({toolState});
     return (
         <div className='toolPanel'>
             {tools.map(tool => {

@@ -3,7 +3,7 @@ import { MapGeometry } from '../../files/map';
 import { v2sub } from '../../vector2';
 import { findClickedObject } from '../RightPanel/click';
 import { MouseDownAction, MouseMoveAction, MouseUpAction } from './actions';
-import { DrawOperation, setDrawOperation, StartPoint } from './drawOperation';
+import { setDrawOperation, StartPoint } from './drawOperation';
 import { toolSelected } from './modes';
 import { blankSelection, Selection } from './selection';
 import { setMap } from './setMap';
@@ -121,7 +121,8 @@ export function mouseMove(state: EditorState, action: MouseMoveAction): EditorSt
             return dragMapObject(state, newSelection, state.map);
         }
     } else if (toolSelected(state, 'draw')) {
-
+        // todo actually do something
+        return state;
     } else {
         return state;
     }
@@ -141,7 +142,8 @@ export function mouseUp(state: EditorState, action: MouseUpAction): EditorState 
             false
         );
     } else if (toolSelected(state, 'draw')) {
-
+        // todo actually do something
+        return state;
     } else {
         return state;
     }
