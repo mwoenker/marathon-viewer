@@ -40,8 +40,8 @@ function Editor() {
         setShapes(new Shapes(new HtmlInputFile(file)));
     };
 
-    function setMap(map: MapGeometry) {
-        updateState({ type: 'setMap', map });
+    function setMap(map: MapGeometry, isEphemeral = false) {
+        updateState({ type: 'setMap', map, isEphemeral });
     }
 
     async function setSelectedMap(summary: MapSummary) {

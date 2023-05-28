@@ -127,3 +127,17 @@ body {
 .toolPanel .tool.selected {
     background: #AAA;
 }
+
+.resizingContainer {
+    width: 100%;
+    height: 100%;
+}
+
+.facingCanvas {
+    width: 100%;
+    height: 100%;
+}
+
+.facingHandle {
+    position: absolute;
+}

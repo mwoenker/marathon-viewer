@@ -48,7 +48,7 @@ interface SidebarProps {
     onMapFileSelected: (file: File) => void
     onShapesFileSelected(file: File): void
     shapes: Shapes
-    onMapChange(map: MapGeometry): void
+    onMapChange(map: MapGeometry, isEphemeral?: boolean): void
     mapSummaries: MapSummary[]
     onMapSelected(map: MapSummary): void
     state: EditorState
@@ -93,11 +93,11 @@ export function Sidebar({
 
     return (
         <div className="leftPanel">
-            <div class="filePanel">
+            <div className="filePanel">
                 <div className='controlGroup'>
-                    <label for='sidebarMapFile'>Map</label>
+                    <label htmlFor='sidebarMapFile'>Map</label>
                     <input id='sidebarMapFile' type="file" onChange={fileSelected} />
-                    <label for='sidebarShapesFile'>Shapes</label>
+                    <label htmlFor='sidebarShapesFile'>Shapes</label>
                     <input id='sidebarShapesFile' type="file" onChange={shapesFileSelected} />
                 </div>
                 <MapList

@@ -8,7 +8,7 @@ import { PolygonOptions } from './PolygonOptions';
 interface SelectionOptionsProps {
     map: MapGeometry
     selection: Selection
-    onMapChange(map: MapGeometry): void
+    onMapChange(map: MapGeometry, isEphemeral?: boolean): void
 }
 
 export function SelectionOptions({ map, onMapChange, selection }: SelectionOptionsProps): JSX.Element | null {

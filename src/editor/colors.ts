@@ -17,5 +17,8 @@ export default {
     scenery: 'green',
     item: 'purple',
     goal: 'orange',
-    soundSource: 'magenta'
+    soundSource: 'magenta',
+    facingHandle: '#f00',
+    facingTrack: '#ccc',
+    facingLever: '#888',
 };

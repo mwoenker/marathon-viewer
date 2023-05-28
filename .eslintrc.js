@@ -5,10 +5,13 @@ module.exports = {
         '@typescript-eslint',
     ],
     rules: {
-        semi: ["error", "always"]
+        semi: ["error", "always"],
+        'react/react-in-jsx-scope': 'off',
     },
     extends: [
         'eslint:recommended',
         'plugin:@typescript-eslint/recommended',
+        'plugin:react/recommended',
+        'plugin:react-hooks/recommended'
     ],
 };
