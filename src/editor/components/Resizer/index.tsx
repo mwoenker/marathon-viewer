@@ -22,7 +22,6 @@ export function Resizer({ children }: ResizerProps): JSX.Element {
 
     useEffect(() => {
         const callback = () => {
-            console.log('callback');
             resize(currentContainer.current);
         };
         callback();

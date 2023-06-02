@@ -49,11 +49,8 @@ export class GeometryBuffer {
         this.drawCalls = [];
     }
 
-    flush(isFinal = false): void {
+    flush(): void {
         this.nDrawCalls += this.drawCalls.length;
-        if (isFinal) {
-            //console.log('draw calls', this.nDrawCalls);
-        }
         const gl = this.gl;
 
         if (this.elementsWritten > 0) {

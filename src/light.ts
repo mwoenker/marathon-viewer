@@ -15,9 +15,6 @@ function flicker(phase: number, period: number, initial: number, final: number) 
     const sine = sineInterp(phase / period, initial, final);
     const d = final - sine;
     const val = sine + randInt(d);
-    if (val < 0) {
-        console.log({ val, d, sine, phase, period, initial, final });
-    }
     return val;
 }
 

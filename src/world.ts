@@ -133,11 +133,11 @@ export class World {
     }
 
     getLightIntensity(lightIndex: number): number {
-        const intensity = this.lightState[lightIndex].intensity / 0x10000;
-        if (intensity !== 0 && !intensity) {
-            console.log(lightIndex, this.lightState);
-            throw new Error('blam2');
+        const lightState = this.lightState[lightIndex]
+        if (!lightState) {
+            throw new Error(`light state not found: ${lightIndex}`);
         }
+        const intensity = lightState.intensity / 0x10000;
         return intensity;
     }
 

@@ -47,8 +47,6 @@ export function textureClickedSurface(
         surfaces = [{ texOffset: [0, 0], surface: intercept }];
     }
 
-    console.log({ surfaces });
-
     for (const connectedSurface of surfaces) {
         const { surface, texOffset } = connectedSurface;
         map = map.setSurfaceTextureInfo(surface, {

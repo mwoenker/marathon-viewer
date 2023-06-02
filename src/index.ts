@@ -43,8 +43,6 @@ declare const window: ExtendedWindow;
 function populateLevelSelect(levelSelect: HTMLSelectElement, summaries: MapSummary[]) {
     levelSelect.innerHTML = '';
     summaries.forEach((summary, i) => {
-        console.log({ summary });
-        console.log(summary.directoryEntry);
         if (summary && summary?.directoryEntry?.levelName) {
             const option = document.createElement('option');
             option.value = `${i}`;

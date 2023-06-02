@@ -136,7 +136,6 @@ export class Environment {
     }
 
     setSelectedShape(shapeDescriptor: number | undefined): void {
-        console.log('SHAPE', shapeDescriptor, parseShapeDescriptor(shapeDescriptor || 0));
         this.selectedShapeDescriptor = shapeDescriptor;
     }
 
@@ -164,7 +163,6 @@ export class Environment {
         }
 
         if (this.lastPoly !== this.player.polygon) {
-            console.log('poly', this.player.polygon);
             this.lastPoly = this.player.polygon;
         }
 

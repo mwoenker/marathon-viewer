@@ -91,14 +91,13 @@ class WebGL2RenderBackend {
         const rasterizer = new GL2Rasterizer(
             player, gl, this.shapeTextures, this.shader);
         render({ rasterizer, player, world, seconds });
-        rasterizer.flush(true);
+        rasterizer.flush();
         rasterizer.dispose();
     }
 
     dispose(): void {
         this.shapeTextures.dispose();
         this.shader.dispose();
-        console.log('gl dispose');
     }
 }
 

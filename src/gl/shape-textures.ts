@@ -35,7 +35,6 @@ export class ShapeTextures {
             if (shape) {
                 const shadingTables = this.shapeLoader.getShadingTables(descriptor);
                 if (shadingTables) {
-                    console.log('creating gl texture', descriptor);
                     const colorTable = fullBrightShadingTable(shadingTables);
                     const rgbaBitmap = shapeToRGBA(shape, colorTable);
                     let texture = null;

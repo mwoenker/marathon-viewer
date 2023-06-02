@@ -47,8 +47,8 @@ export class Rasterizer {
         }
     }
 
-    flush(isFinal = false): void {
-        this.geometryBuffer.flush(isFinal);
+    flush(): void {
+        this.geometryBuffer.flush();
     }
 
     textureWall(

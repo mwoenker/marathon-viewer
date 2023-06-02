@@ -17,9 +17,6 @@ export class SliceFile {
         const realBegin = begin + this.begin;
         const realEnd = end + this.begin;
         if (realEnd > this.end) {
-            console.log(this.begin, this.end);
-            console.log({ begin, end, realBegin, realEnd });
-            console.log(realEnd - end);
             throw new Error('out of bounds read');
         }
         return this.file.readRange(realBegin, realEnd);
