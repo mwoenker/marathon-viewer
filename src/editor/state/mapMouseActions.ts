@@ -3,7 +3,7 @@ import { MapGeometry } from '../../files/map';
 import { v2sub } from '../../vector2';
 import { findClickedObject } from '../RightPanel/click';
 import { MouseDownAction, MouseMoveAction, MouseUpAction } from './actions';
-import { setDrawOperation, StartPoint } from './drawOperation';
+import { continueDrawOperation, finishDrawOperation, startDrawOperationFromPoint } from './drawOperation';
 import { toolSelected } from './modes';
 import { blankSelection, Selection } from './selection';
 import { setMap } from './setMap';
@@ -61,9 +61,11 @@ export function mouseDown(state: EditorState, action: MouseDownAction): EditorSt
         return state;
     }
 
+    const { map } = state;
+
     if (toolSelected(state, 'select')) {
         const clickedObject = findClickedObject(
-            state.map, action.coords, state.pixelSize);
+            map, action.coords, state.pixelSize);
         if (!clickedObject) {
             return setSelection(state, blankSelection);
         } else {
@@ -78,27 +80,7 @@ export function mouseDown(state: EditorState, action: MouseDownAction): EditorSt
             });
         }
     } else if (toolSelected(state, 'draw')) {
-        const clickedObject = findClickedObject(
-            state.map,
-            action.coords,
-            state.pixelSize
-        );
-        let startPoint: StartPoint;
-        if (clickedObject?.type === 'point') {
-            startPoint = {
-                type: 'existing',
-                pointIndex: clickedObject.index
-            };
-        } else {
-            startPoint = {
-                type: 'new',
-                position: action.coords
-            };
-        }
-        return setDrawOperation(state, {
-            startPoint,
-            endPoint: action.coords
-        });
+        return startDrawOperationFromPoint(state, action.coords);
     } else {
         return state;
     }
@@ -106,11 +88,11 @@ export function mouseDown(state: EditorState, action: MouseDownAction): EditorSt
 
 export function mouseMove(state: EditorState, action: MouseMoveAction): EditorState {
     const selection = getSelection(state);
-    if (!selection.isMouseDown) {
-        return state;
-    }
 
     if (toolSelected(state, 'select')) {
+        if (!selection.isMouseDown) {
+            return state;
+        }
         const newSelection = { ...selection, currentCoords: action.coords };
         if (dragDist(newSelection) >= 8 * action.pixelSize) {
             newSelection.isDragging = true;
@@ -121,8 +103,7 @@ export function mouseMove(state: EditorState, action: MouseMoveAction): EditorSt
             return dragMapObject(state, newSelection, state.map);
         }
     } else if (toolSelected(state, 'draw')) {
-        // todo actually do something
-        return state;
+        return continueDrawOperation(state, action.coords);
     } else {
         return state;
     }
@@ -142,8 +123,9 @@ export function mouseUp(state: EditorState, action: MouseUpAction): EditorState 
             false
         );
     } else if (toolSelected(state, 'draw')) {
-        // todo actually do something
-        return state;
+        if (state.map) {
+            return finishDrawOperation(state);
+        }
     } else {
         return state;
     }

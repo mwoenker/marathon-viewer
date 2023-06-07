@@ -616,4 +616,41 @@ export class MapGeometry {
             })),
         });
     }
+
+    addPoint(v: Vec2): [MapGeometry, number] {
+        const pointIndex = this.points.length;
+        const newPoints = [...this.points];
+        newPoints[pointIndex] = v;
+        return [
+            new MapGeometry({
+                ...this,
+                points: newPoints,
+            }),
+            pointIndex
+        ];
+    }
+
+    addLine(startPointIndex: number, endPointIndex: number): [MapGeometry, number] {
+        const lineIndex = this.lines.length;
+        const newLines = [...this.lines];
+        newLines[lineIndex] = new Line({
+            begin: startPointIndex,
+            end: endPointIndex,
+            flags: 0,
+            length: 0,
+            highestFloor: 0,
+            lowestCeiling: 0,
+            frontSide: -1,
+            backSide: -1,
+            frontPoly: -1,
+            backPoly: -1,
+        });
+        return [
+            new MapGeometry({
+                ...this,
+                lines: newLines,
+            }),
+            lineIndex
+        ];
+    }
 }

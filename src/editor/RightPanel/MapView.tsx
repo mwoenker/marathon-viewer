@@ -3,23 +3,23 @@ import { MapGeometry } from "../../files/map";
 import { Vec2 } from "../../vector2";
 import { CanvasMap } from "../draw/canvas";
 import { Viewport } from '../draw/viewport';
-import { Action, Selection } from '../state';
+import { Action, EditorState, getSelection } from '../state';
 
 import type { JSXInternal } from 'preact/src/jsx';
+import { getDrawOperation } from '../state/drawOperation';
 
 interface MapViewProps {
-    pixelSize: number,
-    map: MapGeometry | undefined,
-    selection: Selection,
+    state: EditorState,
     updateState: (action: Action) => void
 }
 
 export function MapView({
-    pixelSize,
-    map,
-    selection,
+    state,
     updateState
 }: MapViewProps): JSX.Element {
+    const { pixelSize, map } = state;
+    const selection = getSelection(state);
+
     const [viewportSize, setViewportSize] = useState([0, 0]);
     const [viewCenter, setViewCenter] = useState([0, 0] as Vec2);
     const ref = useRef<HTMLDivElement>(null);
@@ -62,7 +62,7 @@ export function MapView({
     }
 
     function mouseLeave() {
-        updateState({ type: 'mapMouseUp' });
+        //updateState({ type: 'mapMouseUp' });
     }
 
     function changeMap(map: MapGeometry, isEphemeral = false) {
@@ -158,6 +158,7 @@ export function MapView({
                 map={map}
                 selection={selection}
                 viewport={viewport}
+                drawOperation={getDrawOperation(state)}
             />
         </div>
     );

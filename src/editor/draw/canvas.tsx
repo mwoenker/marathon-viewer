@@ -3,11 +3,13 @@ import { MapGeometry } from '../../files/map';
 import { Selection } from '../state';
 import { Viewport } from './viewport';
 import { MapDraw } from './map-draw';
+import { DrawOperation } from '../state/drawOperation';
 
 interface CanvasMapProps {
     map: MapGeometry | undefined,
     selection: Selection,
-    viewport: Viewport
+    viewport: Viewport,
+    drawOperation: DrawOperation | undefined
 }
 
 export function CanvasMap(allProps: CanvasMapProps): JSX.Element {
@@ -15,14 +17,15 @@ export function CanvasMap(allProps: CanvasMapProps): JSX.Element {
         map,
         selection,
         viewport,
+        drawOperation
     } = allProps;
     const ref = useRef<HTMLCanvasElement | null>(null);
     const frameRequest = useRef(0);
-
+    console.log({ drawOperation });
     const redraw = () => {
         if (ref.current) {
             const canvas = ref.current;
-            const mapDraw = new MapDraw(map, selection, canvas, viewport);
+            const mapDraw = new MapDraw(map, selection, canvas, viewport, drawOperation);
             mapDraw.draw();
         }
         frameRequest.current = 0;

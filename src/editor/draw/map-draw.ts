@@ -7,6 +7,7 @@ import { Selection } from '../state';
 import { isConvex } from '../../geometry';
 import { ObjectType } from '../../files/map/object';
 import { numFixedAngles } from '../../constants';
+import { DrawOperation } from '../state/drawOperation';
 
 const pointWidth = 3;
 const selectedPointWidth = 6;
@@ -19,22 +20,20 @@ interface GridBounds {
 }
 
 export class MapDraw {
-    map: MapGeometry | undefined
-    selection: Selection
-    canvas: HTMLCanvasElement
     context: CanvasRenderingContext2D
-    viewport: Viewport
 
-    constructor(map: MapGeometry | undefined, selection: Selection, canvas: HTMLCanvasElement, viewport: Viewport) {
-        this.map = map;
-        this.selection = selection;
-        this.canvas = canvas;
+    constructor(
+        private map: MapGeometry | undefined,
+        private selection: Selection,
+        private canvas: HTMLCanvasElement,
+        private viewport: Viewport,
+        private drawOperation: DrawOperation | undefined
+    ) {
         const context = canvas.getContext('2d');
         if (!context) {
             throw new Error("Can't get 2d context for map renderer");
         }
         this.context = context;
-        this.viewport = viewport;
     }
 
     private drawObjects(map: MapGeometry) {
@@ -210,6 +209,18 @@ export class MapDraw {
         this.context.restore();
     }
 
+    private drawDrawOperation(): void {
+        if (this.drawOperation && this.map) {
+            const start = this.map.points[this.drawOperation.startPointIndex];
+            const end = this.drawOperation.endPoint;
+            console.log({ start, end });
+            this.context.beginPath();
+            this.context.moveTo(...this.viewport.toPixel(start));
+            this.context.lineTo(...this.viewport.toPixel(end));
+            this.context.stroke();
+        }
+    }
+
     draw(): void {
         const dimMin = -0x8000;
         const dimMax = 0x7fff;
@@ -238,5 +249,7 @@ export class MapDraw {
             this.drawPoints(this.map);
             this.drawObjects(this.map);
         }
+
+        this.drawDrawOperation();
     }
 }

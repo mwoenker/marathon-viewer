@@ -98,9 +98,7 @@ export function RightPanel({
             </div>
             {state.mode.type === 'geometry' && (
                 <MapView
-                    map={state.map}
-                    pixelSize={state.pixelSize}
-                    selection={getSelection(state)}
+                    state={state}
                     updateState={updateState}
                 />
             )}
