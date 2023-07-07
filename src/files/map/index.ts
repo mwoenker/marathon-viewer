@@ -17,6 +17,7 @@ import { Remapping } from './index-remap';
 import { polygonsAt } from '../../geometry';
 import { FloorOrCeilingSurface, Surface, WallSurface } from '../../surface';
 import { impossibleValue } from '../../utils';
+import { SideCandidate } from './fillPolygon';
 
 interface FloorCeilingRequest {
     polygonIndex: number,
@@ -295,6 +296,11 @@ export class MapGeometry {
             throw new Error(`invalid side index: ${sideIndex}`);
         }
         return this.sides[sideIndex];
+    }
+
+    getPolygonOnLineSide(lineIndex: number, isFront: boolean): number {
+        const line = this.getLine(lineIndex);
+        return isFront ? line.frontPoly : line.backPoly;
     }
 
     getPolygonSide(polygonIndex: number, wallIndex: number): Side {
@@ -652,5 +658,80 @@ export class MapGeometry {
             }),
             lineIndex
         ];
+    }
+
+    addPolygon(sides: SideCandidate[]): MapGeometry {
+        if (sides.length < 3 || sides.length > 8) {
+            throw new Error(`Invalid polygon size: ${sides.length}`);
+        }
+
+        const newLines = [...this.lines];
+        const newSides = [...this.sides];
+        const newPolygons = [...this.polygons];
+        const newPolygonIndex = newPolygons.length;
+        const newFloorHeight = 0;
+        const newCeilingHeight = 1024;
+
+        for (const newSide of sides) {
+            if (-1 !== this.getPolygonOnLineSide(newSide.lineIndex, newSide.isFront)) {
+                throw new Error('Polygon already exists on this side');
+            }
+            const line = newLines[newSide.lineIndex];
+            const modifiedLine = new Line({
+                ...line,
+                frontPoly: newSide.isFront ? newPolygonIndex : line.frontPoly,
+                backPoly: !newSide.isFront ? newPolygonIndex : line.backPoly,
+            });
+            newLines[newSide.lineIndex] = modifiedLine;
+        }
+
+        const polygonSides = sides.map((side) => {
+            const otherPolygonIndex = this.getPolygonOnLineSide(side.lineIndex, !side.isFront);
+            let sideType: SideType;
+
+            if (otherPolygonIndex === -1) {
+                sideType = SideType.full;
+            } else {
+                const otherPolygon = this.getPolygon(otherPolygonIndex);
+
+                if (otherPolygon.floorHeight > newFloorHeight &&
+                    otherPolygon.ceilingHeight < newCeilingHeight) {
+                    sideType = SideType.split;
+                } else if (otherPolygon.ceilingHeight < newCeilingHeight) {
+                    sideType = SideType.high;
+                } else if (otherPolygon.floorHeight > newFloorHeight) {
+                    sideType = SideType.low;
+                } else {
+                    sideType = SideType.full;
+                }
+            }
+
+            const newSideIndex = newSides.length;
+            newSides.push(new Side({
+                type: sideType,
+                polygonIndex: newPolygonIndex,
+                lineIndex: side.lineIndex,
+            }));
+
+            return newSideIndex;
+        });
+
+        newPolygons.push(new Polygon({
+            endpoints: sides.map((side) => {
+                const line = this.getLine(side.lineIndex);
+                return side.isFront ? line.begin : line.end;
+            }),
+            lines: sides.map((side) => side.lineIndex),
+            floorHeight: newFloorHeight,
+            ceilingHeight: newCeilingHeight,
+            sides: polygonSides,
+        }));
+
+        return new MapGeometry({
+            ...this,
+            lines: newLines,
+            sides: newSides,
+            polygons: newPolygons,
+        });
     }
 }

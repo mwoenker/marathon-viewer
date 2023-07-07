@@ -1,8 +1,6 @@
 import { EditorState } from '.';
-import { MapGeometry } from '../../files/map';
 import { Vec2 } from '../../vector2';
-import { findClickedObject } from '../RightPanel/click';
-import { addLine, getOrAddPoint, setMap } from './setMap';
+import { addLine, getOrAddPoint } from './setMap';
 
 export interface DrawOperation {
     startPointIndex: number;
@@ -58,7 +56,6 @@ export function continueDrawOperation(
     const oldOperation = getDrawOperation(state);
     if (!oldOperation) {
         return state;
-        //throw new Error('continueDrawOperation called with no draw operation in progress');
     }
     return setDrawOperation(state, {
         startPointIndex: oldOperation.startPointIndex,

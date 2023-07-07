@@ -14,6 +14,10 @@ const tools = [
         name: 'draw',
         symbol: 'D'
     },
+    {
+        name: 'fill',
+        symbol: 'F'
+    },
 ] as const;
 
 export function ToolPanel({ toolState, updateState }: ToolPanelProps): JSX.Element {
@@ -22,7 +26,7 @@ export function ToolPanel({ toolState, updateState }: ToolPanelProps): JSX.Eleme
             {tools.map(tool => {
                 const className = tool.name === toolState.tool ? 'tool selected' : 'tool';
                 return (
-                    <div className={className} onClick={() => updateState({
+                    <div key={tool.name} className={className} onClick={() => updateState({
                         type: 'selectTool',
                         tool: tool.name
                     })}

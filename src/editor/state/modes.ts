@@ -7,12 +7,16 @@ export interface DrawToolState {
     drawOperation?: DrawOperation | undefined;
 }
 
+export interface FillToolState {
+    tool: 'fill';
+}
+
 export interface SelectToolState {
     tool: 'select';
     selection?: Selection
 }
 
-export type ToolState = SelectToolState | DrawToolState;
+export type ToolState = SelectToolState | DrawToolState | FillToolState;
 export type ToolName = ToolState['tool']
 
 export interface GeometryModeState {

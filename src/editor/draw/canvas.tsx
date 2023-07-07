@@ -21,7 +21,7 @@ export function CanvasMap(allProps: CanvasMapProps): JSX.Element {
     } = allProps;
     const ref = useRef<HTMLCanvasElement | null>(null);
     const frameRequest = useRef(0);
-    console.log({ drawOperation });
+
     const redraw = () => {
         if (ref.current) {
             const canvas = ref.current;

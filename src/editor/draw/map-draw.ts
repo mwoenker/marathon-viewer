@@ -213,7 +213,6 @@ export class MapDraw {
         if (this.drawOperation && this.map) {
             const start = this.map.points[this.drawOperation.startPointIndex];
             const end = this.drawOperation.endPoint;
-            console.log({ start, end });
             this.context.beginPath();
             this.context.moveTo(...this.viewport.toPixel(start));
             this.context.lineTo(...this.viewport.toPixel(end));

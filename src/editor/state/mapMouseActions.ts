@@ -1,5 +1,6 @@
 import { EditorState, setSelection, getSelection } from '.';
 import { MapGeometry } from '../../files/map';
+import { findPolygonToFill } from '../../files/map/fillPolygon';
 import { v2sub } from '../../vector2';
 import { findClickedObject } from '../RightPanel/click';
 import { MouseDownAction, MouseMoveAction, MouseUpAction } from './actions';
@@ -81,6 +82,13 @@ export function mouseDown(state: EditorState, action: MouseDownAction): EditorSt
         }
     } else if (toolSelected(state, 'draw')) {
         return startDrawOperationFromPoint(state, action.coords);
+    } else if (toolSelected(state, 'fill')) {
+        const newPolygon = findPolygonToFill(action.coords, state.map);
+        if (!newPolygon) {
+            return state;
+        } else {
+            return setMap(state, map.addPolygon(newPolygon));
+        }
     } else {
         return state;
     }
@@ -125,6 +133,8 @@ export function mouseUp(state: EditorState, action: MouseUpAction): EditorState 
     } else if (toolSelected(state, 'draw')) {
         if (state.map) {
             return finishDrawOperation(state);
+        } else {
+            return state;
         }
     } else {
         return state;
