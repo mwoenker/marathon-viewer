@@ -28,9 +28,13 @@ export function VisualMode({ shapes, map, visualModeState, updateState }: Visual
 
     useEffect(() => {
         window.addEventListener('resize', resize);
-
         return () => {
             window.removeEventListener('resize', resize);
+        };
+    }, [resize]);
+
+    useEffect(() => {
+        return () => {
             environmentRef.current && environmentRef.current.stop();
             environmentRef.current = undefined;
         };
@@ -63,7 +67,7 @@ export function VisualMode({ shapes, map, visualModeState, updateState }: Visual
             environmentRef.current && environmentRef.current.setMap(map);
             environmentRef.current && environmentRef.current.setShapes(shapes);
         }
-    }, [map, shapes]);
+    }, [map, shapes, resize, updateState]);
 
     useEffect(() => {
         environmentRef.current &&
