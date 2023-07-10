@@ -103,13 +103,20 @@ export class MapGeometry {
         this.platforms = data.platforms;
     }
 
+    patch(changes: Partial<MapGeometryConstructor>): MapGeometry {
+        return new MapGeometry({
+            ...this,
+            ...changes,
+        });
+    }
+
     movePoint(i: number, [x, y]: Vec2): MapGeometry {
         const newPoints = [...this.points];
         newPoints[i] = [Math.floor(x), Math.floor(y)];
         if (outOfRange(newPoints[i])) {
             return this;
         } else {
-            return new MapGeometry({ ...this, points: newPoints });
+            return this.patch({ points: newPoints });
         }
     }
 
@@ -186,7 +193,7 @@ export class MapGeometry {
                 position: [newPosition[0], newPosition[1], z],
                 polygon
             });
-            return new MapGeometry({ ...this, objects: newObjects });
+            return this.patch({ objects: newObjects });
         }
     }
 
@@ -202,7 +209,7 @@ export class MapGeometry {
                 return this;
             }
         }
-        return new MapGeometry({ ...this, points: newPoints });
+        return this.patch({ ...this, points: newPoints });
     }
 
     getVerticalSurfaceInfo(surface: WallSurface): SurfaceInfo {
@@ -417,10 +424,7 @@ export class MapGeometry {
                 impossibleValue(surface.type);
         }
 
-        return new MapGeometry({
-            ...this,
-            sides: newSides
-        });
+        return this.patch({ sides: newSides });
     }
 
     setHorizontalSurfaceTextureInfo(
@@ -450,10 +454,7 @@ export class MapGeometry {
             default:
                 impossibleValue(surface.type);
         }
-        return new MapGeometry({
-            ...this,
-            polygons: newPolygons
-        });
+        return this.patch({ polygons: newPolygons });
     }
 
     setSurfaceTextureInfo(surface: Surface, surfaceInfo: SurfaceInfo): MapGeometry {
@@ -504,7 +505,7 @@ export class MapGeometry {
             const polygons = [...this.polygons];
             polygons[polygonIndex] = newPolygon;
 
-            return new MapGeometry({ ...this, sides, polygons });
+            return this.patch({ sides, polygons });
         } else {
             const oldSide = this.sides[sideIndex];
             const side = new Side({
@@ -521,7 +522,7 @@ export class MapGeometry {
             });
             const sides = [...this.sides];
             sides[sideIndex] = side;
-            return new MapGeometry({ ...this, sides });
+            return this.patch({ sides });
         }
     }
 
@@ -533,7 +534,7 @@ export class MapGeometry {
             floorOrigin: offset,
             floorTransferMode: TransferMode.normal,
         });
-        return new MapGeometry({ ...this, polygons });
+        return this.patch({ polygons });
     }
 
     setCeilingTexture({ polygonIndex, shape, offset }: FloorCeilingRequest): MapGeometry {
@@ -544,7 +545,7 @@ export class MapGeometry {
             ceilingOrigin: offset,
             ceilingTransferMode: TransferMode.normal,
         });
-        return new MapGeometry({ ...this, polygons });
+        return this.patch({ polygons });
     }
 
     removeObjectsAndRenumber(deadObjects: Dependencies): MapGeometry {
@@ -604,12 +605,11 @@ export class MapGeometry {
         }
         const newObjects = [...this.objects];
         newObjects[objectIdx] = newObject;
-        return new MapGeometry({ ...this, objects: newObjects });
+        return this.patch({ objects: newObjects });
     }
 
     removePrecalculatedInfo(): MapGeometry {
-        return new MapGeometry({
-            ...this,
+        return this.patch({
             polygons: this.polygons.map(p => new Polygon({
                 ...p,
                 firstObject: -1,
@@ -628,8 +628,7 @@ export class MapGeometry {
         const newPoints = [...this.points];
         newPoints[pointIndex] = v;
         return [
-            new MapGeometry({
-                ...this,
+            this.patch({
                 points: newPoints,
             }),
             pointIndex
@@ -652,8 +651,7 @@ export class MapGeometry {
             backPoly: -1,
         });
         return [
-            new MapGeometry({
-                ...this,
+            this.patch({
                 lines: newLines,
             }),
             lineIndex
@@ -727,8 +725,7 @@ export class MapGeometry {
             sides: polygonSides,
         }));
 
-        return new MapGeometry({
-            ...this,
+        return this.patch({
             lines: newLines,
             sides: newSides,
             polygons: newPolygons,
