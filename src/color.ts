@@ -1,5 +1,5 @@
 import { worldUnitSize } from './constants';
-import { clamp } from './utils';
+import { clamp, lerp } from './utils';
 
 export interface ColorComponents {
     red: number;
@@ -39,8 +39,32 @@ export type SourceColor = {
 
 export type SourceColorTable = SourceColor[]
 export type ColorTable = number[]
+export interface ShadingTables {
+    normal: ColorTable[]
+    highlighted: ColorTable[]
+}
 
-export function makeShadingTables(colorTable: SourceColorTable): ColorTable[] {
+const highlightColor = packColor(128, 255, 255);
+const highlightOpacity = 0.5;
+
+function lerpColor(a: number, b: number, t: number): number {
+    const aElements = unpackColor(a);
+    const bElements = unpackColor(b);
+    return packColor(
+        Math.floor(lerp(t, aElements.red, bElements.red)),
+        Math.floor(lerp(t, aElements.green, bElements.green)),
+        Math.floor(lerp(t, aElements.blue, bElements.blue)),
+        Math.floor(lerp(t, aElements.alpha, bElements.alpha)),
+    );
+}
+
+function makeHighlightedTable(table: ColorTable) {
+    return table.map(color => {
+        return lerpColor(color, highlightColor, highlightOpacity);
+    });
+}
+
+export function makeShadingTables(colorTable: SourceColorTable): ShadingTables {
     const shadingLevels = new Array(nShadingLevels);
     for (let i = 0; i < nShadingLevels; ++i) {
         shadingLevels[i] = colorTable.map(({ r, g, b }, colorIndex) => {
@@ -54,7 +78,10 @@ export function makeShadingTables(colorTable: SourceColorTable): ColorTable[] {
             );
         });
     }
-    return shadingLevels;
+    return {
+        normal: shadingLevels,
+        highlighted: shadingLevels.map(table => makeHighlightedTable(table)),
+    };
 }
 
 export const black = packColor(0, 0, 0);

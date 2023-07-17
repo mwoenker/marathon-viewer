@@ -1,9 +1,9 @@
 import { RandomAccess } from './files/binary-read';
 import { ShapesHeader, Collection, Bitmap, readShapesHeaders, readCollection, parseShapeDescriptor } from './files/shapes';
-import { makeShadingTables, ColorTable } from './color';
+import { makeShadingTables, ColorTable, ShadingTables } from './color';
 
 export interface CollectionWithShading extends Collection {
-    clutShadingTables: ColorTable[][]
+    clutShadingTables: ShadingTables[]
 }
 
 type CollectionSlot = 'loading' | CollectionWithShading
@@ -92,11 +92,11 @@ export class Shapes {
         }
     }
 
-    getShadingTables(descriptor: number): ColorTable[] | null {
+    getShadingTables(descriptor: number, type: keyof ShadingTables = 'normal'): ColorTable[] | null {
         const { collectionIndex, clutIndex } = parseShapeDescriptor(descriptor);
         const collection = this.getCollection(collectionIndex);
         if (collection) {
-            return collection.clutShadingTables[clutIndex];
+            return collection.clutShadingTables[clutIndex][type];
         } else {
             return null;
         }

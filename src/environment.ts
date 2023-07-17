@@ -8,6 +8,10 @@ import { keyMap } from './events';
 import { textureClickedSurface } from './texturing';
 import { worldUnitSize } from './constants';
 import { parseShapeDescriptor } from './files/shapes';
+import { ScreenTransform } from './screen-transform';
+import { Transformation } from './transform2d';
+import { v3scale, Vec3 } from './vector3';
+import { Surface } from './surface';
 
 const hFov = 90 / 180 * Math.PI;
 const minimumVFov = 60 / 180 * Math.PI;
@@ -72,7 +76,7 @@ export class Environment {
 
     keydown: KeyboardHandler | null = null
     keyup: KeyboardHandler | null = null
-    clicked: MouseHandler | null = null
+    // clicked: MouseHandler | null = null
 
     constructor(
         map: MapGeometry,
@@ -144,16 +148,7 @@ export class Environment {
     }
 
     setBackendType(backend: RendererType, newCanvas: HTMLCanvasElement): void {
-        if (this.clicked) {
-            this.canvas.removeEventListener('mousedown', this.clicked);
-        }
-
         this.canvas = newCanvas;
-
-        if (this.clicked) {
-            this.canvas.addEventListener('mousedown', this.clicked);
-        }
-
         this.backendType = backend;
     }
 
@@ -311,25 +306,38 @@ export class Environment {
             }
         };
 
-        this.clicked = (e) => {
-            if (this.selectedShapeDescriptor) {
-                this.map = textureClickedSurface(
-                    this.canvas,
-                    this.player,
-                    this.world,
-                    this.map,
-                    e.offsetX,
-                    e.offsetY,
-                    this.selectedShapeDescriptor,
-                    e.shiftKey);
-                this.onMapChangedCallback && this.onMapChangedCallback(this.map);
-            }
-        };
+        // this.clicked = (e) => {
+        //     if (this.selectedShapeDescriptor) {
+        //         this.map = textureClickedSurface(
+        //             this.canvas,
+        //             this.player,
+        //             this.world,
+        //             this.map,
+        //             e.offsetX,
+        //             e.offsetY,
+        //             this.selectedShapeDescriptor,
+        //             e.shiftKey);
+        //         this.onMapChangedCallback && this.onMapChangedCallback(this.map);
+        //     }
+        // };
 
         window.addEventListener('keydown', this.keydown);
         window.addEventListener('keyup', this.keyup);
+    }
 
-        this.canvas.addEventListener('mousedown', this.clicked);
+    getClickedSurface(x: number, y: number): Surface | null {
+        const { canvas, player, world } = this;
+        const screenTransform = new ScreenTransform(
+            canvas.width, canvas.height, player.hFov, player.vFov, player.verticalAngle);
+        const viewRay = v3scale(100 * worldUnitSize, screenTransform.screenToRay(x, y));
+        const viewTransform = new Transformation(player.position, player.facingAngle);
+        const worldEnd2d = viewTransform.unTransform([viewRay[0], viewRay[2]]);
+        const ray: Vec3 = [worldEnd2d[0], worldEnd2d[1], player.height + viewRay[1]];
+        return world.intersectLineSegment(
+            player.polygon,
+            [...player.position, player.height],
+            ray,
+        );
     }
 
     private teardownEvents() {
@@ -341,11 +349,6 @@ export class Environment {
         if (this.keydown) {
             window.removeEventListener('keydown', this.keydown);
             this.keydown = null;
-        }
-
-        if (this.clicked) {
-            this.canvas.removeEventListener('mousedown', this.clicked);
-            this.clicked = null;
         }
     }
 

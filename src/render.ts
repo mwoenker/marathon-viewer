@@ -231,7 +231,7 @@ class Renderer {
         const p1View = this.viewTransform.transform(p1);
         const p2View = this.viewTransform.transform(p2);
 
-        if (portalTo !== -1 && portalTo !== undefined && portalTo !== null) {
+        if (portalTo !== -1) {
             const neighbor = this.world.getPolygon(portalTo);
             const viewPolygon = this.makeWallPolygon({
                 p1View,
