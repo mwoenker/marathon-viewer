@@ -5,7 +5,7 @@ import { MapGeometry } from "../../files/map";
 import { MapInfo } from "../../files/map/map-info";
 import { TransferMode } from "../../files/wad";
 import { Shapes } from "../../shapes-loader";
-import { getConnectedSurfaces, TexturedSurface } from "../../surface";
+import { getConnectedSurfaces, Surface, TexturedSurface } from "../../surface";
 import { UpdateState, VisualModeState } from "../state";
 
 interface VisualModeProps {
@@ -82,19 +82,23 @@ export function VisualMode({ shapes, map, visualModeState, updateState }: Visual
             const y = e.offsetY;
             const flood = e.shiftKey;
 
-            const intercept = environmentRef.current.getClickedSurface(x, y);
+            const intercept = environmentRef.current.getSurfaceAt(x, y);
             if (!intercept) {
                 return map;
             }
 
             const clickedInfo = map.getSurfaceInfo(intercept);
 
+            if (!clickedInfo) {
+                return;
+            }
+
             let surfaces: TexturedSurface[];
 
             if (flood) {
                 surfaces = getConnectedSurfaces(map, intercept, (surface) => {
                     const info = map.getSurfaceInfo(surface);
-                    return info.shape === clickedInfo.shape;
+                    return info !== null && info.shape === clickedInfo.shape;
                 });
             } else {
                 surfaces = [{ texOffset: [0, 0], surface: intercept }];
@@ -116,6 +120,44 @@ export function VisualMode({ shapes, map, visualModeState, updateState }: Visual
         }
     }, [map, updateState, visualModeState.selectedTexture]);
 
+    const mouseMove = useCallback((e: MouseEvent) => {
+        if (environmentRef.current) {
+            const x = e.offsetX;
+            const y = e.offsetY;
+
+            environmentRef.current.setMousePosition([x, y]);
+        }
+    }, []);
+
+    const mouseLeave = useCallback(() => {
+        console.log('leave');
+        if (environmentRef.current) {
+            environmentRef.current.setMousePosition(undefined);
+        }
+    }, []);
+
+    useEffect(() => {
+        const keyUp = (e: KeyboardEvent) => {
+            if (e.key === 'Shift') {
+                environmentRef.current?.setShouldFloodSelection(false);
+            }
+        };
+
+        const keyDown = (e: KeyboardEvent) => {
+            if (e.key === 'Shift') {
+                environmentRef.current?.setShouldFloodSelection(true);
+            }
+        };
+
+        window.addEventListener('keyup', keyUp);
+        window.addEventListener('keydown', keyDown);
+
+        return () => {
+            window.removeEventListener('keyup', keyUp);
+            window.removeEventListener('keydown', keyDown);
+        };
+    }, [mouseLeave]);
+
     return (
         <canvas
             width={1024}
@@ -123,6 +165,8 @@ export function VisualMode({ shapes, map, visualModeState, updateState }: Visual
             ref={canvasRef}
             style={{ width: '100%', height: '100%' }}
             onClick={click}
+            onMouseMove={mouseMove}
+            onMouseLeave={mouseLeave}
         >
         </canvas>
     );

@@ -61,8 +61,8 @@ export class Rasterizer {
         this.geometryBuffer.addPolygon(textureDescriptor, transformed, brightness);
     }
 
-    drawHorizontalPolygon({ polygon, textureDescriptor, brightness, transfer }: RenderPolygonProps): void {
-        this.textureHorizontalPolygon({ polygon, textureDescriptor, brightness, transfer });
+    drawHorizontalPolygon({ polygon, textureDescriptor, brightness, transfer, highlighted }: RenderPolygonProps): void {
+        this.textureHorizontalPolygon({ polygon, textureDescriptor, brightness, transfer, highlighted });
     }
 
     textureHorizontalPolygon({ polygon, textureDescriptor, brightness, transfer }: RenderPolygonProps): void {

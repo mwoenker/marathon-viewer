@@ -17,11 +17,13 @@ import { ScreenTransform } from './screen-transform';
 import { World } from './world';
 import { worldUnitSize, ticksPerSecond } from './constants';
 import { Rasterizer } from './rasterize';
+import { Surface, surfacesEqual } from './surface';
 
 interface RendererConstructor {
     world: World;
     player: Player;
     rasterizer: Rasterizer;
+    highlightedSurfaces: Surface[];
     seconds: number;
 }
 
@@ -41,6 +43,7 @@ interface DrawHorizontalPolygonProps {
     textureDescriptor: number,
     brightness: number;
     polyTransferMode: number;
+    highlighted: boolean;
 }
 
 export interface RenderProps {
@@ -48,6 +51,7 @@ export interface RenderProps {
     player: Player;
     world: World;
     seconds: number;
+    highlightedSurfaces: Surface[]
 }
 
 class Renderer {
@@ -66,12 +70,14 @@ class Renderer {
     landscapeYOffset: number;
     landscapeTiltCorrection: number;
     isSubmerged: boolean;
+    highlightedSurfaces: Surface[];
 
-    constructor({ world, player, rasterizer, seconds }: RendererConstructor) {
+    constructor({ world, player, rasterizer, seconds, highlightedSurfaces }: RendererConstructor) {
         this.world = world;
         this.player = player;
         this.rasterizer = rasterizer;
         this.seconds = seconds;
+        this.highlightedSurfaces = highlightedSurfaces;
 
         const screenTransform = new ScreenTransform(
             rasterizer.width, rasterizer.height, player.hFov, player.vFov, player.verticalAngle);
@@ -171,7 +177,8 @@ class Renderer {
         isCeiling,
         textureDescriptor,
         brightness,
-        polyTransferMode
+        polyTransferMode,
+        highlighted
     }: DrawHorizontalPolygonProps) {
         const polygon = clipArea.clipPolygon(viewPoints.map((v) => [v[0], height, v[1]]));
 
@@ -213,6 +220,7 @@ class Renderer {
                 textureDescriptor,
                 brightness,
                 transfer: polyTransferMode,
+                highlighted
             });
         }
     }
@@ -255,6 +263,11 @@ class Renderer {
                 }));
 
                 if (abovePoly.length > 0) {
+                    const highlighted = this.isHighlighted({
+                        type: 'wallPrimary',
+                        polygonIndex,
+                        wallIndex: polyLineIndex
+                    });
                     const texturedPolygon = this.textureWallPolygon(
                         p1View,
                         p2View,
@@ -267,6 +280,7 @@ class Renderer {
                         textureDescriptor: side.primaryTexture.texture,
                         brightness: this.world.getLightIntensity(side.primaryLightsourceIndex),
                         transfer: side?.primaryTransferMode || TransferMode.normal,
+                        highlighted
                     });
                 }
             }
@@ -286,6 +300,11 @@ class Renderer {
                 }));
 
                 if (belowPoly.length > 0) {
+                    const highlighted = this.isHighlighted({
+                        type: side.type === SideType.split ? 'wallSecondary' : 'wallPrimary',
+                        polygonIndex,
+                        wallIndex: polyLineIndex
+                    });
                     const texturedPolygon = this.textureWallPolygon(
                         p1View,
                         p2View,
@@ -302,6 +321,7 @@ class Renderer {
                                 ? side.secondaryLightsourceIndex
                                 : side.primaryLightsourceIndex)),
                         transfer: transferMode || TransferMode.normal,
+                        highlighted,
                     });
                 }
             }
@@ -332,6 +352,7 @@ class Renderer {
                         brightness: this.world.getLightIntensity(side.transparentLightsourceIndex),
                         transfer: side?.transparentTransferMode,
                         isTransparent: true,
+                        highlighted: false,
                     });
                 }
             }
@@ -346,6 +367,11 @@ class Renderer {
             const clippedPolygon = clipArea.clipPolygon(viewPolygon);
 
             if (side && clippedPolygon.length > 0) {
+                const highlighted = this.isHighlighted({
+                    type: 'wallPrimary',
+                    polygonIndex,
+                    wallIndex: polyLineIndex
+                });
                 const texturedPolygon = this.textureWallPolygon(
                     p1View,
                     p2View,
@@ -359,6 +385,7 @@ class Renderer {
                     textureDescriptor: side.primaryTexture.texture,
                     brightness: this.world.getLightIntensity(side.primaryLightsourceIndex),
                     transfer: side?.primaryTransferMode || TransferMode.normal,
+                    highlighted,
                 });
             }
         }
@@ -381,6 +408,10 @@ class Renderer {
 
         const viewPoints = vertices.map((p) => this.viewTransform.transform(p));
         if (polygon.ceilingHeight > this.player.height) {
+            const highlighted = this.isHighlighted({
+                type: 'ceiling',
+                polygonIndex,
+            });
             this.drawHorizontalPolygon({
                 viewPoints,
                 textureOffset: ceiling.textureOffset,
@@ -390,10 +421,15 @@ class Renderer {
                 textureDescriptor: ceiling.texture,
                 brightness: ceiling.lightIntensity,
                 polyTransferMode: ceiling.transferMode,
+                highlighted,
             });
         }
 
         if (polygon.floorHeight < this.player.height) {
+            const highlighted = this.isHighlighted({
+                type: 'floor',
+                polygonIndex,
+            });
             this.drawHorizontalPolygon({
                 viewPoints,
                 textureOffset: floor.textureOffset,
@@ -403,8 +439,13 @@ class Renderer {
                 textureDescriptor: floor.texture,
                 brightness: floor.lightIntensity,
                 polyTransferMode: floor.transferMode,
+                highlighted
             });
         }
+    }
+
+    isHighlighted(surface: Surface): boolean {
+        return this.highlightedSurfaces.some(otherSurface => surfacesEqual(surface, otherSurface));
     }
 
     render() {
@@ -412,7 +453,7 @@ class Renderer {
     }
 }
 
-export function render({ rasterizer, player, world, seconds }: RenderProps): void {
-    const renderer = new Renderer({ world, player, rasterizer, seconds });
+export function render({ rasterizer, player, world, seconds, highlightedSurfaces }: RenderProps): void {
+    const renderer = new Renderer({ world, player, rasterizer, seconds, highlightedSurfaces });
     renderer.render();
 }

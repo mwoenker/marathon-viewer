@@ -8,6 +8,7 @@ import { magenta } from './color';
 import { render } from './render';
 import { World } from './world';
 import { Shader } from './gl/shaders';
+import { Surface } from './surface';
 
 class SoftwareRenderBackend {
     private canvas: HTMLCanvasElement
@@ -30,7 +31,7 @@ class SoftwareRenderBackend {
         this.pixels = new Uint32Array(this.imageData.data.buffer);
     }
 
-    frame({ player, world, seconds }: RenderFrameData): void {
+    frame({ player, world, seconds, highlightedSurfaces }: RenderFrameData): void {
         this.pixels.fill(magenta);
 
         this.context.fillStyle = 'white';
@@ -44,7 +45,7 @@ class SoftwareRenderBackend {
             this.shapeLoader
         );
 
-        render({ rasterizer, player, world, seconds });
+        render({ rasterizer, player, world, seconds, highlightedSurfaces });
 
         this.context.putImageData(this.imageData, 0, 0);
     }
@@ -73,7 +74,7 @@ class WebGL2RenderBackend {
         this.shader = new Shader(this.context);
     }
 
-    frame({ player, world, seconds }: RenderFrameData): void {
+    frame({ player, world, seconds, highlightedSurfaces }: RenderFrameData): void {
         const gl = this.context;
 
         gl.viewport(0, 0, this.canvas.width, this.canvas.height);
@@ -90,7 +91,7 @@ class WebGL2RenderBackend {
 
         const rasterizer = new GL2Rasterizer(
             player, gl, this.shapeTextures, this.shader);
-        render({ rasterizer, player, world, seconds });
+        render({ rasterizer, player, world, seconds, highlightedSurfaces });
         rasterizer.flush();
         rasterizer.dispose();
     }
@@ -114,6 +115,7 @@ export interface RenderFrameData {
     player: Player
     world: World
     seconds: number
+    highlightedSurfaces: Surface[]
 }
 
 // Any time you see something named "manager" you know the programmer is out of

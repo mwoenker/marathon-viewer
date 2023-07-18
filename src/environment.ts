@@ -2,16 +2,14 @@ import { MapGeometry } from './files/map';
 import { Shapes } from './shapes-loader';
 import { Player } from './player';
 import { World } from './world';
-import { v2add, v2direction, v2scale, v2 } from './vector2';
+import { v2add, v2direction, v2scale, v2, Vec2 } from './vector2';
 import { RendererType, RenderFrameData, RenderManager, RenderTargetData } from './render-backend';
 import { keyMap } from './events';
-import { textureClickedSurface } from './texturing';
 import { worldUnitSize } from './constants';
-import { parseShapeDescriptor } from './files/shapes';
 import { ScreenTransform } from './screen-transform';
 import { Transformation } from './transform2d';
 import { v3scale, Vec3 } from './vector3';
-import { Surface } from './surface';
+import { getConnectedSurfaces, Surface } from './surface';
 
 const hFov = 90 / 180 * Math.PI;
 const minimumVFov = 60 / 180 * Math.PI;
@@ -24,7 +22,6 @@ interface ExtendedWindow extends Window {
 declare const window: ExtendedWindow;
 
 type KeyboardHandler = (e: KeyboardEvent) => void
-type MouseHandler = (e: MouseEvent) => void
 
 function calculateFov(width: number, height: number) {
     const vFov = 2 * Math.atan(Math.tan(hFov / 2) * height / width);
@@ -76,7 +73,9 @@ export class Environment {
 
     keydown: KeyboardHandler | null = null
     keyup: KeyboardHandler | null = null
-    // clicked: MouseHandler | null = null
+
+    private mousePosition?: Vec2
+    private shouldFloodSelection = false
 
     constructor(
         map: MapGeometry,
@@ -238,7 +237,8 @@ export class Environment {
         const frameData: RenderFrameData = {
             player: this.player,
             world: this.world,
-            seconds: secondsElapsed
+            seconds: secondsElapsed,
+            highlightedSurfaces: this.getHighlightedSurfaces(),
         };
         this.renderManager.frame(targetData, frameData);
 
@@ -288,10 +288,12 @@ export class Environment {
         this.actions.clear();
 
         this.keydown = (e: KeyboardEvent) => {
-            const action = keyMap[e.key];
-            if (action) {
-                e.preventDefault();
-                this.actions.add(action);
+            if (!(e.ctrlKey || e.metaKey)) {
+                const action = keyMap[e.key];
+                if (action) {
+                    e.preventDefault();
+                    this.actions.add(action);
+                }
             }
         };
 
@@ -306,26 +308,11 @@ export class Environment {
             }
         };
 
-        // this.clicked = (e) => {
-        //     if (this.selectedShapeDescriptor) {
-        //         this.map = textureClickedSurface(
-        //             this.canvas,
-        //             this.player,
-        //             this.world,
-        //             this.map,
-        //             e.offsetX,
-        //             e.offsetY,
-        //             this.selectedShapeDescriptor,
-        //             e.shiftKey);
-        //         this.onMapChangedCallback && this.onMapChangedCallback(this.map);
-        //     }
-        // };
-
         window.addEventListener('keydown', this.keydown);
         window.addEventListener('keyup', this.keyup);
     }
 
-    getClickedSurface(x: number, y: number): Surface | null {
+    getSurfaceAt(x: number, y: number): Surface | null {
         const { canvas, player, world } = this;
         const screenTransform = new ScreenTransform(
             canvas.width, canvas.height, player.hFov, player.vFov, player.verticalAngle);
@@ -338,6 +325,40 @@ export class Environment {
             [...player.position, player.height],
             ray,
         );
+    }
+
+    private getHighlightedSurfaces(): Surface[] {
+        if (!this.mousePosition) {
+            return [];
+        }
+
+        const intercept = this.getSurfaceAt(...this.mousePosition);
+        if (!intercept) {
+            return [];
+        }
+
+        const clickedInfo = this.map.getSurfaceInfo(intercept);
+
+        if (!clickedInfo) {
+            return [];
+        }
+
+        if (this.shouldFloodSelection) {
+            return getConnectedSurfaces(this.map, intercept, (surface) => {
+                const info = this.map.getSurfaceInfo(surface);
+                return info !== null && info.shape === clickedInfo.shape;
+            }).map((ts) => ts.surface);
+        } else {
+            return [intercept];
+        }
+    }
+
+    setMousePosition(position: Vec2 | undefined): void {
+        this.mousePosition = position;
+    }
+
+    setShouldFloodSelection(flood: boolean): void {
+        this.shouldFloodSelection = flood;
     }
 
     private teardownEvents() {

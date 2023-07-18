@@ -43,6 +43,7 @@ export interface RenderPolygonProps {
     transfer: TransferMode;
     isTransparent?: boolean;
     textureDescriptor: number;
+    highlighted: boolean;
 }
 
 interface WallSlice {
@@ -177,10 +178,13 @@ export class SoftwareRasterizer extends Rasterizer {
     }
 
     textureWall(
-        { polygon, textureDescriptor, brightness, isTransparent = false }: RenderPolygonProps
+        { polygon, textureDescriptor, brightness, isTransparent = false, highlighted }: RenderPolygonProps
     ): void {
         const texture = this.shapes.getBitmap(textureDescriptor);
-        const shadingTables = this.shapes.getShadingTables(textureDescriptor);
+        const shadingTables = this.shapes.getShadingTables(
+            textureDescriptor,
+            highlighted ? 'highlighted' : 'normal',
+        );
 
         if (!texture || !shadingTables) {
             return;
@@ -320,8 +324,14 @@ export class SoftwareRasterizer extends Rasterizer {
         }
     }
 
-    drawHorizontalPolygon({ polygon, textureDescriptor, brightness, transfer }: RenderPolygonProps): void {
-        this.textureHorizontalPolygon({ polygon, textureDescriptor, brightness, transfer });
+    drawHorizontalPolygon({
+        polygon,
+        textureDescriptor,
+        brightness,
+        transfer,
+        highlighted
+    }: RenderPolygonProps): void {
+        this.textureHorizontalPolygon({ polygon, textureDescriptor, brightness, transfer, highlighted });
     }
 
     private calcLineTextureParamsHorizontal(
@@ -354,9 +364,9 @@ export class SoftwareRasterizer extends Rasterizer {
         }
     }
 
-    textureHorizontalPolygon({ polygon, textureDescriptor, brightness, transfer }: RenderPolygonProps): void {
+    textureHorizontalPolygon({ polygon, textureDescriptor, brightness, transfer, highlighted }: RenderPolygonProps): void {
         const texture = this.shapes.getBitmap(textureDescriptor);
-        const shadingTables = this.shapes.getShadingTables(textureDescriptor);
+        const shadingTables = this.shapes.getShadingTables(textureDescriptor, highlighted ? 'highlighted' : 'normal');
         if (!texture || !shadingTables) {
             return;
         }

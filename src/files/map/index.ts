@@ -212,8 +212,15 @@ export class MapGeometry {
         return this.patch({ ...this, points: newPoints });
     }
 
-    getVerticalSurfaceInfo(surface: WallSurface): SurfaceInfo {
-        const side = this.getPolygonSide(surface.polygonIndex, surface.wallIndex);
+    getVerticalSurfaceInfo(surface: WallSurface): SurfaceInfo | null {
+        const polygon = this.getPolygon(surface.polygonIndex);
+        const sideIndex = polygon.sides[surface.wallIndex];
+
+        if (sideIndex < 0 || sideIndex >= this.sides.length) {
+            return null;
+        }
+
+        const side = this.getSide(sideIndex);
 
         let sideTex: SideTex;
         let transferMode: number;
@@ -270,7 +277,7 @@ export class MapGeometry {
         }
     }
 
-    getSurfaceInfo(surface: Surface): SurfaceInfo {
+    getSurfaceInfo(surface: Surface): SurfaceInfo | null {
         switch (surface.type) {
             case 'wallPrimary':
             case 'wallSecondary':

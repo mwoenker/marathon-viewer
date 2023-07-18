@@ -32,7 +32,7 @@ interface LineLocator {
     readonly horizontalTexOffset: number
 }
 
-function surfacesEqual(a: Surface, b: Surface) {
+export function surfacesEqual(a: Surface, b: Surface): boolean {
     switch (a.type) {
         case 'wallPrimary':
         case 'wallSecondary':
