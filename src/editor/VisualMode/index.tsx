@@ -7,12 +7,18 @@ import { TransferMode } from "../../files/wad";
 import { Shapes } from "../../shapes-loader";
 import { getConnectedSurfaces, Surface, TexturedSurface } from "../../surface";
 import { UpdateState, VisualModeState } from "../state";
+import { Vec2, v2sub, v2add } from "../vector2";
 
 interface VisualModeProps {
     shapes: Shapes;
     map: MapGeometry;
     visualModeState: VisualModeState;
     updateState: UpdateState;
+}
+
+interface DragState {
+    lastPos: Vec2;
+    surfaces: TexturedSurface[]
 }
 
 export function VisualMode({ shapes, map, visualModeState, updateState }: VisualModeProps): JSX.Element {
@@ -57,7 +63,7 @@ export function VisualMode({ shapes, map, visualModeState, updateState }: Visual
                 shapes,
                 canvasRef.current,
                 null,
-                'software'
+                'webgl2'
             );
 
             environmentRef.current.onMapChanged((map) => {
@@ -76,7 +82,9 @@ export function VisualMode({ shapes, map, visualModeState, updateState }: Visual
             environmentRef.current.setSelectedShape(visualModeState.selectedTexture);
     }, [visualModeState]);
 
-    const click = useCallback((e: MouseEvent) => {
+    const dragState = useRef<null | DragState>(null);
+
+    const mouseDown = useCallback((e: MouseEvent) => {
         if (environmentRef.current && visualModeState.selectedTexture) {
             const x = e.offsetX;
             const y = e.offsetY;
@@ -92,7 +100,6 @@ export function VisualMode({ shapes, map, visualModeState, updateState }: Visual
             if (!clickedInfo) {
                 return;
             }
-
             let surfaces: TexturedSurface[];
 
             if (flood) {
@@ -101,8 +108,14 @@ export function VisualMode({ shapes, map, visualModeState, updateState }: Visual
                     return info !== null && info.shape === clickedInfo.shape;
                 });
             } else {
-                surfaces = [{ texOffset: [0, 0], surface: intercept }];
+                const textureInfo = map.getSurfaceInfo(intercept);
+                surfaces = [{ texOffset: textureInfo?.texCoords ?? [0, 0], surface: intercept }];
             }
+
+            dragState.current = {
+                lastPos: [e.offsetX, e.offsetY],
+                surfaces
+            };
 
             let newMap = map;
 
@@ -120,17 +133,53 @@ export function VisualMode({ shapes, map, visualModeState, updateState }: Visual
         }
     }, [map, updateState, visualModeState.selectedTexture]);
 
-    const mouseMove = useCallback((e: MouseEvent) => {
-        if (environmentRef.current) {
-            const x = e.offsetX;
-            const y = e.offsetY;
-
-            environmentRef.current.setMousePosition([x, y]);
-        }
+    const mouseUp = useCallback(() => {
+        dragState.current = null;
     }, []);
 
+    const mouseMove = useCallback((e: MouseEvent) => {
+        if (environmentRef.current && visualModeState.selectedTexture) {
+            if (dragState.current) {
+                const pos: Vec2 = [e.offsetX, e.offsetY];
+                const delta = v2sub(pos, dragState.current.lastPos);
+
+                const surfaces = dragState.current.surfaces.map(surf => {
+                    return {
+                        ...surf,
+                        texOffset: v2sub(surf.texOffset, delta)
+                    };
+                });
+
+                dragState.current = {
+                    lastPos: pos,
+                    surfaces
+                };
+
+                let newMap = map;
+
+                for (const connectedSurface of surfaces) {
+                    const { surface, texOffset } = connectedSurface;
+                    newMap = newMap.setSurfaceTextureInfo(surface, {
+                        texCoords: texOffset,
+                        shape: visualModeState.selectedTexture,
+                        light: 0,
+                        transferMode: TransferMode.normal
+                    });
+                }
+
+                updateState({ type: 'setMap', map: newMap });
+
+            } else {
+                const x = e.offsetX;
+                const y = e.offsetY;
+
+                environmentRef.current.setMousePosition([x, y]);
+            }
+        }
+    }, [map, updateState, visualModeState.selectedTexture]);
+
     const mouseLeave = useCallback(() => {
-        console.log('leave');
+        dragState.current = null;
         if (environmentRef.current) {
             environmentRef.current.setMousePosition(undefined);
         }
@@ -164,7 +213,8 @@ export function VisualMode({ shapes, map, visualModeState, updateState }: Visual
             height={768}
             ref={canvasRef}
             style={{ width: '100%', height: '100%' }}
-            onClick={click}
+            onMouseDown={mouseDown}
+            onMouseUp={mouseUp}
             onMouseMove={mouseMove}
             onMouseLeave={mouseLeave}
         >

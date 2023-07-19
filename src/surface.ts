@@ -65,6 +65,8 @@ function getConnectedHorizontalSurfaces(
     surface: FloorOrCeilingSurface,
     extraCriteria?: SurfacePredicate
 ): TexturedSurface[] {
+    const currentTextureInfo = map.getHorizontalSurfaceInfo(surface);
+
     const height = horizontalSurfaceHeight(map, surface);
     const criteria = (polygonIndex: number) => {
         const connectedSurface = {
@@ -84,7 +86,7 @@ function getConnectedHorizontalSurfaces(
 
     for (const polygonIndex of map.floodBreadthFirst(surface.polygonIndex, criteria)) {
         surfaces.push({
-            texOffset: [0, 0],
+            texOffset: currentTextureInfo.texCoords,
             surface: {
                 type: surface.type,
                 polygonIndex
@@ -354,8 +356,10 @@ function getConnectedVerticalSurfaces(
     surface: WallSurface,
     extraCriteria?: SurfacePredicate
 ): TexturedSurface[] {
+    const currentTextureInfo = map.getVerticalSurfaceInfo(surface);
+
     const surfaces: TexturedSurface<WallSurface>[] = [{
-        texOffset: v2(0, 0),
+        texOffset: currentTextureInfo?.texCoords ?? [0, 0],
         surface
     }];
     let frontier: TexturedSurface<WallSurface>[] = [...surfaces];

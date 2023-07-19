@@ -194,7 +194,7 @@ export class World {
 
         let low = {
             height: polygon.floorHeight,
-            textureOffset: v2scale(1 / worldUnitSize, polygon.floorOrigin),
+            textureOffset: polygon.floorOrigin,
             texture: polygon.floorTexture,
             transferMode: polygon.floorTransferMode,
             lightIntensity: this.getLightIntensity(polygon.floorLightsource),
@@ -202,7 +202,7 @@ export class World {
 
         let high = {
             height: polygon.ceilingHeight,
-            textureOffset: v2scale(1 / worldUnitSize, polygon.ceilingOrigin),
+            textureOffset: polygon.ceilingOrigin,
             texture: polygon.ceilingTexture,
             transferMode: polygon.ceilingTransferMode,
             lightIntensity: this.getLightIntensity(polygon.ceilingLightsource),
