@@ -2,6 +2,7 @@ import { errorName } from './error-name';
 import { Shader } from './shaders';
 import { ShapeTextures } from './shape-textures';
 import { RenderVertex } from '../rasterize';
+import { TransferMode } from '../files/wad';
 
 const positionNumCoords = 3;
 const texNumCoords = 2;
@@ -10,6 +11,8 @@ const vertexSize = positionNumCoords + texNumCoords + lightNumCoords;
 const triangleSize = vertexSize * 3;
 const vertexBufferMaxSize = triangleSize * 4096;
 const vertexBufferBytes = 4 * vertexBufferMaxSize;
+
+const staticShapeDescriptor = -1;
 
 interface DrawCall {
     first: number,
@@ -44,6 +47,7 @@ export class GeometryBuffer {
         this.buffer = buffer;
         gl.bindBuffer(gl.ARRAY_BUFFER, this.buffer);
         gl.bufferData(gl.ARRAY_BUFFER, vertexBufferBytes, gl.STREAM_DRAW);
+
         this.buffer = buffer;
         this.nDrawCalls = 0;
         this.drawCalls = [];
@@ -88,10 +92,19 @@ export class GeometryBuffer {
             gl.enableVertexAttribArray(shaderInfo.light);
             gl.bufferSubData(gl.ARRAY_BUFFER, 0, this.vertexBuffer, 0, this.elementsWritten);
             gl.activeTexture(gl.TEXTURE0);
+
             gl.uniform1i(shaderInfo.textureSampler, 0);
+            const now = Date.now() / 512;
+            const entropy = (now - Math.floor(now));
+            gl.uniform1f(this.shader.time, entropy);
 
             for (const { first, count, shapeDescriptor } of this.drawCalls) {
-                gl.bindTexture(gl.TEXTURE_2D, this.shapeTextures.get(shapeDescriptor));
+                if (shapeDescriptor === staticShapeDescriptor) {
+                    gl.uniform1i(this.shader.renderType, 2);
+                } else {
+                    gl.uniform1i(this.shader.renderType, 1);
+                    gl.bindTexture(gl.TEXTURE_2D, this.shapeTextures.get(shapeDescriptor));
+                }
                 gl.drawArrays(gl.TRIANGLES, first, count);
             }
         }
@@ -114,7 +127,11 @@ export class GeometryBuffer {
         this.addVertex(p3, light);
     }
 
-    addPolygon(shapeDescriptor: number, vertices: RenderVertex[], light: number): void {
+    addPolygon(shapeDescriptor: number, transferMode: TransferMode, vertices: RenderVertex[], light: number): void {
+        if (transferMode === TransferMode.static) {
+            shapeDescriptor = staticShapeDescriptor;
+        }
+
         const nDrawVertices = 3 * (vertices.length - 2);
         if (this.elementsWritten + (vertexSize * nDrawVertices) >= this.vertexBuffer.length) {
             this.flush();

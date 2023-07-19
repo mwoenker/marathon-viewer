@@ -52,13 +52,13 @@ export class Rasterizer {
     }
 
     textureWall(
-        { polygon, textureDescriptor, brightness, isTransparent = false }: RenderPolygonProps
+        { polygon, textureDescriptor, transfer, brightness }: RenderPolygonProps
     ): void {
         const transformed = polygon.map(({ position, texCoord }) => ({
             position: this.screenTransform.viewToScreen(position),
             texCoord
         }));
-        this.geometryBuffer.addPolygon(textureDescriptor, transformed, brightness);
+        this.geometryBuffer.addPolygon(textureDescriptor, transfer, transformed, brightness);
     }
 
     drawHorizontalPolygon({ polygon, textureDescriptor, brightness, transfer, highlighted }: RenderPolygonProps): void {
@@ -71,7 +71,7 @@ export class Rasterizer {
             texCoord
         }));
         const realBrightness = transfer === TransferMode.landscape ? 1.0 : brightness;
-        this.geometryBuffer.addPolygon(textureDescriptor, transformed, realBrightness);
+        this.geometryBuffer.addPolygon(textureDescriptor, transfer, transformed, realBrightness);
     }
 
     dispose(): void {

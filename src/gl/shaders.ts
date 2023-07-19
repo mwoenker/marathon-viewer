@@ -23,16 +23,35 @@ const vertexShaderText = `
 const fragmentShaderText = `
   varying mediump vec2 tex_coord;
   varying lowp float light;
-  uniform sampler2D tex_sampler;
 
-  void main() {
+  uniform int render_type;
+  uniform sampler2D tex_sampler;
+  uniform mediump float time;
+
+  mediump float random(mediump vec2 pos) {
+    mediump vec2 permuted = pos * (1.0 + time);
+    return fract(sin(dot(permuted ,vec2(12.9898,78.233))) * 43758.5453);
+  }
+
+  lowp vec4 texture() {
     lowp float z = gl_FragCoord[2];
     lowp float dist = z;
     lowp float dist_brightness = 0.3 * clamp(1.0 - (dist * 20.0), 0.0, 1.0);
     // lowp vec3 color = dist_brightness * vec3(1.0, 0.5, 0.0);
     lowp vec4 tex_color = texture2D(tex_sampler, tex_coord);
     lowp vec3 frag_color = (light + dist_brightness) * vec3(tex_color);
-    gl_FragColor = vec4(frag_color, tex_color[3]);
+    return vec4(frag_color, tex_color[3]);
+  }
+
+  void main() {
+    if (render_type == 1) {
+      gl_FragColor = texture();
+    } else if (render_type == 2) {
+      mediump float r = random(gl_FragCoord.xy);
+      mediump float g = random(r * gl_FragCoord.xy);
+      mediump float b = random(g * gl_FragCoord.xy);
+      gl_FragColor = vec4(r, g, b, 1);
+    }
   }
 `;
 
@@ -106,6 +125,8 @@ export class Shader {
     vertexPosition: number
     texCoord: number
     light: number
+    renderType: WebGLUniformLocation
+    time: WebGLUniformLocation
     textureSampler: WebGLUniformLocation
     stride: number
     vertexOffset: number
@@ -123,7 +144,9 @@ export class Shader {
         this.vertexPosition = attribLocation(gl, this.program, 'position');
         this.texCoord = attribLocation(gl, this.program, 'tex_coord_attr');
         this.light = attribLocation(gl, this.program, 'light_attr');
+        this.renderType = uniformLocation(gl, this.program, 'render_type');
         this.textureSampler = uniformLocation(gl, this.program, 'tex_sampler');
+        this.time = uniformLocation(gl, this.program, 'time');
         this.stride = floatBytes * 6;
         this.vertexOffset = 0;
         this.texCoordOffset = floatBytes * 3;
