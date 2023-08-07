@@ -4,9 +4,11 @@ const vertexShaderText = `
   attribute vec4 position;
   attribute vec2 tex_coord_attr;
   attribute lowp float light_attr;
+  attribute lowp vec4 tint_color_attr;
 
   varying mediump vec2 tex_coord;
   varying lowp float light;
+  varying lowp vec4 tint_color;
   
   void main() {
     gl_Position = position[2] * vec4(
@@ -17,12 +19,14 @@ const vertexShaderText = `
     );
     tex_coord = tex_coord_attr;
     light = light_attr;
+    tint_color = tint_color_attr;
   }
 `;
 
 const fragmentShaderText = `
   varying mediump vec2 tex_coord;
   varying lowp float light;
+  varying lowp vec4 tint_color;
 
   uniform int render_type;
   uniform sampler2D tex_sampler;
@@ -37,10 +41,10 @@ const fragmentShaderText = `
     lowp float z = gl_FragCoord[2];
     lowp float dist = z;
     lowp float dist_brightness = 0.3 * clamp(1.0 - (dist * 20.0), 0.0, 1.0);
-    // lowp vec3 color = dist_brightness * vec3(1.0, 0.5, 0.0);
     lowp vec4 tex_color = texture2D(tex_sampler, tex_coord);
     lowp vec3 frag_color = (light + dist_brightness) * vec3(tex_color);
-    return vec4(frag_color, tex_color[3]);
+    lowp vec3 tinted_color = mix(frag_color, tint_color.xyz, tint_color.w);
+    return vec4(tinted_color, tex_color[3]);
   }
 
   void main() {
@@ -115,7 +119,17 @@ function uniformLocation(gl: WebGL2RenderingContext, program: WebGLProgram, name
     return result;
 }
 
-const floatBytes = 4;
+export const floatBytes = 4;
+
+export const positionNumCoords = 3;
+export const texNumCoords = 2;
+export const lightNumCoords = 1;
+export const tintColorNumCoords = 4;
+
+export const positionBytes = floatBytes * positionNumCoords;
+export const texCoordBytes = floatBytes * texNumCoords;
+export const lightBytes = floatBytes * lightNumCoords;
+export const tintColorBytes = floatBytes * tintColorNumCoords;
 
 export class Shader {
     gl: WebGL2RenderingContext
@@ -125,6 +139,7 @@ export class Shader {
     vertexPosition: number
     texCoord: number
     light: number
+    tintColor: number
     renderType: WebGLUniformLocation
     time: WebGLUniformLocation
     textureSampler: WebGLUniformLocation
@@ -132,6 +147,7 @@ export class Shader {
     vertexOffset: number
     texCoordOffset: number
     lightOffset: number
+    tintColorOffset: number;
 
     constructor(gl: WebGL2RenderingContext) {
         this.gl = gl;
@@ -144,13 +160,17 @@ export class Shader {
         this.vertexPosition = attribLocation(gl, this.program, 'position');
         this.texCoord = attribLocation(gl, this.program, 'tex_coord_attr');
         this.light = attribLocation(gl, this.program, 'light_attr');
+        this.tintColor = attribLocation(gl, this.program, 'tint_color_attr');
+
         this.renderType = uniformLocation(gl, this.program, 'render_type');
         this.textureSampler = uniformLocation(gl, this.program, 'tex_sampler');
         this.time = uniformLocation(gl, this.program, 'time');
-        this.stride = floatBytes * 6;
+        this.stride = positionBytes + texCoordBytes + lightBytes + tintColorBytes;
+
         this.vertexOffset = 0;
-        this.texCoordOffset = floatBytes * 3;
-        this.lightOffset = floatBytes * 5;
+        this.texCoordOffset = this.vertexOffset + positionBytes;
+        this.lightOffset = this.texCoordOffset + texCoordBytes;
+        this.tintColorOffset = this.lightOffset + lightBytes;
     }
 
     dispose(): void {

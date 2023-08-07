@@ -44,8 +44,8 @@ export interface ShadingTables {
     highlighted: ColorTable[]
 }
 
-const highlightColor = packColor(128, 255, 255);
-const highlightOpacity = 0.1;
+export const highlightColor = packColor(128, 255, 255);
+export const highlightOpacity = 0.1;
 
 function lerpColor(a: number, b: number, t: number): number {
     const aElements = unpackColor(a);

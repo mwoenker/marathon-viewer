@@ -1,16 +1,14 @@
 import { errorName } from './error-name';
-import { Shader } from './shaders';
+import { floatBytes, lightNumCoords, positionNumCoords, Shader, texNumCoords, tintColorNumCoords } from './shaders';
 import { ShapeTextures } from './shape-textures';
 import { RenderVertex } from '../rasterize';
 import { TransferMode } from '../files/wad';
+import { highlightColor, highlightOpacity, unpackColor } from '../color';
 
-const positionNumCoords = 3;
-const texNumCoords = 2;
-const lightNumCoords = 1;
-const vertexSize = positionNumCoords + texNumCoords + lightNumCoords;
+const vertexSize = positionNumCoords + texNumCoords + lightNumCoords + tintColorNumCoords;
 const triangleSize = vertexSize * 3;
 const vertexBufferMaxSize = triangleSize * 4096;
-const vertexBufferBytes = 4 * vertexBufferMaxSize;
+const vertexBufferBytes = floatBytes * vertexBufferMaxSize;
 
 const staticShapeDescriptor = -1;
 
@@ -19,6 +17,9 @@ interface DrawCall {
     count: number,
     shapeDescriptor: number;
 }
+
+const highlightColorComponents = unpackColor(highlightColor);
+highlightColorComponents.alpha = highlightOpacity * 255;
 
 export class GeometryBuffer {
     elementsWritten: number;
@@ -87,9 +88,19 @@ export class GeometryBuffer {
                 normalize,
                 shaderInfo.stride,
                 shaderInfo.lightOffset);
+            gl.vertexAttribPointer(
+                shaderInfo.tintColor,
+                tintColorNumCoords,
+                type,
+                normalize,
+                shaderInfo.stride,
+                shaderInfo.tintColorOffset
+            );
+
             gl.enableVertexAttribArray(shaderInfo.vertexPosition);
             gl.enableVertexAttribArray(shaderInfo.texCoord);
             gl.enableVertexAttribArray(shaderInfo.light);
+            gl.enableVertexAttribArray(shaderInfo.tintColor);
             gl.bufferSubData(gl.ARRAY_BUFFER, 0, this.vertexBuffer, 0, this.elementsWritten);
             gl.activeTexture(gl.TEXTURE0);
 
@@ -112,22 +123,36 @@ export class GeometryBuffer {
         this.drawCalls = [];
     }
 
-    addVertex(p: RenderVertex, light: number): void {
+    addVertex(p: RenderVertex, light: number, highlighted: boolean): void {
+        const tintComponents = highlighted
+            ? highlightColorComponents
+            : { red: 0, green: 0, blue: 0, alpha: 0 };
+
+        const start = this.elementsWritten;
+
         this.vertexBuffer[this.elementsWritten++] = p.position[0];
         this.vertexBuffer[this.elementsWritten++] = p.position[1];
         this.vertexBuffer[this.elementsWritten++] = p.position[2];
         this.vertexBuffer[this.elementsWritten++] = p.texCoord[0];
         this.vertexBuffer[this.elementsWritten++] = p.texCoord[1];
         this.vertexBuffer[this.elementsWritten++] = light;
+        this.vertexBuffer[this.elementsWritten++] = tintComponents.red / 255;
+        this.vertexBuffer[this.elementsWritten++] = tintComponents.green / 255;
+        this.vertexBuffer[this.elementsWritten++] = tintComponents.blue / 255;
+        this.vertexBuffer[this.elementsWritten++] = tintComponents.alpha / 255;
+
+        if (this.elementsWritten - start !== vertexSize) {
+            throw new Error(`vertex is the wrong size! ${this.elementsWritten - start} instead of ${vertexSize}`);
+        }
     }
 
-    addTriangle(p1: RenderVertex, p2: RenderVertex, p3: RenderVertex, light: number): void {
-        this.addVertex(p1, light);
-        this.addVertex(p2, light);
-        this.addVertex(p3, light);
+    addTriangle(p1: RenderVertex, p2: RenderVertex, p3: RenderVertex, light: number, isTinted: boolean): void {
+        this.addVertex(p1, light, isTinted);
+        this.addVertex(p2, light, isTinted);
+        this.addVertex(p3, light, isTinted);
     }
 
-    addPolygon(shapeDescriptor: number, transferMode: TransferMode, vertices: RenderVertex[], light: number): void {
+    addPolygon(shapeDescriptor: number, transferMode: TransferMode, vertices: RenderVertex[], light: number, isTinted: boolean): void {
         if (transferMode === TransferMode.static) {
             shapeDescriptor = staticShapeDescriptor;
         }
@@ -138,7 +163,7 @@ export class GeometryBuffer {
         }
         const startElement = this.elementsWritten;
         for (let i = 1; i < vertices.length - 1; ++i) {
-            this.addTriangle(vertices[0], vertices[i], vertices[i + 1], light);
+            this.addTriangle(vertices[0], vertices[i], vertices[i + 1], light, isTinted);
         }
 
         if (this.drawCalls.length > 0 &&

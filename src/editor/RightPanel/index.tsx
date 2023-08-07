@@ -49,8 +49,8 @@ function ModeSelector({ value, onChange }: ModeSelectorProps) {
     return (
         <select value={value} onChange={change}>
             <option value="geometry">Geometry</option>
-            <option value="visual">Visual</option>
-        </select>
+            <option style="color: red; background: green;" value="visual">Visual</option>
+        </select >
     );
 }
 
