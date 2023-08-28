@@ -46,9 +46,35 @@ export interface SelectTextureAction {
     texture: number | undefined
 }
 
+export interface SelectLightAction {
+    type: 'selectLight';
+    light: number | undefined;
+}
+
 export interface SelectToolAction {
     type: 'selectTool';
     tool: ToolState['tool'];
+}
+
+export interface SelectHeightAction {
+    type: 'selectHeight';
+    height: number | undefined;
+}
+
+export interface NewHeightAction {
+    type: 'addNewHeight';
+    height: number;
+}
+
+export interface SetNewHeigtsAction {
+    type: 'setNewHeights';
+    heights: ReadonlySet<number>;
+}
+
+export interface ChangeHeightAction {
+    type: 'changeHeight';
+    oldHeight: number;
+    newHeight: number;
 }
 
 export type Action =
@@ -60,5 +86,10 @@ export type Action =
     UndoAction |
     RedoAction |
     SelectTextureAction |
-    SelectToolAction;
+    SelectLightAction |
+    SelectToolAction |
+    SelectHeightAction |
+    NewHeightAction |
+    SetNewHeigtsAction |
+    ChangeHeightAction;
 

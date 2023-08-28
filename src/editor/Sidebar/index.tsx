@@ -6,6 +6,7 @@ import { SelectionOptions } from './SelectionOptions';
 import { Shapes } from '../../shapes-loader';
 import { VisualOptions } from '../VisualMode/VisualOptions';
 import { ToolPanel } from './ToolPanel';
+import { HeightOptions } from './HeightOptions';
 
 interface MapListProps {
     maps: MapSummary[],
@@ -24,7 +25,7 @@ function MapList({ maps, selectedMap, onMapSelected }: MapListProps) {
 
     return (
         <select
-            class="select"
+            className="select"
             value={selectedMap ? selectedMap.index : ''}
             onChange={change}
             disabled={maps.length === 0}
@@ -117,6 +118,10 @@ export function Sidebar({
                         onMapChange={onMapChange} />
                 </>
             )}
+            {(state.mode.type === 'floor_height' || state.mode.type === 'ceiling_height') &&
+                state.map && (
+                    <HeightOptions map={state.map} mode={state.mode} updateState={updateState} />
+                )}
             {state.mode.type === 'visual' && state.map && shapes && (
                 <VisualOptions
                     visualModeState={state.mode}

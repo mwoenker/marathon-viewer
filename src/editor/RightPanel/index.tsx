@@ -35,6 +35,8 @@ function parseEditMode(modeStr: string): EditMode {
     switch (modeStr) {
         case 'geometry':
         case 'visual':
+        case 'floor_height':
+        case 'ceiling_height':
             return modeStr;
         default:
             throw new Error(`Unknown edit mode: ${modeStr}`);
@@ -49,7 +51,9 @@ function ModeSelector({ value, onChange }: ModeSelectorProps) {
     return (
         <select value={value} onChange={change}>
             <option value="geometry">Geometry</option>
-            <option style="color: red; background: green;" value="visual">Visual</option>
+            <option value="floor_height">Floor Height</option>
+            <option value="ceiling_height">Ceiling Height</option>
+            <option value="visual">Visual</option>
         </select >
     );
 }
@@ -96,12 +100,15 @@ export function RightPanel({
                     <MapSummary map={state.map} />
                 )}
             </div>
-            {state.mode.type === 'geometry' && (
-                <MapView
-                    state={state}
-                    updateState={updateState}
-                />
-            )}
+            {(state.mode.type === 'geometry' ||
+                state.mode.type === 'floor_height' ||
+                state.mode.type === 'ceiling_height') && (
+                    <MapView
+                        state={state}
+                        updateState={updateState}
+                        mode={state.mode}
+                    />
+                )}
 
             {state.mode.type === 'visual' && state.map && (
                 <VisualMode

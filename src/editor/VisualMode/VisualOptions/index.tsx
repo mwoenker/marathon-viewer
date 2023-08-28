@@ -5,6 +5,7 @@ import { fullBrightShadingTable } from '../../../color';
 import { useEffect, useState } from "preact/hooks";
 import { Shape } from "./Shape";
 import { Action, VisualModeState } from "../../state";
+import { useMemo } from "react";
 
 export interface VisualOptionsProps {
     visualModeState: VisualModeState;
@@ -39,6 +40,10 @@ export function VisualOptions({ visualModeState, updateState, shapes, map }: Vis
     const [collectionId, setCollectionId] = useState(Collections.wallsWater);
     const collection = useShapesCollection(shapes, collectionId);
 
+    const lightIndexes = useMemo(() => {
+        return map.lights.map((_, index) => index);
+    }, [map.lights]);
+
     useEffect(() => {
         updateState({ type: 'selectTexture', texture: undefined });
     }, [collection]);
@@ -54,6 +59,11 @@ export function VisualOptions({ visualModeState, updateState, shapes, map }: Vis
         fullBrightShadingTable(collection.clutShadingTables[0].normal)
         : null;
 
+    const selectLight = (optionValue: string) => {
+        const light = optionValue === '' ? undefined : parseInt(optionValue);
+        updateState({ type: 'selectLight', light });
+    };
+
     return <div className="contextPanel">
         <select
             value={collectionId}
@@ -61,6 +71,15 @@ export function VisualOptions({ visualModeState, updateState, shapes, map }: Vis
         >
             {collectionIds.map(id => (
                 <option value={id} key={id}>{CollectionNames[id]}</option>
+            ))}
+        </select>
+        <select
+            value={visualModeState.selectedLight}
+            onChange={e => selectLight(e.currentTarget.value)}
+        >
+            <option value=''>Don&apos;t change light</option>
+            {lightIndexes.map(lightIndex => (
+                <option key={lightIndex} value={lightIndex}>Light {lightIndex}</option>
             ))}
         </select>
         <div className="texturePalette">

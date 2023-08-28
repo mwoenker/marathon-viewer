@@ -1,21 +1,23 @@
-import { useState, useRef, useLayoutEffect } from 'react';
+import { useState, useRef, useLayoutEffect, useMemo } from 'react';
 import { MapGeometry } from "../../files/map";
 import { Vec2 } from "../../vector2";
 import { CanvasMap } from "../draw/canvas";
 import { Viewport } from '../draw/viewport';
-import { Action, EditorState, getSelection } from '../state';
+import { Action, EditorState, getSelection, ModeState } from '../state';
 
 import type { JSXInternal } from 'preact/src/jsx';
 import { getDrawOperation } from '../state/drawOperation';
 
 interface MapViewProps {
-    state: EditorState,
-    updateState: (action: Action) => void
+    state: EditorState;
+    updateState: (action: Action) => void;
+    mode: ModeState;
 }
 
 export function MapView({
     state,
-    updateState
+    updateState,
+    mode
 }: MapViewProps): JSX.Element {
     const { pixelSize, map } = state;
     const selection = getSelection(state);
@@ -23,8 +25,10 @@ export function MapView({
     const [viewportSize, setViewportSize] = useState([0, 0]);
     const [viewCenter, setViewCenter] = useState([0, 0] as Vec2);
     const ref = useRef<HTMLDivElement>(null);
-    const viewport = new Viewport(
-        viewportSize[0], viewportSize[1], pixelSize, viewCenter);
+    const viewport = useMemo(() => {
+        return new Viewport(
+            viewportSize[0], viewportSize[1], pixelSize, viewCenter);
+    }, [pixelSize, viewCenter, viewportSize]);
 
     function toPixel(coord: Vec2) {
         return coord.map(e => (e + 0x7fff) / pixelSize);
@@ -156,6 +160,7 @@ export function MapView({
         >
             <CanvasMap
                 map={map}
+                mode={mode}
                 selection={selection}
                 viewport={viewport}
                 drawOperation={getDrawOperation(state)}

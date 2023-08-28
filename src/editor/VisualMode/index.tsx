@@ -121,17 +121,23 @@ export function VisualMode({ shapes, map, visualModeState, updateState }: Visual
 
             for (const connectedSurface of surfaces) {
                 const { surface, texOffset } = connectedSurface;
+                const surfaceInfo = newMap.getSurfaceInfo(surface);
+                const existingLight = surfaceInfo?.light ?? 0;
+                const selectedLight = visualModeState.selectedLight;
+                const light = typeof selectedLight === 'number'
+                    ? selectedLight
+                    : existingLight;
                 newMap = newMap.setSurfaceTextureInfo(surface, {
                     texCoords: texOffset,
                     shape: visualModeState.selectedTexture,
-                    light: 0,
+                    light,
                     transferMode: TransferMode.normal
                 });
             }
 
             updateState({ type: 'setMap', map: newMap });
         }
-    }, [map, updateState, visualModeState.selectedTexture]);
+    }, [map, updateState, visualModeState.selectedTexture, visualModeState.selectedLight]);
 
     const mouseUp = useCallback(() => {
         dragState.current = null;
@@ -159,10 +165,12 @@ export function VisualMode({ shapes, map, visualModeState, updateState }: Visual
 
                 for (const connectedSurface of surfaces) {
                     const { surface, texOffset } = connectedSurface;
+                    const surfaceInfo = newMap.getSurfaceInfo(surface);
+                    const light = surfaceInfo?.light ?? 0;
                     newMap = newMap.setSurfaceTextureInfo(surface, {
                         texCoords: texOffset,
                         shape: visualModeState.selectedTexture,
-                        light: 0,
+                        light: light,
                         transferMode: TransferMode.normal
                     });
                 }

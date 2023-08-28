@@ -8,6 +8,7 @@ import { isConvex } from '../../geometry';
 import { ObjectType } from '../../files/map/object';
 import { numFixedAngles } from '../../constants';
 import { DrawOperation } from '../state/drawOperation';
+import { ColorComponents, getCssColor } from '../../color';
 
 const pointWidth = 3;
 const selectedPointWidth = 6;
@@ -19,6 +20,8 @@ interface GridBounds {
     bottom: number
 }
 
+type GetPolygonColor = (polygonIndex: number) => ColorComponents
+
 export class MapDraw {
     context: CanvasRenderingContext2D
 
@@ -27,7 +30,8 @@ export class MapDraw {
         private selection: Selection,
         private canvas: HTMLCanvasElement,
         private viewport: Viewport,
-        private drawOperation: DrawOperation | undefined
+        private drawOperation: DrawOperation | undefined,
+        private getPolygonColor: GetPolygonColor,
     ) {
         const context = canvas.getContext('2d');
         if (!context) {
@@ -135,9 +139,11 @@ export class MapDraw {
                 (idx: number) => map.points[idx]);
             const selected = 'polygon' === this.selection.objType
                 && i === this.selection.index;
+
             const color = selected
                 ? colors.selectedPolygon
-                : colors.polygon;
+                : getCssColor(this.getPolygonColor(i));
+            // : colors.polygon;
 
             const drawPoly = (points: Vec2[]) => {
                 this.context.beginPath();
@@ -186,7 +192,7 @@ export class MapDraw {
         this.context.restore();
     }
 
-    drawWorldUnitMarkers(gridBounds: GridBounds) {
+    drawWorldUnitMarkers(gridBounds: GridBounds): void {
         this.context.save();
 
         const wuSize = 1024;

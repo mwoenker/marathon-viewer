@@ -1,6 +1,7 @@
 import { EditorState, setSelection, getSelection } from '.';
 import { MapGeometry } from '../../files/map';
 import { findPolygonToFill } from '../../files/map/fillPolygon';
+import { polygonsAt } from '../../geometry';
 import { v2sub } from '../../vector2';
 import { findClickedObject } from '../RightPanel/click';
 import { MouseDownAction, MouseMoveAction, MouseUpAction } from './actions';
@@ -89,6 +90,16 @@ export function mouseDown(state: EditorState, action: MouseDownAction): EditorSt
         } else {
             return setMap(state, map.addPolygon(newPolygon));
         }
+    } else if (state.mode.type === 'floor_height' &&
+        typeof state.mode.selectedHeight === 'number') {
+        const polygonIndexes = polygonsAt(action.coords, map);
+        const polygonIndex = polygonIndexes[polygonIndexes.length - 1];
+        return setMap(state, map.setFloorHeight(polygonIndex, state.mode.selectedHeight));
+    } else if (state.mode.type === 'ceiling_height' &&
+        typeof state.mode.selectedHeight === 'number') {
+        const polygonIndexes = polygonsAt(action.coords, map);
+        const polygonIndex = polygonIndexes[polygonIndexes.length - 1];
+        return setMap(state, map.setCeilingHeight(polygonIndex, state.mode.selectedHeight));
     } else {
         return state;
     }

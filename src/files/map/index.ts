@@ -738,4 +738,53 @@ export class MapGeometry {
             polygons: newPolygons,
         });
     }
+
+    // Unique list of floor heighs, sorted ascending
+    getFloorHeights(): number[] {
+        const heights = new Set<number>(this.polygons.map(p => p.floorHeight));
+        return [...heights].sort((a, b) => a - b);
+    }
+
+    // Unique list of ceiling heighs, sorted ascending
+    getCeilingHeights(): number[] {
+        const heights = new Set<number>(this.polygons.map(p => p.ceilingHeight));
+        return [...heights].sort((a, b) => a - b);
+    }
+
+    setFloorHeight(polygonIndex: number, height: number): MapGeometry {
+        const polygons = [...this.polygons];
+        polygons[polygonIndex] = new Polygon({
+            ...this.getPolygon(polygonIndex),
+            floorHeight: height
+        });
+        return this.patch({ polygons });
+    }
+
+    setCeilingHeight(polygonIndex: number, height: number): MapGeometry {
+        const polygons = [...this.polygons];
+        polygons[polygonIndex] = new Polygon({
+            ...this.getPolygon(polygonIndex),
+            ceilingHeight: height
+        });
+        return this.patch({ polygons });
+    }
+
+    changeHeight(
+        heightType: 'floorHeight' | 'ceilingHeight',
+        oldHeight: number,
+        newHeight: number
+    ): MapGeometry {
+        return this.patch({
+            polygons: this.polygons.map((oldPoly) => {
+                if (oldPoly[heightType] === oldHeight) {
+                    return new Polygon({
+                        ...oldPoly,
+                        [heightType]: newHeight
+                    });
+                } else {
+                    return oldPoly;
+                }
+            })
+        });
+    }
 }

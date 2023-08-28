@@ -50,6 +50,9 @@ function defaultModeState(mode: EditMode): ModeState {
             return initialState.mode;
         case 'visual':
             return { type: 'visual' };
+        case 'floor_height':
+        case 'ceiling_height':
+            return { type: mode, newHeights: new Set() };
         default:
             impossibleValue(mode);
     }
@@ -133,6 +136,18 @@ function reduce(state: EditorState, action: Action): EditorState {
                     }
                 };
             }
+        case 'selectLight':
+            if (state.mode.type !== 'visual') {
+                return state;
+            } else {
+                return {
+                    ...state,
+                    mode: {
+                        ...state.mode,
+                        selectedLight: action.light
+                    }
+                };
+            }
         case 'selectTool':
             if (state.mode.type !== 'geometry') {
                 return state;
@@ -145,8 +160,77 @@ function reduce(state: EditorState, action: Action): EditorState {
                     }
                 };
             }
+        case 'selectHeight':
+            if (state.mode.type !== 'floor_height' && state.mode.type !== 'ceiling_height') {
+                return state;
+            } else {
+                return {
+                    ...state,
+                    mode: {
+                        ...state.mode,
+                        selectedHeight: action.height
+                    }
+                };
+            }
+        case 'addNewHeight':
+            if (state.mode.type !== 'floor_height' && state.mode.type !== 'ceiling_height') {
+                return state;
+            } else {
+                const heights = new Set(state.mode.newHeights);
+                heights.add(action.height);
+                return {
+                    ...state,
+                    mode: {
+                        ...state.mode,
+                        newHeights: heights
+                    }
+                };
+            }
+        case 'setNewHeights':
+            if (state.mode.type !== 'floor_height' && state.mode.type !== 'ceiling_height') {
+                return state;
+            } else {
+                return {
+                    ...state,
+                    mode: {
+                        ...state.mode,
+                        newHeights: action.heights
+                    }
+                };
+            }
+        case 'changeHeight':
+            if (state.map && (
+                state.mode.type === 'floor_height' ||
+                state.mode.type === 'ceiling_height'
+            )) {
+                const newHeightList =
+                    [...state.mode.newHeights].map((height) => {
+                        if (action.oldHeight === height) {
+                            return action.newHeight;
+                        } else {
+                            return height;
+                        }
+                    });
+
+                return {
+                    ...state,
+                    map: state.map.changeHeight(
+                        state.mode.type === 'floor_height'
+                            ? 'floorHeight'
+                            : 'ceilingHeight',
+                        action.oldHeight,
+                        action.newHeight),
+                    mode: {
+                        ...state.mode,
+                        newHeights: new Set(newHeightList),
+                    }
+                };
+            } else {
+                console.warn('changeHeight called while not in height mode');
+                return state;
+            }
         default:
-            throw new Error(`invalid action`);
+            impossibleValue(action);
     }
 }
 

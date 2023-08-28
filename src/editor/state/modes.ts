@@ -27,9 +27,16 @@ export interface GeometryModeState {
 export interface VisualModeState {
     type: 'visual'
     selectedTexture?: number | undefined
+    selectedLight?: number | undefined
 }
 
-export type ModeState = GeometryModeState | VisualModeState
+export interface HeightModeState {
+    type: 'floor_height' | 'ceiling_height';
+    selectedHeight?: number;
+    newHeights: ReadonlySet<number>;
+}
+
+export type ModeState = GeometryModeState | VisualModeState | HeightModeState;
 
 export type EditMode = ModeState['type']
 
