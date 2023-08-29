@@ -2,13 +2,13 @@ import { Reader } from '../binary-read';
 import { Writer } from '../binary-write';
 
 interface MapInfoConstructor {
-    environmentCode: number;
-    physicsModel: number;
-    musicId: number;
-    missionFlags: number;
-    environmentFlags: number;
-    name: string;
-    entryFlags: number;
+    environmentCode?: number;
+    physicsModel?: number;
+    musicId?: number;
+    missionFlags?: number;
+    environmentFlags?: number;
+    name?: string;
+    entryFlags?: number;
 }
 
 export class MapInfo {
@@ -20,14 +20,15 @@ export class MapInfo {
     name: string;
     entryFlags: number;
 
-    constructor(data: MapInfoConstructor) {
-        this.environmentCode = data.environmentCode;
-        this.physicsModel = data.physicsModel;
-        this.musicId = data.musicId;
-        this.missionFlags = data.missionFlags;
-        this.environmentFlags = data.environmentFlags;
-        this.name = data.name;
-        this.entryFlags = data.entryFlags;
+    constructor(data: MapInfoConstructor = {}) {
+        // I don't know if these default values make sense!
+        this.environmentCode = data.environmentCode ?? 0;
+        this.physicsModel = data.physicsModel ?? 0;
+        this.musicId = data.musicId ?? 0;
+        this.missionFlags = data.missionFlags ?? 0;
+        this.environmentFlags = data.environmentFlags ?? 0;
+        this.name = data.name ?? 'Untitled Map';
+        this.entryFlags = data.entryFlags ?? 0;
     }
 
     static read(reader: Reader): MapInfo {

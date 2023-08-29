@@ -19,7 +19,7 @@ export function findClickedObject(
     // Did we click on a point?
     const pointIndex = closestPoint(mapCoords, map);
     const position = map.points[pointIndex];
-    if (v2dist(position, mapCoords) < distThreshold) {
+    if (pointIndex >= 0 && v2dist(position, mapCoords) < distThreshold) {
         return {
             type: 'point',
             index: pointIndex,
@@ -29,13 +29,15 @@ export function findClickedObject(
 
     // Did we click on an object?
     const objectIndex = closestObject(mapCoords, map);
-    const objectPosition = v3tov2(map.objects[objectIndex].position);
-    if (v2dist(objectPosition, mapCoords) - objectLogicalSize < distThreshold) {
-        return {
-            type: 'object',
-            index: objectIndex,
-            position: objectPosition
-        };
+    if (objectIndex >= 0) {
+        const objectPosition = v3tov2(map.objects[objectIndex].position);
+        if (v2dist(objectPosition, mapCoords) - objectLogicalSize < distThreshold) {
+            return {
+                type: 'object',
+                index: objectIndex,
+                position: objectPosition
+            };
+        }
     }
 
 

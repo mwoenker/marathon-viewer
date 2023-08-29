@@ -37,21 +37,21 @@ interface WallTextureRequest {
 }
 
 interface MapGeometryConstructor {
-    index: number;
-    header: WadHeader;
-    info: MapInfo;
-    points: Vec2[];
-    lights: Light[];
-    lines: Line[];
-    sides: Side[];
-    polygons: Polygon[];
-    media: Media[];
-    objects: MapObject[];
-    itemPlacement: ItemPlacement[];
-    ambientSounds: AmbientSound[];
-    randomSounds: RandomSound[];
-    notes: Note[];
-    platforms: Platform[];
+    index?: number;
+    header?: WadHeader; // if we read this from existing file
+    info?: MapInfo;
+    points?: Vec2[];
+    lights?: Light[];
+    lines?: Line[];
+    sides?: Side[];
+    polygons?: Polygon[];
+    media?: Media[];
+    objects?: MapObject[];
+    itemPlacement?: ItemPlacement[];
+    ambientSounds?: AmbientSound[];
+    randomSounds?: RandomSound[];
+    notes?: Note[];
+    platforms?: Platform[];
 }
 
 export type PolygonFilter = (polyIdx: number) => boolean
@@ -70,7 +70,7 @@ function outOfRange(pt: Vec2): boolean {
 
 export class MapGeometry {
     index: number;
-    header: WadHeader;
+    header?: WadHeader;
     info: MapInfo;
     points: Vec2[];
     lights: Light[];
@@ -85,22 +85,22 @@ export class MapGeometry {
     notes: Note[];
     platforms: Platform[];
 
-    constructor(data: MapGeometryConstructor) {
-        this.index = data.index;
+    constructor(data: MapGeometryConstructor = {}) {
+        this.index = data.index ?? 0;
         this.header = data.header;
-        this.info = data.info;
-        this.points = data.points;
-        this.lights = data.lights;
-        this.lines = data.lines;
-        this.sides = data.sides;
-        this.polygons = data.polygons;
-        this.media = data.media;
-        this.objects = data.objects;
-        this.itemPlacement = data.itemPlacement;
-        this.ambientSounds = data.ambientSounds;
-        this.randomSounds = data.randomSounds;
-        this.notes = data.notes;
-        this.platforms = data.platforms;
+        this.info = data.info ?? new MapInfo();
+        this.points = data.points ?? [];
+        this.lights = data.lights ?? [];
+        this.lines = data.lines ?? [];
+        this.sides = data.sides ?? [];
+        this.polygons = data.polygons ?? [];
+        this.media = data.media ?? [];
+        this.objects = data.objects ?? [];
+        this.itemPlacement = data.itemPlacement ?? [];
+        this.ambientSounds = data.ambientSounds ?? [];
+        this.randomSounds = data.randomSounds ?? [];
+        this.notes = data.notes ?? [];
+        this.platforms = data.platforms ?? [];
     }
 
     patch(changes: Partial<MapGeometryConstructor>): MapGeometry {

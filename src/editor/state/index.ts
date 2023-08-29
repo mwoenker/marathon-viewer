@@ -17,7 +17,7 @@ export {
 };
 
 export interface EditorState {
-    map: MapGeometry | undefined
+    map: MapGeometry
     isEphemeral: boolean // current state is ephemeral, next setMap should replace not push onto undo
     pixelSize: number
     mode: ModeState
@@ -27,7 +27,7 @@ export interface EditorState {
 
 const initialState: EditorState = {
     pixelSize: 64,
-    map: undefined,
+    map: new MapGeometry(),
     isEphemeral: false,
     undoStack: [],
     redoStack: [],
