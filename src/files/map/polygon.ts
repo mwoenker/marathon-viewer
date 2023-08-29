@@ -80,8 +80,8 @@ export class Polygon {
         this.vertexCount = data.vertexCount ?? data.lines.length;
         this.endpoints = data.endpoints;
         this.lines = data.lines;
-        this.floorTexture = data.floorTexture ?? -1;
-        this.ceilingTexture = data.ceilingTexture ?? -1;
+        this.floorTexture = data.floorTexture ?? 0xffff;
+        this.ceilingTexture = data.ceilingTexture ?? 0xffff;
         this.floorHeight = data.floorHeight;
         this.ceilingHeight = data.ceilingHeight;
         this.floorLightsource = data.floorLightsource ?? 0;
