@@ -7,6 +7,7 @@ import { DrawOperation } from '../state/drawOperation';
 import { colorCodeForIndex, ColorComponents, polygonColor } from '../../color';
 import { ModeState } from '../state/modes';
 import { getMapHeights } from '../state/floorCeilingHeights';
+import { impossibleValue } from '../../utils';
 interface CanvasMapProps {
     map: MapGeometry | undefined;
     mode: ModeState,
@@ -56,7 +57,17 @@ export function CanvasMap(allProps: CanvasMapProps): JSX.Element {
         if (mode.type === 'geometry') {
             return polygonColor;
         } else {
-            const color = heightColors.get(polygon.floorHeight);
+            let polyHeight: number;
+
+            if (mode.type === 'floor_height') {
+                polyHeight = polygon.floorHeight;
+            } else if (mode.type === 'ceiling_height') {
+                polyHeight = polygon.ceilingHeight;
+            } else {
+                throw new Error(`invalid mode for map view: ${mode.type}`);
+            }
+
+            const color = heightColors.get(polyHeight);
             if (!color) {
                 throw new Error(`no color for polygon ${polygonIndex}`);
             }
