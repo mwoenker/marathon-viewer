@@ -95,7 +95,7 @@ export class Shapes {
     getShadingTables(descriptor: number, type: keyof ShadingTables = 'normal'): ColorTable[] | null {
         const { collectionIndex, clutIndex } = parseShapeDescriptor(descriptor);
         const collection = this.getCollection(collectionIndex);
-        if (collection) {
+        if (collection && clutIndex in collection.clutShadingTables) {
             return collection.clutShadingTables[clutIndex][type];
         } else {
             return null;
