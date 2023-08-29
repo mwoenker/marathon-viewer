@@ -13,15 +13,19 @@ export interface FillToolState {
 
 export interface SelectToolState {
     tool: 'select';
-    selection?: Selection
 }
 
-export type ToolState = SelectToolState | DrawToolState | FillToolState;
+export interface ObjectToolState {
+    tool: 'object';
+}
+
+export type ToolState = SelectToolState | DrawToolState | FillToolState | ObjectToolState;
 export type ToolName = ToolState['tool']
 
 export interface GeometryModeState {
     type: 'geometry'
     toolState: ToolState
+    selection?: Selection
 }
 
 export interface VisualModeState {

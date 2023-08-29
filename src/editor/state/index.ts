@@ -35,8 +35,8 @@ const initialState: EditorState = {
         type: 'geometry',
         toolState: {
             tool: 'select',
-            selection: blankSelection
-        }
+        },
+        selection: blankSelection,
     }
 };
 
@@ -237,8 +237,8 @@ function reduce(state: EditorState, action: Action): EditorState {
 type EditorStateResult = [EditorState, Dispatch<Action>];
 
 export function getSelection(state: EditorState): Selection {
-    if (state.mode.type === 'geometry' && state.mode.toolState.tool === 'select') {
-        return state.mode.toolState.selection ?? blankSelection;
+    if (state.mode.type === 'geometry') {
+        return state.mode.selection ?? blankSelection;
     } else {
         return blankSelection;
     }
@@ -246,8 +246,7 @@ export function getSelection(state: EditorState): Selection {
 
 export function setSelection(state: EditorState, selection: Selection): EditorState {
     if (selection === getSelection(state) ||
-        state.mode.type !== 'geometry' ||
-        state.mode.toolState.tool !== 'select') {
+        state.mode.type !== 'geometry') {
         return state;
     } else {
         return {
@@ -256,8 +255,8 @@ export function setSelection(state: EditorState, selection: Selection): EditorSt
                 ...state.mode,
                 toolState: {
                     ...state.mode.toolState,
-                    selection
-                }
+                },
+                selection,
             }
         };
     }

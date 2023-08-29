@@ -1,7 +1,7 @@
 import { Vec2, v2add, v2sub } from '../../vector2';
 import { Side, SideTex } from './side';
 import { Polygon } from './polygon';
-import { Light } from './light';
+import { Light, LightFlagBits } from './light';
 import { MapObject } from './object';
 import { Line } from './line';
 import { ItemPlacement } from './item-placement';
@@ -18,6 +18,8 @@ import { polygonsAt } from '../../geometry';
 import { FloorOrCeilingSurface, Surface, WallSurface } from '../../surface';
 import { impossibleValue } from '../../utils';
 import { SideCandidate } from './fillPolygon';
+import { Vec3 } from '../../vector3';
+import { LightFunctionType } from './light';
 
 interface FloorCeilingRequest {
     polygonIndex: number,
@@ -68,6 +70,68 @@ function outOfRange(pt: Vec2): boolean {
         pt[1] < -0x8000 || pt[1] > 0x7fff;
 }
 
+const nDefaultLights = 10;
+
+function defaultLights(): Light[] {
+    const lights: Light[] = [];
+
+    for (let i = 0; i < nDefaultLights; ++i) {
+        const maxI = nDefaultLights - 1;
+        const brightness = (maxI - i) / maxI;
+        lights.push(new Light({
+            type: 0,
+            tag: 0,
+            flags: 1 << LightFlagBits.initiallyActive,
+            phase: 0,
+            states: [
+                {
+                    func: LightFunctionType.smooth,
+                    period: 30,
+                    intensity: 0xffff,
+                    deltaIntensity: 0,
+                    deltaPeriod: 0,
+                },
+                {
+                    func: LightFunctionType.constant,
+                    period: 30,
+                    intensity: Math.floor(0xffff * brightness),
+                    deltaIntensity: 0,
+                    deltaPeriod: 0,
+                },
+                {
+                    func: LightFunctionType.constant,
+                    period: 0,
+                    intensity: 0,
+                    deltaIntensity: 0,
+                    deltaPeriod: 0,
+                },
+                {
+                    func: LightFunctionType.constant,
+                    period: 30,
+                    intensity: 0,
+                    deltaIntensity: 0,
+                    deltaPeriod: 0,
+                },
+                {
+                    func: LightFunctionType.constant,
+                    period: 30,
+                    intensity: 0,
+                    deltaIntensity: 0,
+                    deltaPeriod: 0,
+                },
+                {
+                    func: LightFunctionType.constant,
+                    period: 30,
+                    intensity: 0,
+                    deltaIntensity: 0,
+                    deltaPeriod: 0,
+                },
+            ],
+        }));
+    }
+    return lights;
+}
+
 export class MapGeometry {
     index: number;
     header?: WadHeader;
@@ -90,7 +154,7 @@ export class MapGeometry {
         this.header = data.header;
         this.info = data.info ?? new MapInfo();
         this.points = data.points ?? [];
-        this.lights = data.lights ?? [];
+        this.lights = data.lights ?? defaultLights();
         this.lines = data.lines ?? [];
         this.sides = data.sides ?? [];
         this.polygons = data.polygons ?? [];
@@ -785,6 +849,18 @@ export class MapGeometry {
                     return oldPoly;
                 }
             })
+        });
+    }
+
+    addObject(polygonIndex: number, position: Vec3): MapGeometry {
+        return this.patch({
+            objects: [
+                ...this.objects,
+                new MapObject({
+                    position,
+                    polygon: polygonIndex,
+                })
+            ]
         });
     }
 }

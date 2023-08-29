@@ -35,7 +35,7 @@ interface LightConstructor {
     tag: number;
 }
 
-enum LightFlagBits {
+export enum LightFlagBits {
     initiallyActive,
     hasSlavedIntensities, // not used for anything?
     stateless,

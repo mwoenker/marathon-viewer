@@ -1,11 +1,17 @@
-import { EditorState, ToolState, UpdateState } from '../state';
+import { ToolState, UpdateState } from '../state';
+import { ToolName } from '../state/modes';
 
 export interface ToolPanelProps {
     toolState: ToolState;
     updateState: UpdateState;
 }
 
-const tools = [
+interface ToolDescription {
+    name: ToolName;
+    symbol: string;
+}
+
+const tools: readonly ToolDescription[] = [
     {
         name: 'select',
         symbol: 'S'
@@ -18,7 +24,11 @@ const tools = [
         name: 'fill',
         symbol: 'F'
     },
-] as const;
+    {
+        name: 'object',
+        symbol: 'O'
+    },
+];
 
 export function ToolPanel({ toolState, updateState }: ToolPanelProps): JSX.Element {
     return (

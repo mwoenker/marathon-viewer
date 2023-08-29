@@ -1,6 +1,7 @@
 import { EditorState, setSelection, getSelection } from '.';
 import { MapGeometry } from '../../files/map';
 import { findPolygonToFill } from '../../files/map/fillPolygon';
+import { MapObject } from '../../files/map/object';
 import { polygonsAt } from '../../geometry';
 import { v2sub } from '../../vector2';
 import { findClickedObject } from '../RightPanel/click';
@@ -90,14 +91,40 @@ export function mouseDown(state: EditorState, action: MouseDownAction): EditorSt
         } else {
             return setMap(state, map.addPolygon(newPolygon));
         }
+    } else if (toolSelected(state, 'object')) {
+        const polygonIndexes = polygonsAt(action.coords, map);
+        if (polygonIndexes.length === 0) {
+            return state;
+        }
+        const polygonIndex = polygonIndexes[0];
+        const polygon = state.map.getPolygon(polygonIndex);
+        const newMap = map.addObject(polygonIndexes[0], [...action.coords, polygon.floorHeight]);
+        const withMap = setMap(state, newMap);
+        return setSelection(withMap, {
+            objType: 'object',
+            index: newMap.objects.length - 1,
+            relativePos: [0, 0],
+            isMouseDown: false,
+            isDragging: false,
+            startCoords: action.coords,
+            currentCoords: action.coords,
+        });
+
     } else if (state.mode.type === 'floor_height' &&
         typeof state.mode.selectedHeight === 'number') {
         const polygonIndexes = polygonsAt(action.coords, map);
+        if (polygonIndexes.length === 0) {
+            return state;
+        }
         const polygonIndex = polygonIndexes[polygonIndexes.length - 1];
-        return setMap(state, map.setFloorHeight(polygonIndex, state.mode.selectedHeight));
+        const newMap = map.setFloorHeight(polygonIndex, state.mode.selectedHeight);
+        return setMap(state, newMap);
     } else if (state.mode.type === 'ceiling_height' &&
         typeof state.mode.selectedHeight === 'number') {
         const polygonIndexes = polygonsAt(action.coords, map);
+        if (polygonIndexes.length === 0) {
+            return state;
+        }
         const polygonIndex = polygonIndexes[polygonIndexes.length - 1];
         return setMap(state, map.setCeilingHeight(polygonIndex, state.mode.selectedHeight));
     } else {

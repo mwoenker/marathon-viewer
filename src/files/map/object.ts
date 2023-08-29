@@ -22,12 +22,12 @@ export enum ObjectFlags {
 }
 
 interface MapObjectConstructor {
-    type: ObjectType;
-    index: number;
-    facing: number; // is sound volume for savedSoundSource
+    type?: ObjectType;
+    index?: number;
+    facing?: number; // is sound volume for savedSoundSource
     polygon: number;
-    position: Vec3;
-    flags: number;
+    position?: Vec3;
+    flags?: number;
 }
 
 export class MapObject {
@@ -39,12 +39,12 @@ export class MapObject {
     flags: number;
 
     constructor(data: MapObjectConstructor) {
-        this.type = data.type;
-        this.index = data.index;
-        this.facing = data.facing;
-        this.polygon = data.polygon;
-        this.position = data.position;
-        this.flags = data.flags;
+        this.type = data.type ?? ObjectType.monster;
+        this.index = data.index ?? 0;
+        this.facing = data.facing ?? 0;
+        this.polygon = data.polygon ?? -1;
+        this.position = data.position ?? [0, 0, 0];
+        this.flags = data.flags ?? 0;
     }
 
     static read(reader: Reader): MapObject {
