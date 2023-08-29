@@ -1,7 +1,7 @@
 import { MapGeometry } from "./files/map";
 import { Polygon } from "./files/map/polygon";
-import { impossibleValue } from "./utils";
-import { Vec2, v2, v2dist } from "./vector2";
+import { impossibleValue, textureOffset } from "./utils";
+import { Vec2, v2, v2dist, v2sub, v2direction, v2add, v2scale } from "./vector2";
 
 export type WallSurfaceType = 'wallPrimary' | 'wallSecondary' | 'wallTransparent'
 export type FloorSurfaceType = 'floor' | 'ceiling'
@@ -388,6 +388,38 @@ function getConnectedVerticalSurfaces(
     } while (frontier.length > 0);
 
     return surfaces;
+}
+
+export function dragSurfaceTexCoords(
+    surface: TexturedSurface,
+    screenOffset: Vec2,
+    cameraXyAngle: number, // radians
+): TexturedSurface {
+    const forward = v2direction(cameraXyAngle);
+    const right = v2direction(cameraXyAngle + (Math.PI / 2));
+    let dragOffset: Vec2;
+
+    if (surface.surface.type === 'floor') {
+        dragOffset = v2add(
+            v2scale(screenOffset[0], right),
+            v2scale(-screenOffset[1], forward),
+        );
+    } else if (surface.surface.type === 'ceiling') {
+        dragOffset = v2add(
+            v2scale(screenOffset[0], right),
+            v2scale(screenOffset[1], forward),
+        );
+    } else {
+        dragOffset = screenOffset;
+    }
+
+    console.log({ dragOffset, forward, right, cameraXyAngle });
+    console.log(textureOffset(v2sub(surface.texOffset, dragOffset)));
+
+    return {
+        ...surface,
+        texOffset: textureOffset(v2sub(surface.texOffset, dragOffset)),
+    };
 }
 
 export function getConnectedSurfaces(

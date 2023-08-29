@@ -5,9 +5,9 @@ import { MapGeometry } from "../../files/map";
 import { MapInfo } from "../../files/map/map-info";
 import { TransferMode } from "../../files/wad";
 import { Shapes } from "../../shapes-loader";
-import { getConnectedSurfaces, Surface, TexturedSurface } from "../../surface";
+import { dragSurfaceTexCoords, getConnectedSurfaces, TexturedSurface } from "../../surface";
 import { UpdateState, VisualModeState } from "../state";
-import { Vec2, v2sub, v2add } from "../vector2";
+import { Vec2, v2sub } from "../vector2";
 
 interface VisualModeProps {
     shapes: Shapes;
@@ -148,12 +148,10 @@ export function VisualMode({ shapes, map, visualModeState, updateState }: Visual
             if (dragState.current) {
                 const pos: Vec2 = [e.offsetX, e.offsetY];
                 const delta = v2sub(pos, dragState.current.lastPos);
+                const playerXyAngle = environmentRef.current.player.facingAngle;
 
                 const surfaces = dragState.current.surfaces.map(surf => {
-                    return {
-                        ...surf,
-                        texOffset: v2sub(surf.texOffset, delta)
-                    };
+                    return dragSurfaceTexCoords(surf, delta, playerXyAngle);
                 });
 
                 dragState.current = {
