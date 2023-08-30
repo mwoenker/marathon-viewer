@@ -12,35 +12,6 @@ import { RandomSound } from './random-sound';
 import { Note } from './note';
 import { Platform } from './platform';
 
-// return new object with updates merged into original. If updates don't
-// actually change any values of the original, return the original unchanged
-function updateObject<T>(original: T, updates: Partial<T>): T {
-    function compare(a: unknown, b: unknown): boolean {
-        // return true if objects are the same or are arrays with identical
-        // elements
-        if (a === b) {
-            return true;
-        } else if (Array.isArray(a) && Array.isArray(b)
-            && a.length === b.length) {
-            for (let i = 0; i < a.length; ++i) {
-                if (a[i] !== b[i]) {
-                    return false;
-                }
-            }
-            return true;
-        } else {
-            return false;
-        }
-    }
-
-    for (const prop in updates) {
-        if (!compare(original[prop], updates[prop])) {
-            return { ...original, ...updates };
-        }
-    }
-    return original;
-}
-
 export function remappedIndexes<T>(objectType: DependencyType, objects: T[], deletedObjects: Dependencies): number[] {
     let newIndex = 0;
     return objects.map((obj, oldIndex) => {
@@ -149,7 +120,8 @@ export class Remapping {
         const newArrays = this.withoutDeleted();
         return {
             ...newArrays,
-            lines: newArrays.lines.map(line => updateObject(line, {
+            lines: newArrays.lines.map(line => new Line({
+                ...line,
                 begin: getNewIndex(line.begin, this.points),
                 end: getNewIndex(line.end, this.points),
                 frontSide: getNewIndex(line.frontSide, this.sides),
@@ -157,7 +129,8 @@ export class Remapping {
                 frontPoly: getNewIndex(line.frontPoly, this.polygons),
                 backPoly: getNewIndex(line.backPoly, this.polygons),
             })),
-            sides: newArrays.sides.map(side => updateObject(side, {
+            sides: newArrays.sides.map(side => new Side({
+                ...side,
                 polygonIndex: getNewIndex(side.polygonIndex, this.polygons),
                 lineIndex: getNewIndex(side.lineIndex, this.lines),
                 primaryLightsourceIndex: getNewIndex(
@@ -167,7 +140,8 @@ export class Remapping {
                 transparentLightsourceIndex: getNewIndex(
                     side.transparentLightsourceIndex, this.lights),
             })),
-            polygons: newArrays.polygons.map(polygon => updateObject(polygon, {
+            polygons: newArrays.polygons.map(polygon => new Polygon({
+                ...polygon,
                 endpoints: polygon.endpoints.map((j: number) => getNewIndex(j, this.points)),
                 lines: polygon.lines.map((j: number) => getNewIndex(j, this.lines)),
                 sides: polygon.sides.map((j: number) => getNewIndex(j, this.sides)),
@@ -177,10 +151,12 @@ export class Remapping {
                 adjacentPolygons: polygon.adjacentPolygons.map(
                     (j: number) => getNewIndex(j, this.polygons)),
             })),
-            objects: newArrays.objects.map(obj => updateObject(obj, {
+            objects: newArrays.objects.map(obj => new MapObject({
+                ...obj,
                 polygon: getNewIndex(obj.polygon, this.polygons)
             })),
-            platforms: newArrays.platforms.map(platform => updateObject(platform, {
+            platforms: newArrays.platforms.map(platform => new Platform({
+                ...platform,
                 polygonIndex: getNewIndex(platform.polygonIndex, this.polygons)
             })),
         };
