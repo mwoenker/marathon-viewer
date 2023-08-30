@@ -10,6 +10,7 @@ import { continueDrawOperation, finishDrawOperation, startDrawOperationFromPoint
 import { toolSelected } from './modes';
 import { blankSelection, Selection } from './selection';
 import { setMap } from './setMap';
+import { snapToGrid } from './snapGrid';
 
 function dragDist(state: Selection) {
     if (!state.startCoords || !state.currentCoords) {
@@ -33,10 +34,7 @@ function dragMapObject(
             state,
             state.map.movePoint(
                 selection.index,
-                [
-                    Math.floor(selection.currentCoords[0]),
-                    Math.floor(selection.currentCoords[1]),
-                ],
+                snapToGrid(state.snapGridSize, selection.currentCoords),
             ),
             true
         );

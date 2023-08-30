@@ -1,6 +1,7 @@
 import { EditorState } from '.';
 import { Vec2 } from '../../vector2';
 import { addLine, getOrAddPoint } from './setMap';
+import { snapToGrid } from './snapGrid';
 
 export interface DrawOperation {
     startPointIndex: number;
@@ -41,11 +42,14 @@ export function startDrawOperationFromPoint(
     state: EditorState,
     position: Vec2,
 ): EditorState {
-    const [stateWithPoint, pointIndex] = getOrAddPoint(state, position, true);
+    const [stateWithPoint, pointIndex] = getOrAddPoint(
+        state,
+        snapToGrid(state.snapGridSize, position),
+        true);
 
     return setDrawOperation(stateWithPoint, {
         startPointIndex: pointIndex,
-        endPoint: position,
+        endPoint: snapToGrid(state.snapGridSize, position),
     });
 }
 
@@ -59,7 +63,7 @@ export function continueDrawOperation(
     }
     return setDrawOperation(state, {
         startPointIndex: oldOperation.startPointIndex,
-        endPoint,
+        endPoint: snapToGrid(state.snapGridSize, endPoint),
     });
 }
 

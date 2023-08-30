@@ -2,8 +2,10 @@ import { JSXInternal } from 'preact/src/jsx';
 import { MapGeometry } from '../../files/map';
 import { Shapes } from '../../shapes-loader';
 import { Action, EditMode, EditorState, getSelection } from '../state';
+import { SnapGridSize } from '../state/snapGrid';
 import { VisualMode } from '../VisualMode';
 import { MapView } from './MapView';
+import { SnapSelector } from './SnapSelector';
 
 function MapSummary({ map }: { map: MapGeometry }) {
     if (map && map.polygons && map.lines && map.points) {
@@ -82,6 +84,10 @@ export function RightPanel({
         updateState({ type: 'setEditMode', editMode });
     }
 
+    function changeSnapGrid(size: SnapGridSize) {
+        updateState({ type: 'setSnapSize', size });
+    }
+
     return (
         <div className="rightPanel"
             tabIndex={0}
@@ -95,6 +101,7 @@ export function RightPanel({
                         +
                     </button>
                     <ModeSelector value={state.mode.type} onChange={changeMode} />
+                    <SnapSelector value={state.snapGridSize} onChange={changeSnapGrid} />
                 </div>
                 {state.map && (
                     <MapSummary map={state.map} />

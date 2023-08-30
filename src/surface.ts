@@ -413,9 +413,6 @@ export function dragSurfaceTexCoords(
         dragOffset = screenOffset;
     }
 
-    console.log({ dragOffset, forward, right, cameraXyAngle });
-    console.log(textureOffset(v2sub(surface.texOffset, dragOffset)));
-
     return {
         ...surface,
         texOffset: textureOffset(v2sub(surface.texOffset, dragOffset)),

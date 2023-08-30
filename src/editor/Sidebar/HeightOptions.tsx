@@ -59,7 +59,6 @@ export function HeightOptions({ map, mode, updateState }: HeightOptionsProps): J
         const deduplicated = new Set(mode.newHeights);
         for (const newHeight of mode.newHeights) {
             if (heightsInMap.has(newHeight)) {
-                console.log('bonk', newHeight);
                 deduplicated.delete(newHeight);
             }
         }

@@ -6,6 +6,7 @@ import { mouseDown, mouseMove, mouseUp } from './mapMouseActions';
 import { EditMode, ModeState, VisualModeState, ToolState } from './modes';
 import { blankSelection, Selection } from './selection';
 import { setMap } from './setMap';
+import { SnapGridSize } from './snapGrid';
 
 export {
     Action,
@@ -20,6 +21,7 @@ export interface EditorState {
     map: MapGeometry
     isEphemeral: boolean // current state is ephemeral, next setMap should replace not push onto undo
     pixelSize: number
+    snapGridSize: SnapGridSize
     mode: ModeState
     undoStack: MapGeometry[]
     redoStack: MapGeometry[]
@@ -31,6 +33,7 @@ const initialState: EditorState = {
     isEphemeral: false,
     undoStack: [],
     redoStack: [],
+    snapGridSize: 256,
     mode: {
         type: 'geometry',
         toolState: {
@@ -88,6 +91,11 @@ function reduce(state: EditorState, action: Action): EditorState {
                 ...state,
                 pixelSize: state.pixelSize * zoomIncrement
             };
+        case 'setSnapSize':
+            return {
+                ...state,
+                snapGridSize: action.size,
+            }
         case 'setMap': {
             return setMap(state, action.map, Boolean(action.isEphemeral));
         }
