@@ -44,14 +44,14 @@ export enum PlatformFlagBit {
 }
 
 export class Platform {
-    type: number;
-    speed: number;
-    delay: number;
-    maximumHeight: number;
-    minimumHeight: number;
-    staticFlags: number;
-    polygonIndex: number;
-    tag: number;
+    readonly type: number;
+    readonly speed: number;
+    readonly delay: number;
+    readonly maximumHeight: number;
+    readonly minimumHeight: number;
+    readonly staticFlags: number;
+    readonly polygonIndex: number;
+    readonly tag: number;
 
     constructor(data: PlatformConstructor) {
         this.type = data.type;

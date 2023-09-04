@@ -31,12 +31,12 @@ interface MapObjectConstructor {
 }
 
 export class MapObject {
-    type: ObjectType;
-    index: number;
-    facing: number;
-    polygon: number;
-    position: Vec3;
-    flags: number;
+    readonly type: ObjectType;
+    readonly index: number;
+    readonly facing: number;
+    readonly polygon: number;
+    readonly position: Vec3;
+    readonly flags: number;
 
     constructor(data: MapObjectConstructor) {
         this.type = data.type ?? ObjectType.monster;

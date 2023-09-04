@@ -71,6 +71,7 @@ function outOfRange(pt: Vec2): boolean {
 }
 
 const nDefaultLights = 10;
+const nItemPlacements = 128;
 
 function defaultLights(): Light[] {
     const lights: Light[] = [];
@@ -132,22 +133,30 @@ function defaultLights(): Light[] {
     return lights;
 }
 
+function defaultItemPlacements(): ItemPlacement[] {
+    const placements: ItemPlacement[] = [];
+    for (let i = 0; i < nItemPlacements; ++i) {
+        placements.push(new ItemPlacement());
+    }
+    return placements;
+}
+
 export class MapGeometry {
-    index: number;
-    header?: WadHeader;
-    info: MapInfo;
-    points: Vec2[];
-    lights: Light[];
-    lines: Line[];
-    sides: Side[];
-    polygons: Polygon[];
-    media: Media[];
-    objects: MapObject[];
-    itemPlacement: ItemPlacement[];
-    ambientSounds: AmbientSound[];
-    randomSounds: RandomSound[];
-    notes: Note[];
-    platforms: Platform[];
+    readonly index: number;
+    readonly header?: WadHeader;
+    readonly info: MapInfo;
+    readonly points: Vec2[];
+    readonly lights: Light[];
+    readonly lines: Line[];
+    readonly sides: Side[];
+    readonly polygons: Polygon[];
+    readonly media: Media[];
+    readonly objects: MapObject[];
+    readonly itemPlacement: ItemPlacement[];
+    readonly ambientSounds: AmbientSound[];
+    readonly randomSounds: RandomSound[];
+    readonly notes: Note[];
+    readonly platforms: Platform[];
 
     constructor(data: MapGeometryConstructor = {}) {
         this.index = data.index ?? 0;
@@ -160,7 +169,7 @@ export class MapGeometry {
         this.polygons = data.polygons ?? [];
         this.media = data.media ?? [];
         this.objects = data.objects ?? [];
-        this.itemPlacement = data.itemPlacement ?? [];
+        this.itemPlacement = data.itemPlacement ?? defaultItemPlacements();
         this.ambientSounds = data.ambientSounds ?? [];
         this.randomSounds = data.randomSounds ?? [];
         this.notes = data.notes ?? [];

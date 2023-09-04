@@ -2,29 +2,29 @@ import { Reader } from '../binary-read';
 import { Writer } from '../binary-write';
 
 interface ItemPlacementConstructor {
-    flags: number;
-    initialCount: number;
-    minimumCount: number;
-    maximumCount: number;
-    randomCount: number;
-    randomChance: number;
+    flags?: number;
+    initialCount?: number;
+    minimumCount?: number;
+    maximumCount?: number;
+    randomCount?: number;
+    randomChance?: number;
 }
 
 export class ItemPlacement {
-    flags: number;
-    initialCount: number;
-    minimumCount: number;
-    maximumCount: number;
-    randomCount: number;
-    randomChance: number;
+    readonly flags: number;
+    readonly initialCount: number;
+    readonly minimumCount: number;
+    readonly maximumCount: number;
+    readonly randomCount: number;
+    readonly randomChance: number;
 
-    constructor(data: ItemPlacementConstructor) {
-        this.flags = data.flags;
-        this.initialCount = data.initialCount;
-        this.minimumCount = data.minimumCount;
-        this.maximumCount = data.maximumCount;
-        this.randomCount = data.randomCount;
-        this.randomChance = data.randomChance;
+    constructor(data: ItemPlacementConstructor = {}) {
+        this.flags = data.flags ?? 0;
+        this.initialCount = data.initialCount ?? 0;
+        this.minimumCount = data.minimumCount ?? 0;
+        this.maximumCount = data.maximumCount ?? 0;
+        this.randomCount = data.randomCount ?? 0;
+        this.randomChance = data.randomChance ?? 0;
     }
 
     static read(reader: Reader): ItemPlacement {
@@ -40,10 +40,10 @@ export class ItemPlacement {
 
     write(writer: Writer): void {
         writer.uint16(this.flags);
-        writer.uint16(this.initialCount);
-        writer.uint16(this.minimumCount);
-        writer.uint16(this.maximumCount);
-        writer.uint16(this.randomCount);
+        writer.int16(this.initialCount);
+        writer.int16(this.minimumCount);
+        writer.int16(this.maximumCount);
+        writer.int16(this.randomCount);
         writer.uint16(this.randomChance);
     }
 }

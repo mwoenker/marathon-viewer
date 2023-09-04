@@ -8,9 +8,9 @@ interface AmbientSoundConstructor {
 }
 
 export class AmbientSound {
-    flags: number;
-    soundIndex: number;
-    volume: number;
+    readonly flags: number;
+    readonly soundIndex: number;
+    readonly volume: number;
 
     constructor(data: AmbientSoundConstructor) {
         this.flags = data.flags;

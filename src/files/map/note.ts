@@ -11,10 +11,10 @@ interface NoteConstructor {
 }
 
 export class Note {
-    type: number;
-    location: Vec2;
-    polygonIndex: number;
-    text: string
+    readonly type: number;
+    readonly location: Vec2;
+    readonly polygonIndex: number;
+    readonly text: string
 
     constructor(data: NoteConstructor) {
         this.type = data.type;

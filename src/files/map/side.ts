@@ -55,26 +55,26 @@ export interface SideConstructor {
 }
 
 export class Side {
-    type: number;
-    flags: number;
-    primaryTexture: SideTex;
-    secondaryTexture: SideTex;
-    transparentTexture: SideTex;
-    collisionTopLeft: Vec2;
-    collisionTopRight: Vec2;
-    collisionBottomLeft: Vec2;
-    collisionBottomRight: Vec2;
-    controlPanelType: number;
-    controlPanelPermutation: number;
-    primaryTransferMode: number;
-    secondaryTransferMode: number;
-    transparentTransferMode: number;
-    polygonIndex: number;
-    lineIndex: number;
-    primaryLightsourceIndex: number;
-    secondaryLightsourceIndex: number;
-    transparentLightsourceIndex: number;
-    ambientDelta: number;
+    readonly type: number;
+    readonly flags: number;
+    readonly primaryTexture: SideTex;
+    readonly secondaryTexture: SideTex;
+    readonly transparentTexture: SideTex;
+    readonly collisionTopLeft: Vec2;
+    readonly collisionTopRight: Vec2;
+    readonly collisionBottomLeft: Vec2;
+    readonly collisionBottomRight: Vec2;
+    readonly controlPanelType: number;
+    readonly controlPanelPermutation: number;
+    readonly primaryTransferMode: number;
+    readonly secondaryTransferMode: number;
+    readonly transparentTransferMode: number;
+    readonly polygonIndex: number;
+    readonly lineIndex: number;
+    readonly primaryLightsourceIndex: number;
+    readonly secondaryLightsourceIndex: number;
+    readonly transparentLightsourceIndex: number;
+    readonly ambientDelta: number;
 
     constructor(data: SideConstructor) {
         if (!Number.isInteger(data.type) ||
@@ -104,6 +104,10 @@ export class Side {
         this.secondaryLightsourceIndex = data.secondaryLightsourceIndex ?? 0;
         this.transparentLightsourceIndex = data.transparentLightsourceIndex ?? 0;
         this.ambientDelta = data.ambientDelta ?? 0;
+    }
+
+    patch(update: Partial<SideConstructor>): Side {
+        return new Side({ ...this, update });
     }
 
     static read(reader: Reader): Side {

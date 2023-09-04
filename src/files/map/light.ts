@@ -42,11 +42,11 @@ export enum LightFlagBits {
 }
 
 export class Light {
-    type: number;
-    flags: number;
-    phase: number;
-    states: LightFunction[];
-    tag: number;
+    readonly type: number;
+    readonly flags: number;
+    readonly phase: number;
+    readonly states: LightFunction[];
+    readonly tag: number;
 
     constructor(data: LightConstructor) {
         this.type = data.type;

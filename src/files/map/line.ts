@@ -25,16 +25,16 @@ interface LineConstructor {
 }
 
 export class Line implements LineConstructor {
-    begin: number;
-    end: number;
-    flags: number;
-    length: number;
-    highestFloor: number;
-    lowestCeiling: number;
-    frontSide: number; // clockwise side
-    backSide: number; //ccw side
-    frontPoly: number;
-    backPoly: number;
+    readonly begin: number;
+    readonly end: number;
+    readonly flags: number;
+    readonly length: number;
+    readonly highestFloor: number;
+    readonly lowestCeiling: number;
+    readonly frontSide: number; // clockwise side
+    readonly backSide: number; //ccw side
+    readonly frontPoly: number;
+    readonly backPoly: number;
 
     constructor(data: LineConstructor) {
         this.begin = data.begin;
@@ -47,6 +47,16 @@ export class Line implements LineConstructor {
         this.backSide = data.backSide;
         this.frontPoly = data.frontPoly;
         this.backPoly = data.backPoly;
+    }
+
+    patch(update: Partial<LineConstructor>): Line {
+        return new Line({ ...this, update });
+    }
+
+    patchFlag(flag: LineFlag, val: boolean): Line {
+        return this.patch({
+            flags: (this.flags & ~flag) | (val ? flag : 0)
+        });
     }
 
     static read(reader: Reader): Line {
@@ -82,10 +92,6 @@ export class Line implements LineConstructor {
 
     hasFlag(flag: LineFlag): boolean {
         return (this.flags & flag) !== 0;
-    }
-
-    setFlag(flag: LineFlag, val: boolean): void {
-        this.flags = (this.flags & ~flag) | (val ? flag : 0);
     }
 }
 

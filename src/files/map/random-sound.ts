@@ -16,17 +16,17 @@ interface RandomSoundConstructor {
 }
 
 export class RandomSound {
-    flags: number;
-    soundIndex: number;
-    volume: number;
-    deltaVolume: number;
-    period: number;
-    deltaPeriod: number;
-    direction: number;
-    deltaDirection: number;
-    pitch: number;
-    deltaPitch: number;
-    phase: number;
+    readonly flags: number;
+    readonly soundIndex: number;
+    readonly volume: number;
+    readonly deltaVolume: number;
+    readonly period: number;
+    readonly deltaPeriod: number;
+    readonly direction: number;
+    readonly deltaDirection: number;
+    readonly pitch: number;
+    readonly deltaPitch: number;
+    readonly phase: number;
 
     constructor(data: RandomSoundConstructor) {
         this.flags = data.flags;

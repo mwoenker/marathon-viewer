@@ -8,6 +8,7 @@ export function setMap(
     map: MapGeometry,
     isEphemeral = false
 ): EditorState {
+    console.log({ map });
     let undo: MapGeometry[];
     if (!state.map) {
         undo = [];

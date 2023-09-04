@@ -12,13 +12,13 @@ interface MapInfoConstructor {
 }
 
 export class MapInfo {
-    environmentCode: number;
-    physicsModel: number;
-    musicId: number;
-    missionFlags: number;
-    environmentFlags: number;
-    name: string;
-    entryFlags: number;
+    readonly environmentCode: number;
+    readonly physicsModel: number;
+    readonly musicId: number;
+    readonly missionFlags: number;
+    readonly environmentFlags: number;
+    readonly name: string;
+    readonly entryFlags: number;
 
     constructor(data: MapInfoConstructor = {}) {
         // I don't know if these default values make sense!

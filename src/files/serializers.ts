@@ -19,6 +19,7 @@ import { MapInfo } from './map/map-info';
 import { Vec2 } from '../vector2';
 import { WadHeader } from './wad';
 import { MapGeometry } from './map';
+import { assertDefined, defined } from '../utils';
 
 interface SerializerInstance {
     write(writer: Writer): void
@@ -263,7 +264,11 @@ export async function readMap(
 ): Promise<Map> {
     const chunks = await readEntryChunks(file, wadHeader, index);
 
-    const { info, points: simplePoints, endpoints, lines, sides, polygons } = chunks;
+    const { info, points: simplePoints, endpoints } = chunks;
+    let lines = defined(chunks.lines, 'No LINS chunk');
+    let sides = defined(chunks.sides, 'No SIDS chuhnk');
+    let polygons = defined(chunks.polygons, 'No POLY chunk');
+
     if (!info) {
         throw new Error('No map info chunk found');
     }
@@ -279,33 +284,34 @@ export async function readMap(
         throw Error('No EPNT or PNTS chunk');
     }
 
-    if (!lines) {
-        throw Error('No LINS chunk');
-    }
-
-    if (!sides) {
-        throw Error('No SIDS chunk');
-    }
-
-    if (!polygons) {
-        throw Error('No POLY chunk');
-    }
-
     let platforms: Platform[];
     if (chunks.dynamicPlatforms) {
         platforms = chunks.dynamicPlatforms.map(dynamicPlatform => {
             return dynamicPlatform.toStatic();
         });
+
+        platforms = platforms.filter(platform =>
+            polygons[platform.polygonIndex] !== undefined);
+
         platforms.forEach(platform => {
             const { polygonIndex } = platform;
             if (polygonIndex >= 0 && polygonIndex < polygons.length) {
-                const polygon = polygons[polygonIndex];
+                let polygon = polygons[polygonIndex];
+                assertDefined(
+                    polygon,
+                    'platform references nonexistent polygon'
+                );
                 if (platform.comesFromFloor()) {
-                    polygon.floorHeight = platform.minimumHeight;
+                    polygon = polygon.patch({
+                        floorHeight: platform.minimumHeight
+                    });
                 }
                 if (platform.comesFromCeiling()) {
-                    polygon.ceilingHeight = platform.maximumHeight;
+                    polygon = polygon.patch({
+                        ceilingHeight: platform.maximumHeight
+                    });
                 }
+                polygons[polygonIndex] = polygon;
             } else {
                 console.warn(`Can't fixup platform polygon: ${polygonIndex} out of range`);
             }
@@ -314,37 +320,44 @@ export async function readMap(
         platforms = chunks.platforms || [];
     }
 
-    for (const line of lines) {
+    lines = lines.map(line => {
         const polygonIndexes = [line.backPoly, line.frontPoly].filter(idx => idx !== -1);
         const linePolygons = polygonIndexes.map(idx => polygons[idx]);
 
         if (linePolygons.length === 0) {
-            line.lowestCeiling = line.highestFloor = 0;
+            line = line.patch({
+                lowestCeiling: 0,
+                highestFloor: 0,
+            });
         } else {
-            line.lowestCeiling = linePolygons.reduce(
+            const lowestCeiling = linePolygons.reduce(
                 (ceiling, polygon) => Math.min(ceiling, polygon.ceilingHeight),
                 0x7fff);
-            line.highestFloor = linePolygons.reduce(
+            const highestFloor = linePolygons.reduce(
                 (floor, polygon) => Math.max(floor, polygon.floorHeight),
                 -0x8000);
+            line = line.patch({ lowestCeiling, highestFloor });
         }
 
-        if (line.hasFlag(LineFlag.variableElevation)) {
-            line.setFlag(LineFlag.solid, line.highestFloor >= line.lowestCeiling);
-        }
-    }
+        line = line.patchFlag(
+            LineFlag.solid,
+            line.highestFloor >= line.lowestCeiling
+        );
 
-    for (const side of sides) {
-        side.collisionBottomLeft = [0, 0];
-        side.collisionBottomRight = [0, 0];
-        side.collisionTopLeft = [0, 0];
-        side.collisionTopRight = [0, 0];
-    }
+        return line;
+    });
 
-    for (const polygon of polygons) {
-        polygon.center = [0, 0];
-        polygon.area = 0;
-    }
+    sides = sides.map(side => side.patch({
+        collisionBottomLeft: [0, 0],
+        collisionBottomRight: [0, 0],
+        collisionTopLeft: [0, 0],
+        collisionTopRight: [0, 0],
+    }));
+
+    polygons = polygons.map(polygon => polygon.patch({
+        center: [0, 0],
+        area: 0,
+    }));
 
     return {
         header: wadHeader,

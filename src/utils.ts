@@ -36,3 +36,17 @@ export function toInternalUnits(worldUnits: number): number {
 export function formatWorldUnits(internalUnits: number): string {
     return toWorldUnits(internalUnits).toFixed(5);
 }
+
+export function assertDefined<T>(
+    val: T | undefined | null,
+    error: string
+): asserts val is T {
+    if (val === undefined || val === null) {
+        throw new Error(error);
+    }
+}
+
+export function defined<T>(val: T | undefined | null, error: string): T {
+    assertDefined(val, error);
+    return val;
+}

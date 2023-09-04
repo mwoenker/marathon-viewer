@@ -30,22 +30,22 @@ interface DynamicPlatformConstructor {
 }
 
 export class DynamicPlatform {
-    type: number;
-    staticFlags: number;
-    speed: number;
-    delay: number;
-    minFloorHeight: number;
-    maxFloorHeight: number;
-    minCeilingHeight: number;
-    maxCeilingHeight: number;
-    polygonIndex: number;
-    dynamicFlags: number;
-    floorHeight: number;
-    ceilingHeight: number;
-    ticksUntilRestart: number;
-    endpointOwners: EndpointOwner[];
-    parentPlatformIndex: number;
-    tag: number;
+    readonly type: number;
+    readonly staticFlags: number;
+    readonly speed: number;
+    readonly delay: number;
+    readonly minFloorHeight: number;
+    readonly maxFloorHeight: number;
+    readonly minCeilingHeight: number;
+    readonly maxCeilingHeight: number;
+    readonly polygonIndex: number;
+    readonly dynamicFlags: number;
+    readonly floorHeight: number;
+    readonly ceilingHeight: number;
+    readonly ticksUntilRestart: number;
+    readonly endpointOwners: EndpointOwner[];
+    readonly parentPlatformIndex: number;
+    readonly tag: number;
 
     constructor(data: DynamicPlatformConstructor) {
         this.type = data.type;

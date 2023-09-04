@@ -41,37 +41,37 @@ export interface PolygonConstructor {
 }
 
 export class Polygon {
-    type: number;
-    flags: number;
-    permutation: number;
-    vertexCount: number;
-    endpoints: number[];
-    lines: number[];
-    floorTexture: number;
-    ceilingTexture: number;
-    floorHeight: number;
-    ceilingHeight: number;
-    floorLightsource: number;
-    ceilingLightsource: number;
-    area: number;
-    firstObject: number;
-    firstExclusionZone: number;
-    nLineExclusionZones: number;
-    nPointExclusionZones: number;
-    floorTransferMode: number;
-    ceilingTransferMode: number;
-    adjacentPolygons: number[];
-    firstNeighbor: number;
-    nNeighbors: number;
-    center: Vec2;
-    sides: number[];
-    floorOrigin: Vec2;
-    ceilingOrigin: Vec2;
-    media: number;
-    mediaLightsource: number;
-    firstSoundSource: number;
-    ambientSound: number;
-    randomSound: number;
+    readonly type: number;
+    readonly flags: number;
+    readonly permutation: number;
+    readonly vertexCount: number;
+    readonly endpoints: number[];
+    readonly lines: number[];
+    readonly floorTexture: number;
+    readonly ceilingTexture: number;
+    readonly floorHeight: number;
+    readonly ceilingHeight: number;
+    readonly floorLightsource: number;
+    readonly ceilingLightsource: number;
+    readonly area: number;
+    readonly firstObject: number;
+    readonly firstExclusionZone: number;
+    readonly nLineExclusionZones: number;
+    readonly nPointExclusionZones: number;
+    readonly floorTransferMode: number;
+    readonly ceilingTransferMode: number;
+    readonly adjacentPolygons: number[];
+    readonly firstNeighbor: number;
+    readonly nNeighbors: number;
+    readonly center: Vec2;
+    readonly sides: number[];
+    readonly floorOrigin: Vec2;
+    readonly ceilingOrigin: Vec2;
+    readonly media: number;
+    readonly mediaLightsource: number;
+    readonly firstSoundSource: number;
+    readonly ambientSound: number;
+    readonly randomSound: number;
 
     constructor(data: PolygonConstructor) {
         this.type = data.type ?? 0;
@@ -105,6 +105,10 @@ export class Polygon {
         this.firstSoundSource = data.firstSoundSource ?? -1;
         this.ambientSound = data.ambientSound ?? -1;
         this.randomSound = data.randomSound ?? -1;
+    }
+
+    patch(update: Partial<PolygonConstructor>): Polygon {
+        return new Polygon({ ...this, update });
     }
 
     static read(r: Reader): Polygon {

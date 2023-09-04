@@ -20,18 +20,18 @@ interface MediaConstructor {
 }
 
 export class Media {
-    type: number;
-    flags: number;
-    lightIndex: number;
-    currentDirection: number;
-    currentMagnitude: number;
-    low: number;
-    high: number;
-    origin: Vec2;
-    height: number;
-    minimumLightIntensity: number;
-    texture: number;
-    transferMode: number;
+    readonly type: number;
+    readonly flags: number;
+    readonly lightIndex: number;
+    readonly currentDirection: number;
+    readonly currentMagnitude: number;
+    readonly low: number;
+    readonly high: number;
+    readonly origin: Vec2;
+    readonly height: number;
+    readonly minimumLightIntensity: number;
+    readonly texture: number;
+    readonly transferMode: number;
 
     constructor(data: MediaConstructor) {
         this.type = data.type;

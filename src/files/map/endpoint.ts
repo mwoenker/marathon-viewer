@@ -13,12 +13,12 @@ interface EndpointConstructor {
 }
 
 export class Endpoint {
-    flags: number;
-    highestFloor: number;
-    lowestCeiling: number;
-    position: Vec2;
-    transformed: Vec2;
-    supportingPolyIdx: number;
+    readonly flags: number;
+    readonly highestFloor: number;
+    readonly lowestCeiling: number;
+    readonly position: Vec2;
+    readonly transformed: Vec2;
+    readonly supportingPolyIdx: number;
 
     constructor(data: EndpointConstructor) {
         this.flags = data.flags;
