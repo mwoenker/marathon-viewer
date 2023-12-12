@@ -7,6 +7,7 @@ import { Action, EditorState, getSelection, ModeState } from '../state';
 
 import type { JSXInternal } from 'preact/src/jsx';
 import { getDrawOperation } from '../state/drawOperation';
+import { defaultSnapGridSize } from '../state/snapGrid';
 
 interface MapViewProps {
     state: EditorState;
@@ -164,6 +165,7 @@ export function MapView({
                 selection={selection}
                 viewport={viewport}
                 drawOperation={getDrawOperation(state)}
+                gridSpacing={state.snapGridSize || defaultSnapGridSize}
             />
         </div>
     );

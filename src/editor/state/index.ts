@@ -95,7 +95,7 @@ function reduce(state: EditorState, action: Action): EditorState {
             return {
                 ...state,
                 snapGridSize: action.size,
-            }
+            };
         case 'setMap': {
             return setMap(state, action.map, Boolean(action.isEphemeral));
         }

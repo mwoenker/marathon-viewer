@@ -6,7 +6,7 @@ import { getNonConvexPattern, objectColor } from './util';
 import { Selection } from '../state';
 import { isConvex } from '../../geometry';
 import { ObjectType } from '../../files/map/object';
-import { numFixedAngles } from '../../constants';
+import { numFixedAngles, worldUnitSize } from '../../constants';
 import { DrawOperation } from '../state/drawOperation';
 import { ColorComponents, getCssColor } from '../../color';
 
@@ -32,6 +32,7 @@ export class MapDraw {
         private viewport: Viewport,
         private drawOperation: DrawOperation | undefined,
         private getPolygonColor: GetPolygonColor,
+        private gridSpacing: number,
     ) {
         const context = canvas.getContext('2d');
         if (!context) {
@@ -169,20 +170,19 @@ export class MapDraw {
         this.context.save();
 
         // Draw ruler lines
-        const ruleSize = 256;
         this.context.strokeStyle = colors.ruleLine;
-        for (let y = gridBounds.top - (gridBounds.top % ruleSize);
+        for (let y = gridBounds.top - (gridBounds.top % this.gridSpacing);
             y <= gridBounds.bottom;
-            y += ruleSize) {
+            y += this.gridSpacing) {
             this.context.beginPath();
             this.context.moveTo(...this.viewport.toPixel([gridBounds.left, y]));
             this.context.lineTo(...this.viewport.toPixel([gridBounds.right, y]));
             this.context.stroke();
         }
 
-        for (let x = gridBounds.left - (gridBounds.left % ruleSize);
+        for (let x = gridBounds.left - (gridBounds.left % this.gridSpacing);
             x <= gridBounds.right;
-            x += ruleSize) {
+            x += this.gridSpacing) {
             this.context.beginPath();
             this.context.moveTo(...this.viewport.toPixel([x, gridBounds.top]));
             this.context.lineTo(...this.viewport.toPixel([x, gridBounds.bottom]));
@@ -195,13 +195,12 @@ export class MapDraw {
     drawWorldUnitMarkers(gridBounds: GridBounds): void {
         this.context.save();
 
-        const wuSize = 1024;
         const markerRadius = 1.5;
         this.context.fillStyle = colors.wuMarker;
-        for (let y = gridBounds.top - (gridBounds.top % wuSize); y <= gridBounds.bottom; y += wuSize) {
-            for (let x = gridBounds.left - (gridBounds.left % wuSize);
+        for (let y = gridBounds.top - (gridBounds.top % worldUnitSize); y <= gridBounds.bottom; y += worldUnitSize) {
+            for (let x = gridBounds.left - (gridBounds.left % worldUnitSize);
                 x <= gridBounds.right;
-                x += wuSize) {
+                x += worldUnitSize) {
                 this.context.beginPath();
                 const [sx, sy] = this.viewport.toPixel([x, y]);
                 this.context.moveTo(sx - markerRadius, sy - markerRadius);

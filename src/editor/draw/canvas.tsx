@@ -7,13 +7,14 @@ import { DrawOperation } from '../state/drawOperation';
 import { colorCodeForIndex, ColorComponents, polygonColor } from '../../color';
 import { ModeState } from '../state/modes';
 import { getMapHeights } from '../state/floorCeilingHeights';
-import { impossibleValue } from '../../utils';
+
 interface CanvasMapProps {
     map: MapGeometry | undefined;
     mode: ModeState,
     selection: Selection;
     viewport: Viewport;
     drawOperation: DrawOperation | undefined;
+    gridSpacing: number
 }
 
 function getHeightColors(heights: number[]) {
@@ -35,6 +36,7 @@ export function CanvasMap(allProps: CanvasMapProps): JSX.Element {
         selection,
         viewport,
         drawOperation,
+        gridSpacing,
     } = allProps;
     const ref = useRef<HTMLCanvasElement | null>(null);
     const frameRequest = useRef(0);
@@ -78,11 +80,18 @@ export function CanvasMap(allProps: CanvasMapProps): JSX.Element {
     const redraw = useCallback(() => {
         if (ref.current) {
             const canvas = ref.current;
-            const mapDraw = new MapDraw(map, selection, canvas, viewport, drawOperation, getPolygonColor);
+            const mapDraw = new MapDraw(
+                map,
+                selection,
+                canvas,
+                viewport,
+                drawOperation,
+                getPolygonColor,
+                gridSpacing);
             mapDraw.draw();
         }
         frameRequest.current = 0;
-    }, [drawOperation, getPolygonColor, map, selection, viewport]);
+    }, [drawOperation, getPolygonColor, map, selection, viewport, gridSpacing]);
 
     useLayoutEffect(
         () => {
