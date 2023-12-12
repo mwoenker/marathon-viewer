@@ -107,7 +107,7 @@ export class Side {
     }
 
     patch(update: Partial<SideConstructor>): Side {
-        return new Side({ ...this, update });
+        return new Side({ ...this, ...update });
     }
 
     static read(reader: Reader): Side {

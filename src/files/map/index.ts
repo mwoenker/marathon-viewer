@@ -3,7 +3,7 @@ import { Side, SideTex } from './side';
 import { Polygon } from './polygon';
 import { Light, LightFlagBits } from './light';
 import { MapObject } from './object';
-import { Line } from './line';
+import { Line, LineFlag } from './line';
 import { ItemPlacement } from './item-placement';
 import { Media } from './media';
 import { AmbientSound } from './ambient-sound';
@@ -16,10 +16,11 @@ import { Dependencies } from './dependencies';
 import { Remapping } from './index-remap';
 import { polygonsAt } from '../../geometry';
 import { FloorOrCeilingSurface, Surface, WallSurface } from '../../surface';
-import { impossibleValue } from '../../utils';
+import { assertDefined, assertTrue, impossibleValue } from '../../utils';
 import { SideCandidate } from './fillPolygon';
 import { Vec3 } from '../../vector3';
 import { LightFunctionType } from './light';
+import { DependencyType } from './dependencies';
 
 interface FloorCeilingRequest {
     polygonIndex: number,
@@ -390,6 +391,26 @@ export class MapGeometry {
         return isFront ? line.frontPoly : line.backPoly;
     }
 
+    getSideFrontPolygon(sideIndex: number): Polygon {
+        const side = this.getSide(sideIndex);
+        return this.getPolygon(side.polygonIndex);
+    }
+
+    getSideBackPolygon(sideIndex: number): Polygon | undefined {
+        const side = this.getSide(sideIndex);
+        const line = this.getLine(side.lineIndex);
+        const polyIndex = line.frontPoly === side.polygonIndex
+            ? line.backPoly
+            : line.frontPoly;
+        if (polyIndex === side.polygonIndex) {
+            throw new Error('Same polygon on both sides of line');
+        } else if (polyIndex === -1) {
+            return undefined;
+        } else {
+            return this.getPolygon(polyIndex);
+        }
+    }
+
     getPolygonSide(polygonIndex: number, wallIndex: number): Side {
         const polygon = this.getPolygon(polygonIndex);
         if (wallIndex < 0 || wallIndex >= polygon.vertexCount) {
@@ -629,14 +650,19 @@ export class MapGeometry {
     }
 
     removeObjectsAndRenumber(deadObjects: Dependencies): MapGeometry {
+        const polygonsDeleted =
+            deadObjects.objects.get(DependencyType.polygon) ?? [];
+        const linesAffected = polygonsDeleted.flatMap(poly =>
+            this.getPolygon(poly).lines);
         const mappings = new Remapping(this, deadObjects);
         const newArrays = mappings.remap();
-        return new MapGeometry({
+        const withObjectsRemoved = new MapGeometry({
             index: this.index,
             header: this.header,
             info: this.info,
             ...newArrays,
         });
+        return withObjectsRemoved.resetLineSides(linesAffected, true);
     }
 
     deletePolygon(polygonIdx: number): MapGeometry {
@@ -645,9 +671,15 @@ export class MapGeometry {
         return this.removeObjectsAndRenumber(deletions);
     }
 
-    deleteLine(pointIdx: number): MapGeometry {
+    deleteLine(lineIndex: number): MapGeometry {
         const deletions = new Dependencies();
-        deletions.addLine(this, pointIdx);
+        deletions.addLine(this, lineIndex);
+        return this.removeObjectsAndRenumber(deletions);
+    }
+
+    deleteSide(sideIdx: number): MapGeometry {
+        const deletions = new Dependencies();
+        deletions.addSide(this, sideIdx);
         return this.removeObjectsAndRenumber(deletions);
     }
 
@@ -750,19 +782,6 @@ export class MapGeometry {
         const newFloorHeight = 0;
         const newCeilingHeight = 1024;
 
-        for (const newSide of sides) {
-            if (-1 !== this.getPolygonOnLineSide(newSide.lineIndex, newSide.isFront)) {
-                throw new Error('Polygon already exists on this side');
-            }
-            const line = newLines[newSide.lineIndex];
-            const modifiedLine = new Line({
-                ...line,
-                frontPoly: newSide.isFront ? newPolygonIndex : line.frontPoly,
-                backPoly: !newSide.isFront ? newPolygonIndex : line.backPoly,
-            });
-            newLines[newSide.lineIndex] = modifiedLine;
-        }
-
         const polygonSides = sides.map((side) => {
             const otherPolygonIndex = this.getPolygonOnLineSide(side.lineIndex, !side.isFront);
             let sideType: SideType;
@@ -780,7 +799,8 @@ export class MapGeometry {
                 } else if (otherPolygon.floorHeight > newFloorHeight) {
                     sideType = SideType.low;
                 } else {
-                    sideType = SideType.full;
+                    // no side needed
+                    return -1;
                 }
             }
 
@@ -794,7 +814,23 @@ export class MapGeometry {
             return newSideIndex;
         });
 
-        newPolygons.push(new Polygon({
+        sides.forEach((newSide, polygonSideIdx) => {
+            const newSideIdx = polygonSides[polygonSideIdx];
+            if (-1 !== this.getPolygonOnLineSide(newSide.lineIndex, newSide.isFront)) {
+                throw new Error('Polygon already exists on this side');
+            }
+            const line = newLines[newSide.lineIndex];
+            const modifiedLine = new Line({
+                ...line,
+                frontPoly: newSide.isFront ? newPolygonIndex : line.frontPoly,
+                backPoly: !newSide.isFront ? newPolygonIndex : line.backPoly,
+                frontSide: newSide.isFront ? newSideIdx : line.frontSide,
+                backSide: !newSide.isFront ? newSideIdx : line.backSide,
+            });
+            newLines[newSide.lineIndex] = modifiedLine;
+        });
+
+        const newPoly = new Polygon({
             endpoints: sides.map((side) => {
                 const line = this.getLine(side.lineIndex);
                 return side.isFront ? line.begin : line.end;
@@ -803,13 +839,16 @@ export class MapGeometry {
             floorHeight: newFloorHeight,
             ceilingHeight: newCeilingHeight,
             sides: polygonSides,
-        }));
+        });
+        newPolygons.push(newPoly);
 
-        return this.patch({
+        const withNewPoly = this.patch({
             lines: newLines,
             sides: newSides,
             polygons: newPolygons,
         });
+
+        return withNewPoly.resetLineSides(newPoly.lines, true);
     }
 
     // Unique list of floor heighs, sorted ascending
@@ -826,20 +865,24 @@ export class MapGeometry {
 
     setFloorHeight(polygonIndex: number, height: number): MapGeometry {
         const polygons = [...this.polygons];
+        const oldPolygon = this.getPolygon(polygonIndex);
         polygons[polygonIndex] = new Polygon({
-            ...this.getPolygon(polygonIndex),
+            ...oldPolygon,
             floorHeight: height
         });
-        return this.patch({ polygons });
+        return this.patch({ polygons }).resetLineSides(
+            oldPolygon.lines, false);
     }
 
     setCeilingHeight(polygonIndex: number, height: number): MapGeometry {
         const polygons = [...this.polygons];
+        const oldPolygon = this.getPolygon(polygonIndex);
         polygons[polygonIndex] = new Polygon({
-            ...this.getPolygon(polygonIndex),
+            ...oldPolygon,
             ceilingHeight: height
         });
-        return this.patch({ polygons });
+        return this.patch({ polygons }).resetLineSides(
+            oldPolygon.lines, false);
     }
 
     changeHeight(
@@ -871,5 +914,274 @@ export class MapGeometry {
                 })
             ]
         });
+    }
+
+    addSide(side: Side): MapGeometry {
+        const sides = [...this.sides];
+        sides.push(side);
+        return this.patch({ sides });
+    }
+
+    setLine(lineIndex: number, line: Line): MapGeometry {
+        const lines = [...this.lines];
+        lines[lineIndex] = line;
+        return this.patch({ lines });
+    }
+
+    setSide(sideIndex: number, side: Side): MapGeometry {
+        const sides = [...this.sides];
+        sides[sideIndex] = side;
+        return this.patch({ sides });
+    }
+
+    setPolygon(polygonIndex: number, polygon: Polygon): MapGeometry {
+        const polygons = [...this.polygons];
+        polygons[polygonIndex] = polygon;
+        return this.patch({ polygons });
+    }
+
+    // Set side type & line flags flags based on polygon connectivity and
+    // heights. Should be used for the lines of a polygon when adding or
+    // deleting a polygon, or when changing polygon heights
+    resetLineSides(
+        lineIndexes: Iterable<number>,
+        inferTransparentSides: boolean,
+    ): MapGeometry {
+        // eslint-disable-next-line @typescript-eslint/no-this-alias
+        let map: MapGeometry = this;
+
+        for (const lineIndex of lineIndexes) {
+            map = map.resetLineSide(lineIndex, 'front', inferTransparentSides);
+            map = map.resetLineSide(lineIndex, 'back', inferTransparentSides);
+        }
+
+        return map;
+    }
+
+    private resetLineSide(
+        lineIndex: number,
+        thisSide: 'front' | 'back',
+        inferTransparentSides: boolean,
+    ): MapGeometry {
+        const otherSide =
+            thisSide === 'front' ? 'back' : 'front';
+        let line = this.getLine(lineIndex);
+
+        const thisSidePolyIndex = line[`${thisSide}Poly`];
+        const otherSidePolyIndex = line[`${otherSide}Poly`];
+        const thisSideIndex = line[`${thisSide}Side`];
+
+        let correctSideType: SideType | undefined;
+        let joinsTwoPolygons = false;
+
+        if (thisSidePolyIndex !== -1 && otherSidePolyIndex !== -1) {
+            // polygon on both sides
+            joinsTwoPolygons = true;
+            const thisSidePoly = this.getPolygon(thisSidePolyIndex);
+            const otherSidePoly = this.getPolygon(otherSidePolyIndex);
+
+            if (thisSidePoly.floorHeight < otherSidePoly.floorHeight) {
+                if (thisSidePoly.ceilingHeight > otherSidePoly.ceilingHeight) {
+                    correctSideType = SideType.split;
+                } else {
+                    correctSideType = SideType.low;
+                }
+            } else if (thisSidePoly.ceilingHeight > otherSidePoly.ceilingHeight) {
+                correctSideType = SideType.high;
+            }
+        } else if (thisSidePolyIndex !== -1) {
+            // only polygon on this side
+            correctSideType = SideType.full;
+        }
+
+        const currentSideType: SideType | undefined = thisSideIndex !== -1
+            ? this.getSide(thisSideIndex).type
+            : undefined;
+
+        // eslint-disable-next-line @typescript-eslint/no-this-alias
+        let map: MapGeometry = this;
+
+        if (!joinsTwoPolygons) {
+            line = line.patchFlag(LineFlag.solid, true);
+            line = line.patchFlag(LineFlag.transparent, false);
+        } else if (inferTransparentSides) {
+            line = line.patchFlag(LineFlag.solid, false);
+            line = line.patchFlag(LineFlag.transparent, true);
+        }
+
+        line = line.patchFlag(
+            LineFlag.elevation,
+            typeof correctSideType === 'number');
+
+        if (currentSideType !== correctSideType) {
+            if (currentSideType === undefined &&
+                correctSideType !== undefined) {
+                // need to create side
+                map = map.addSide(new Side({
+                    polygonIndex: thisSidePolyIndex,
+                    lineIndex: lineIndex,
+                    type: correctSideType
+                }));
+
+                const newSideIndex = map.sides.length - 1;
+                line = line.patch({
+                    [`${thisSide}Side`]: newSideIndex,
+                });
+
+                const thisSidePoly = map.getPolygon(thisSidePolyIndex);
+                const lineIdxOnPoly = thisSidePoly.lines.indexOf(lineIndex);
+                assertTrue(lineIdxOnPoly >= 0, 'line not found on polygon');
+
+                const polySides = [...thisSidePoly.sides];
+                polySides[lineIdxOnPoly] = newSideIndex;
+
+                map = map.setPolygon(thisSidePolyIndex, thisSidePoly.patch({
+                    sides: polySides
+                }));
+            } else if (currentSideType !== undefined &&
+                correctSideType === undefined) {
+                // need to delete side
+
+                map = map.deleteSide(thisSideIndex);
+                line = line.patch({
+                    [`${thisSide}Side`]: -1
+                });
+            } else {
+                // need to change side type
+                map = map.setSide(
+                    thisSideIndex,
+                    map.getSide(thisSideIndex).patch({
+                        type: correctSideType
+                    })
+                );
+            }
+        }
+
+        map = map.setLine(lineIndex, line);
+
+        return map;
+    }
+
+    consistencyErrors(): string[] {
+        const errors: string[] = [];
+
+        const indexInvalid = (array: unknown[], index: number): boolean => {
+            return index !== -1 && (index < 0 || index >= array.length);
+        };
+
+        const makeChecker = (
+            referrerType: string,
+            referrerIndex: number
+        ) => (
+            referenceName: string,
+            referenceIndex: number,
+            referredArray: unknown[],
+        ): void => {
+                if (indexInvalid(referredArray, referenceIndex)) {
+                    errors.push(`${referrerType} ${referrerIndex} has an invalid ${referenceName} ${referenceIndex}`);
+                }
+            };
+
+        this.polygons.forEach((polygon, polygonIndex) => {
+            const check = makeChecker('polygon', polygonIndex);
+
+            for (const adjacentIndex of polygon.adjacentPolygons) {
+                check('adjacent polygon', adjacentIndex, this.polygons);
+            }
+
+            check('ambient sound', polygon.ambientSound, this.ambientSounds);
+            check('ceiling light', polygon.ceilingLightsource, this.lights);
+            check('floor light', polygon.floorLightsource, this.lights);
+            check('media light', polygon.mediaLightsource, this.lights);
+
+            for (const endpointIdx of polygon.endpoints) {
+                check('endpoint', endpointIdx, this.points);
+            }
+
+            for (const lineIdx of polygon.lines) {
+                check('line', lineIdx, this.lines);
+            }
+
+            for (const sideIdx of polygon.sides) {
+                check('side', sideIdx, this.sides);
+            }
+
+            check('media', polygon.media, this.media);
+
+            check('random sound', polygon.randomSound, this.randomSounds);
+
+            polygon.sides.forEach((sideIdx, polyEdgeIdx) => {
+                const line = this.getLine(polygon.lines[polyEdgeIdx]);
+                if (sideIdx !== line.backSide && sideIdx !== line.frontSide) {
+                    errors.push(`polygon side ${polyEdgeIdx} does not match line side`);
+                }
+
+                if (polygonIndex !== line.frontPoly && polygonIndex !== line.backPoly) {
+                    errors.push(`polygon ${polygonIndex} contains line that doesn't reference it`);
+                }
+            });
+        });
+
+        this.sides.forEach((side, sideIdx) => {
+            const check = makeChecker('side', sideIdx);
+            check('line', side.lineIndex, this.lines);
+            check('polygon', side.polygonIndex, this.lines);
+            check('primary light', side.primaryLightsourceIndex, this.lights);
+            check('secondary light', side.secondaryLightsourceIndex, this.lights);
+            check(
+                'transparent light',
+                side.transparentLightsourceIndex,
+                this.lights);
+
+            const line = this.getLine(side.lineIndex);
+
+            if (line.frontSide !== sideIdx && line.backSide !== sideIdx) {
+                errors.push(`side ${sideIdx} part of line ${side.lineIndex} that does not reference it`);
+            }
+        });
+
+        this.lines.forEach((line, lineIdx) => {
+            const check = makeChecker('line', lineIdx);
+            check('back polygon', line.backPoly, this.polygons);
+            check('front polygon', line.frontPoly, this.polygons);
+            check('back side', line.backSide, this.sides);
+            check('front side', line.frontSide, this.sides);
+
+            if (line.frontSide !== -1) {
+                const frontSide = this.getSide(line.frontSide);
+                if (frontSide.lineIndex !== lineIdx) {
+                    errors.push(`line ${lineIdx} references side ${line.frontSide} on other line`);
+                }
+            }
+
+            if (line.backSide !== -1) {
+                const backSide = this.getSide(line.backSide);
+                if (backSide.lineIndex !== lineIdx) {
+                    errors.push(`line ${lineIdx} references side ${line.backSide} on other line`);
+                }
+            }
+        });
+
+        this.media.forEach((media, mediaIdx) => {
+            const check = makeChecker('media', mediaIdx);
+            check('light', media.lightIndex, this.lights);
+        });
+
+        this.notes.forEach((note, noteIdx) => {
+            const check = makeChecker('note', noteIdx);
+            check('polygon', note.polygonIndex, this.polygons);
+        });
+
+        this.platforms.forEach((platform, platformIdx) => {
+            const check = makeChecker('platform', platformIdx);
+            check('polygon', platform.polygonIndex, this.polygons);
+        });
+
+        this.objects.forEach((object, objectIdx) => {
+            const check = makeChecker('object', objectIdx);
+            check('polygon', object.polygon, this.polygons);
+        });
+
+        return errors;
     }
 }

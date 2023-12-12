@@ -108,7 +108,7 @@ export class Polygon {
     }
 
     patch(update: Partial<PolygonConstructor>): Polygon {
-        return new Polygon({ ...this, update });
+        return new Polygon({ ...this, ...update });
     }
 
     static read(r: Reader): Polygon {

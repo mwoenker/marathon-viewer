@@ -85,12 +85,7 @@ export class Dependencies {
         }
     }
     addSide(map: MapGeometry, sideIndex: number): void {
-        if (this._add(DependencyType.side, sideIndex)) {
-            const side = map.sides[sideIndex];
-            if (-1 !== side.polygonIndex) {
-                this.addPolygon(map, side.polygonIndex);
-            }
-        }
+        this._add(DependencyType.side, sideIndex);
     }
     addPolygon(map: MapGeometry, polygonIndex: number): void {
         if (this._add(DependencyType.polygon, polygonIndex)) {

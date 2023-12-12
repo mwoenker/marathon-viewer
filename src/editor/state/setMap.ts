@@ -8,7 +8,6 @@ export function setMap(
     map: MapGeometry,
     isEphemeral = false
 ): EditorState {
-    console.log({ map });
     let undo: MapGeometry[];
     if (!state.map) {
         undo = [];
@@ -17,6 +16,15 @@ export function setMap(
     } else {
         undo = [...state.undoStack, state.map];
     }
+
+    const errors = map.consistencyErrors();
+    if (errors.length > 0) {
+        console.error('inconsistent map', map);
+    }
+    errors.forEach((err) => console.error(err));
+
+    (window as unknown as any).map = map;
+
     return {
         ...state,
         isEphemeral: isEphemeral === true,

@@ -50,7 +50,7 @@ export class Line implements LineConstructor {
     }
 
     patch(update: Partial<LineConstructor>): Line {
-        return new Line({ ...this, update });
+        return new Line({ ...this, ...update });
     }
 
     patchFlag(flag: LineFlag, val: boolean): Line {

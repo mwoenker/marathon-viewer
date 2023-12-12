@@ -46,6 +46,12 @@ export function assertDefined<T>(
     }
 }
 
+export function assertTrue(val: boolean, error: string): asserts val is true {
+    if (val !== true) {
+        throw new Error(error);
+    }
+}
+
 export function defined<T>(val: T | undefined | null, error: string): T {
     assertDefined(val, error);
     return val;
