@@ -23,7 +23,6 @@ interface MapFileSetting {
 
 function Editor() {
     const [mapFile, setMapFile] = useState<MapFileSetting>({ file: null, summaries: [] });
-    // size of screen pixel in map units
     const [state, updateState] = useEditorState();
     const [shapes, setShapes] = useState<Shapes>(new Shapes(new HttpFile(shapesUrl)));
     useKeyboardShortcuts(updateState);
