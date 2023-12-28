@@ -36,6 +36,7 @@ export interface ZoomInAction { type: 'zoomIn' }
 export interface ZoomOutAction { type: 'zoomOut' }
 export interface SetSnapSizeAction { type: 'setSnapSize', size: SnapGridSize }
 export interface SetMapAction { type: 'setMap', map: MapGeometry, isEphemeral?: boolean }
+export interface LoadNewMapAction { type: 'loadNewMap', map: MapGeometry, isEphemeral?: boolean }
 export interface UndoAction { type: 'undo' }
 export interface RedoAction { type: 'redo' }
 export interface SetEditMode {
@@ -85,6 +86,7 @@ export type Action =
     ZoomOutAction |
     SetSnapSizeAction |
     SetMapAction |
+    LoadNewMapAction |
     SetEditMode |
     UndoAction |
     RedoAction |

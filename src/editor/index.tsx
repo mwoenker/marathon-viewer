@@ -13,6 +13,7 @@ import { RightPanel } from './RightPanel';
 import { useEditorState } from './state';
 import { Shapes } from '../shapes-loader';
 import { useKeyboardShortcuts } from './shortcuts';
+import { loadNewMap } from './state/setMap';
 
 const shapesUrl = 'minf.shpA';
 
@@ -31,7 +32,7 @@ function Editor() {
         const summaries = await readMapSummaries(new HtmlInputFile(file));
         setMapFile({ file, summaries });
         if (summaries.length > 0) {
-            updateState({ type: 'setMap', map: await readMapFromSummary(summaries[0]) });
+            updateState({ type: 'loadNewMap', map: await readMapFromSummary(summaries[0]) });
         }
     };
 
@@ -44,7 +45,10 @@ function Editor() {
     }
 
     async function setSelectedMap(summary: MapSummary) {
-        setMap(await readMapFromSummary(summary));
+        updateState({
+            type: 'loadNewMap',
+            map: await readMapFromSummary(summary)
+        });
     }
 
     return (

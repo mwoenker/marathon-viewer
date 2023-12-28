@@ -3,6 +3,19 @@ import { MapGeometry } from "../../files/map";
 import { Vec2 } from "../../vector2";
 import { findClickedObject } from "../RightPanel/click";
 
+export function loadNewMap(
+    state: EditorState,
+    map: MapGeometry,
+): EditorState {
+    return {
+        ...state,
+        isEphemeral: false,
+        map,
+        undoStack: [],
+        redoStack: [],
+    };
+}
+
 export function setMap(
     state: EditorState,
     map: MapGeometry,

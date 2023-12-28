@@ -5,7 +5,7 @@ import { Action } from './actions';
 import { mouseDown, mouseMove, mouseUp } from './mapMouseActions';
 import { EditMode, ModeState, VisualModeState, ToolState } from './modes';
 import { blankSelection, Selection } from './selection';
-import { setMap } from './setMap';
+import { loadNewMap, setMap } from './setMap';
 import { SnapGridSize } from './snapGrid';
 
 export {
@@ -98,6 +98,9 @@ function reduce(state: EditorState, action: Action): EditorState {
             };
         case 'setMap': {
             return setMap(state, action.map, Boolean(action.isEphemeral));
+        }
+        case 'loadNewMap': {
+            return loadNewMap(state, action.map);
         }
         case 'undo':
             if (state.undoStack.length === 0) {
